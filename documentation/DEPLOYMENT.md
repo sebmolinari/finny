@@ -53,3 +53,10 @@ cd ~/finny/frontend
 npm install
 npm run build
 ```
+
+## Secure files:
+
+```sh
+chmod 600 ~/finny/backend/.env
+chmod 600 ~/finny/backend/database.db*
+```
