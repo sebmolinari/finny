@@ -107,6 +107,8 @@ async function initAssets(token, assets) {
 
 async function initPriceData(assetIds, token, priceHistory) {
   console.log("\nCreating price data...");
+  // Fix: Define bulkPriceData before using it
+  const bulkPriceData = [];
 
   for (const symbol in priceHistory) {
     const assetId = assetIds[symbol];

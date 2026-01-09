@@ -25,6 +25,8 @@ import {
 import { toast } from "react-toastify";
 import api from "../api/api";
 import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
+import { settingsAPI } from "../api/api";
+import { formatDateInTimezone } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const AuditLogs = () => {
@@ -122,8 +124,25 @@ const AuditLogs = () => {
     }
   };
 
+  const [userTimezone, setUserTimezone] = useState("UTC");
+  const [userDateFormat, setUserDateFormat] = useState("YYYY-MM-DD");
+
+  useEffect(() => {
+    async function loadUserSettings() {
+      try {
+        const response = await settingsAPI.get();
+        setUserTimezone(response.data.timezone || "UTC");
+        setUserDateFormat(response.data.date_format || "YYYY-MM-DD");
+      } catch (error) {
+        setUserTimezone("UTC");
+        setUserDateFormat("YYYY-MM-DD");
+      }
+    }
+    loadUserSettings();
+  }, []);
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+    return formatDateInTimezone(dateString, userTimezone, userDateFormat);
   };
 
   if (loading && logs.length === 0) {

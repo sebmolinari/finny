@@ -229,7 +229,7 @@ app.listen(PORT, () => {
     }
   );
 
-  logger.info("Price refresh scheduled: Daily at 6:00 PM EST");
+  logger.info("Price refresh scheduled: Daily at 16:30 PM EST");
 
   // Schedule portfolio summary emails
   // Daily at 4:45 PM EST
@@ -268,7 +268,13 @@ app.listen(PORT, () => {
     }
   );
 
-  logger.info("Portfolio email summaries scheduled");
+  logger.info("Portfolio email summaries scheduled daily at 16:45 PM EST");
+  logger.info(
+    "Portfolio email summaries scheduled weekly on Fridays at 17:00 PM EST"
+  );
+  logger.info(
+    "Portfolio email summaries scheduled monthly on the 1st at 17:00 PM EST"
+  );
 });
 
 const shutdown = (signal) => {
