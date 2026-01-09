@@ -16,7 +16,6 @@ import api from "../api/api";
 import { settingsAPI } from "../api/api";
 import { formatDateInTimezone } from "../utils/dateUtils";
 
-
 export default function Metrics() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,10 +69,13 @@ export default function Metrics() {
         ) : metrics ? (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Last refresh: {lastRefresh
+              Last refresh:{" "}
+              {lastRefresh
                 ? formatDateInTimezone(
                     // use space-separated datetime so dateUtils adds a single trailing Z
-                    (lastRefresh instanceof Date ? lastRefresh.toISOString().slice(0, 19).replace("T", " ") : String(lastRefresh)),
+                    lastRefresh instanceof Date
+                      ? lastRefresh.toISOString().slice(0, 19).replace("T", " ")
+                      : String(lastRefresh),
                     userTimezone,
                     userDateFormat
                   )
@@ -104,7 +106,12 @@ export default function Metrics() {
                 <TableRow>
                   <TableCell>Memory Used / Total</TableCell>
                   <TableCell>
-                    {((metrics.totalMem - metrics.freeMem) / 1024 / 1024).toFixed(0)} MB / {(metrics.totalMem / 1024 / 1024).toFixed(0)} MB
+                    {(
+                      (metrics.totalMem - metrics.freeMem) /
+                      1024 /
+                      1024
+                    ).toFixed(0)}{" "}
+                    MB / {(metrics.totalMem / 1024 / 1024).toFixed(0)} MB
                   </TableCell>
                 </TableRow>
                 <TableRow>
