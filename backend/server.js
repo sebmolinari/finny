@@ -61,7 +61,12 @@ if (!process.env.DATABASE_PATH) {
 app.set("trust proxy", 1);
 
 // Security Middleware
-app.use(helmet()); // Adds security headers
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
