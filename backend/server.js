@@ -21,6 +21,7 @@ const auditRoutes = require("./routes/audit");
 const constantsRoutes = require("./routes/constants");
 const emailRoutes = require("./routes/email");
 const allocationRoutes = require("./routes/allocation");
+const hostMetricsRoutes = require("./routes/hostMetrics");
 
 const app = express();
 const PORT = process.env.PORT;
@@ -131,6 +132,7 @@ app.use("/api/v1/audit", auditRoutes);
 app.use("/api/v1/constants", constantsRoutes);
 app.use("/api/v1/email", emailRoutes);
 app.use("/api/v1/allocation", allocationRoutes);
+app.use("/api/v1/metrics", hostMetricsRoutes);
 
 // Serve static files from React app in production
 if (process.env.NODE_ENV === "production") {

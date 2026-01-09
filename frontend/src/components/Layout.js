@@ -128,6 +128,7 @@ const Layout = () => {
           { type: "divider" },
           { text: "Users", icon: <PeopleIcon />, path: "/users" },
           { text: "Audit Logs", icon: <HistoryIcon />, path: "/audit" },
+          { text: "Host Metrics", icon: <ShowChartIcon />, path: "/metrics" },
         ]
       : []),
   ];

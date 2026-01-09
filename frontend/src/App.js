@@ -27,6 +27,7 @@ import CashDetails from "./pages/CashDetails";
 import Brokers from "./pages/Brokers";
 import Settings from "./pages/Settings";
 import AuditLogs from "./pages/AuditLogs";
+import Metrics from "./pages/Metrics";
 import MarketTrends from "./pages/MarketTrends";
 import TaxReport from "./pages/TaxReport";
 import ChangePassword from "./pages/ChangePassword";
@@ -94,6 +95,14 @@ function App() {
                   element={
                     <AdminRoute>
                       <AuditLogs />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/metrics"
+                  element={
+                    <AdminRoute>
+                      <Metrics />
                     </AdminRoute>
                   }
                 />
