@@ -1,0 +1,769 @@
+const Transaction = require("../models/Transaction");
+const PriceData = require("../models/PriceData");
+const Broker = require("../models/Broker");
+const {
+  fromValueScale,
+  PRICE_SCALE,
+  QUANTITY_SCALE,
+  AMOUNT_SCALE,
+} = require("../utils/valueScale");
+
+class AnalyticsService {
+  // Calculate asset allocation by type
+  static _calculateAssetAllocation(holdings) {
+    const allocation = holdings.reduce((acc, holding) => {
+      const type = holding.asset_type;
+      if (!acc[type]) {
+        acc[type] = {
+          type,
+          value: 0,
+          count: 0,
+        };
+      }
+      acc[type].value += holding.market_value;
+      acc[type].count += 1;
+      return acc;
+    }, {});
+
+    const totalValue = Object.values(allocation).reduce(
+      (sum, a) => sum + a.value,
+      0
+    );
+
+    return Object.values(allocation).map((a) => ({
+      ...a,
+      percentage: totalValue > 0 ? (a.value / totalValue) * 100 : 0,
+    }));
+  }
+
+  // Calculate daily P&L based on yesterday's prices
+  static _calculateDailyPnL(holdings) {
+    const db = require("../config/database");
+
+    // Get yesterday's date
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    let yesterdayMarketValue = 0;
+    let todayMarketValue = 0;
+
+    for (const holding of holdings) {
+      // Today's market value (already calculated)
+      todayMarketValue += holding.market_value;
+
+      // Get yesterday's price for this asset
+      const stmt = db.prepare(`
+        SELECT price FROM price_data
+        WHERE asset_id = ? AND date <= ?
+        ORDER BY date DESC
+        LIMIT 1
+      `);
+      const yesterdayPriceRow = stmt.get(holding.asset_id, yesterdayStr);
+
+      if (yesterdayPriceRow) {
+        const yesterdayPrice = fromValueScale(
+          yesterdayPriceRow.price,
+          PRICE_SCALE
+        );
+        yesterdayMarketValue += holding.total_quantity * yesterdayPrice;
+      } else {
+        // If no yesterday price, use today's price (no change)
+        yesterdayMarketValue += holding.market_value;
+      }
+    }
+
+    return todayMarketValue - yesterdayMarketValue;
+  }
+
+  // Get portfolio holdings with enriched data (prices, P&L, etc.)
+  static getPortfolioHoldings(userId, hideZeroQuantity = true) {
+    const holdings = Transaction.getPortfolioHoldings(userId, hideZeroQuantity);
+
+    const enrichedHoldings = holdings.map((holding) => {
+      const latestPrice = PriceData.getLatestPrice(holding.asset_id);
+      const marketValue = latestPrice
+        ? holding.total_quantity * latestPrice.price
+        : 0;
+      const unrealizedGain = marketValue - holding.cost_basis;
+      const unrealizedGainPercent =
+        holding.cost_basis > 0
+          ? (unrealizedGain / holding.cost_basis) * 100
+          : 0;
+
+      return {
+        asset_id: holding.asset_id,
+        symbol: holding.symbol,
+        name: holding.name,
+        asset_type: holding.asset_type,
+        broker_id: holding.broker_id,
+        broker_name: holding.broker_name,
+        total_quantity: holding.total_quantity,
+        cost_basis: holding.cost_basis,
+        market_price: latestPrice?.price || 0,
+        market_value: marketValue,
+        unrealized_gain: unrealizedGain,
+        unrealized_gain_percent: unrealizedGainPercent,
+        average_cost: holding.cost_basis / holding.total_quantity,
+        realized_gain: holding.realized_gain,
+      };
+    });
+
+    return enrichedHoldings;
+  }
+
+  // Get comprehensive portfolio analytics data
+  static getPortfolioAnalytics(userId) {
+    // Get enriched portfolio with current prices and FIFO calculations in one pass
+    const enrichedHoldings = this.getPortfolioHoldings(userId);
+
+    // Transaction analytics
+    const netInvested = Transaction.getNetInvested(userId);
+    const netContributions = Transaction.getNetContributions(userId);
+    const holdingsMarketValue = enrichedHoldings.reduce(
+      (sum, h) => sum + h.market_value,
+      0
+    );
+    const totalCostBasisHoldings = enrichedHoldings.reduce(
+      (sum, h) => sum + h.cost_basis,
+      0
+    );
+    const totalUnrealizedGain = enrichedHoldings.reduce(
+      (sum, h) => sum + h.unrealized_gain,
+      0
+    );
+
+    // Cash balance (from deposits/withdrawals and trading/dividends)
+    const cashBalance = Transaction.getCashBalance(userId);
+
+    // Get liquidity asset balance
+    const liquidityBalance = Transaction.getLiquidityBalance(userId);
+
+    const totalPortfolioValue = holdingsMarketValue + cashBalance;
+
+    // Calculate MWRR and CAGR
+    const mwrr = Transaction.calculateMWRR(userId, totalPortfolioValue);
+    const cagr = Transaction.calculateCAGR(userId, totalPortfolioValue);
+
+    // Asset allocation
+    const assetAllocation = this._calculateAssetAllocation(enrichedHoldings);
+
+    // Calculate daily P&L
+    const dailyPnL = this._calculateDailyPnL(enrichedHoldings);
+
+    return {
+      nav: totalPortfolioValue,
+      transactions: {
+        net_invested: netInvested, // Buys - Sells
+        net_contributions: netContributions,
+        holdings_market_value: holdingsMarketValue,
+        daily_pnl: dailyPnL,
+        cash_balance: cashBalance,
+        liquidity_balance: liquidityBalance,
+        unrealized_gain: totalUnrealizedGain,
+        unrealized_gain_percent:
+          totalCostBasisHoldings > 0
+            ? (totalUnrealizedGain / totalCostBasisHoldings) * 100
+            : 0,
+        liquidity_percent:
+          totalPortfolioValue > 0
+            ? ((cashBalance + liquidityBalance) / totalPortfolioValue) * 100
+            : 0,
+        mwrr: mwrr,
+        cagr: cagr,
+        holdings: enrichedHoldings,
+        asset_allocation: assetAllocation,
+      },
+    };
+  }
+
+  // Get portfolio performance over time
+  static getPortfolioPerformance(userId, days = 30) {
+    const db = require("../config/database");
+
+    // Calculate cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffDateStr = cutoffDate.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    // Get all transactions in the date range
+    const stmt = db.prepare(`
+      SELECT date, transaction_type, asset_id
+      FROM transactions
+      WHERE user_id = ? AND date >= ?
+      ORDER BY date ASC, id ASC
+    `);
+    const transactions = stmt.all(userId, cutoffDateStr);
+
+    if (transactions.length === 0) {
+      return [];
+    }
+
+    // Get unique dates in the range
+    const uniqueDates = [...new Set(transactions.map((t) => t.date))];
+
+    // Add today if not already included
+    if (!uniqueDates.includes(todayStr)) {
+      uniqueDates.push(todayStr);
+    }
+
+    const performance = [];
+
+    for (const date of uniqueDates) {
+      // Calculate cash balance at this date (integer arithmetic)
+      const cashStmt = db.prepare(`
+        SELECT transaction_type, total_amount
+        FROM transactions
+        WHERE user_id = ? AND date <= ?
+      `);
+      const cashTransactions = cashStmt.all(userId, date);
+      let cashBalanceValue = 0;
+      cashTransactions.forEach((tx) => {
+        const amountValue = tx.total_amount || 0;
+        switch (tx.transaction_type) {
+          case "deposit":
+          case "sell":
+          case "dividend":
+          case "interest":
+          case "coupon":
+            cashBalanceValue += amountValue;
+            break;
+          case "withdraw":
+          case "buy":
+            cashBalanceValue -= amountValue;
+            break;
+        }
+      });
+      const cashBalance = fromValueScale(cashBalanceValue, AMOUNT_SCALE);
+
+      // Calculate holdings at this date (integer arithmetic)
+      const holdingsStmt = db.prepare(`
+        SELECT 
+          a.id as asset_id,
+          a.symbol,
+          a.asset_type,
+          t.transaction_type,
+          t.quantity
+        FROM transactions t
+        JOIN assets a ON t.asset_id = a.id
+        WHERE t.user_id = ? AND t.date <= ? AND t.transaction_type IN ('buy', 'sell')
+      `);
+      const holdingTransactions = holdingsStmt.all(userId, date);
+
+      // Aggregate by asset (integer arithmetic)
+      const holdingsValueMap = {};
+      holdingTransactions.forEach((tx) => {
+        const qtyValue = tx.quantity || 0;
+        const signedQtyValue =
+          tx.transaction_type === "buy" ? qtyValue : -qtyValue;
+
+        if (!holdingsValueMap[tx.asset_id]) {
+          holdingsValueMap[tx.asset_id] = {
+            asset_id: tx.asset_id,
+            symbol: tx.symbol,
+            asset_type: tx.asset_type,
+            quantityValue: 0,
+          };
+        }
+        holdingsValueMap[tx.asset_id].quantityValue += signedQtyValue;
+      });
+
+      // Filter out zero/negative quantities
+      const holdings = Object.values(holdingsValueMap).filter(
+        (h) => h.quantityValue > 0
+      );
+
+      // Get prices for each holding at this date (or closest prior date)
+      let holdingsValue = 0;
+      for (const holding of holdings) {
+        const priceStmt = db.prepare(`
+          SELECT price FROM price_data
+          WHERE asset_id = ? AND date <= ?
+          ORDER BY date DESC
+          LIMIT 1
+        `);
+        const priceResult = priceStmt.get(holding.asset_id, date);
+        if (priceResult) {
+          const quantity = fromValueScale(
+            holding.quantityValue,
+            QUANTITY_SCALE
+          );
+          const price = fromValueScale(priceResult.price, PRICE_SCALE);
+          holdingsValue += quantity * price;
+        }
+      }
+
+      // Total portfolio value = holdings + cash
+      const totalValue = holdingsValue + cashBalance;
+
+      performance.push({
+        date,
+        total_value: totalValue,
+      });
+    }
+
+    return performance;
+  }
+
+  // Detailed return calculations (MWRR & CAGR)
+  static getReturnDetails(userId) {
+    // Build current portfolio value (holdings + cash)
+    const enrichedHoldings = this.getPortfolioHoldings(userId);
+    const holdingsMarketValue = enrichedHoldings.reduce(
+      (sum, h) => sum + h.market_value,
+      0
+    );
+
+    const cashBalance = Transaction.getCashBalance(userId);
+    const currentTotalValue = holdingsMarketValue + cashBalance;
+
+    // Compute detailed components
+    const mwrrDetails = Transaction.calculateMWRRDetails(
+      userId,
+      currentTotalValue
+    );
+    const cagrDetails = Transaction.calculateCAGRDetails(
+      userId,
+      currentTotalValue
+    );
+    const cagrEvolution = Transaction.calculateCAGREvolution(userId);
+
+    return {
+      current_total_value: currentTotalValue,
+      cash_balance: cashBalance,
+      holdings_market_value: holdingsMarketValue,
+      mwrr: mwrrDetails.mwrr,
+      mwrr_cash_flows: mwrrDetails.cashFlows,
+      mwrr_iterations: mwrrDetails.iterations,
+      cagr: cagrDetails.cagr,
+      cagr_details: cagrDetails,
+      cagr_evolution: cagrEvolution,
+    };
+  }
+
+  // Cash balance details
+  static getCashBalanceDetails(userId) {
+    return Transaction.getCashBalanceDetails(userId);
+  }
+
+  // Get broker summary
+  static getBrokerHoldings(userId) {
+    return Broker.getBrokerHoldings(userId);
+  }
+
+  // Get market trends with sparkline data (for all active assets)
+  static getMarketTrends(userId, days = 30) {
+    const Asset = require("../models/Asset");
+
+    // Get all active assets
+    const assets = Asset.getAll({ includeInactive: false });
+
+    // Calculate cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
+    const cutoffDateStr = cutoffDate.toISOString().split("T")[0];
+
+    // Build trends with price data for each asset
+    const trends = assets.map((asset) => {
+      const latestPrice = PriceData.getLatestPrice(asset.id);
+
+      // Get price history for sparkline
+      const priceHistory = PriceData.findByAsset(asset.id, {
+        startDate: cutoffDateStr,
+        limit: parseInt(days) + 10,
+      }).reverse(); // Reverse to get chronological order
+
+      // Calculate price change percentage
+      const firstPrice =
+        priceHistory.length > 0
+          ? priceHistory[0].price
+          : latestPrice?.price || 0;
+      const lastPrice = latestPrice?.price || 0;
+      const priceChange =
+        firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+
+      return {
+        asset_id: asset.id,
+        symbol: asset.symbol,
+        name: asset.name,
+        asset_type: asset.asset_type,
+        currency: asset.currency,
+        current_price: latestPrice?.price || 0,
+        price_date: latestPrice?.date,
+        price_change_percent: priceChange,
+        price_history: priceHistory.map((p) => ({
+          date: p.date,
+          price: p.price,
+        })),
+      };
+    });
+
+    return { trends, days: parseInt(days) };
+  }
+
+  // Tax report - holdings at year-end with FX conversion
+  static getTaxReport(
+    userId,
+    year,
+    excludeAssetTypes = [],
+    excludeBrokers = []
+  ) {
+    const db = require("../config/database");
+    const UserSettings = require("../models/UserSettings");
+
+    // Get FX rate asset from user settings
+    const settings = UserSettings.findByUserId(userId);
+    const fxRateAssetId = settings?.fx_rate_asset_id;
+
+    if (!fxRateAssetId) {
+      throw new Error(
+        "FX Rate asset not configured in settings. Please configure FX Rate in Settings."
+      );
+    }
+
+    // Calculate end of year date
+    const yearEndDate = `${year}-12-31`;
+
+    // Build dynamic WHERE clause for filters
+    let whereConditions = [
+      "t.user_id = ?",
+      "t.date <= ?",
+      "t.transaction_type IN ('buy', 'sell')",
+    ];
+    let queryParams = [userId, yearEndDate];
+
+    // Add asset type exclusions
+    if (excludeAssetTypes.length > 0) {
+      const placeholders = excludeAssetTypes.map(() => "?").join(", ");
+      whereConditions.push(`a.asset_type NOT IN (${placeholders})`);
+      queryParams.push(...excludeAssetTypes);
+    }
+
+    // Add broker exclusions
+    if (excludeBrokers.length > 0) {
+      const placeholders = excludeBrokers.map(() => "?").join(", ");
+      whereConditions.push(`b.name NOT IN (${placeholders})`);
+      queryParams.push(...excludeBrokers);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Get holdings at year-end
+    const holdingsStmt = db.prepare(`
+      SELECT 
+        a.id as asset_id,
+        a.symbol,
+        a.name,
+        a.asset_type,
+        a.currency,
+        b.name as broker_name,
+        t.transaction_type,
+        t.quantity
+      FROM transactions t
+      JOIN assets a ON t.asset_id = a.id
+      LEFT JOIN brokers b ON t.broker_id = b.id
+      WHERE ${whereClause}
+    `);
+    const holdingTransactions = holdingsStmt.all(...queryParams);
+
+    // Aggregate by asset and broker (integer arithmetic)
+    const holdingsMap = {};
+    holdingTransactions.forEach((tx) => {
+      const qtyValue = tx.quantity || 0;
+      const signedQtyValue =
+        tx.transaction_type === "buy" ? qtyValue : -qtyValue;
+
+      const key = `${tx.asset_id}_${tx.broker_name || "null"}`;
+      if (!holdingsMap[key]) {
+        holdingsMap[key] = {
+          asset_id: tx.asset_id,
+          symbol: tx.symbol,
+          name: tx.name,
+          asset_type: tx.asset_type,
+          currency: tx.currency,
+          broker_name: tx.broker_name,
+          quantityValue: 0,
+        };
+      }
+      holdingsMap[key].quantityValue += signedQtyValue;
+    });
+
+    // Convert to float and filter out holdings with quantity <= 1
+    const holdings = Object.values(holdingsMap)
+      .map((h) => ({
+        ...h,
+        quantity: fromValueScale(h.quantityValue, QUANTITY_SCALE),
+      }))
+      .filter((h) => h.quantity > 1);
+
+    // Get FX rate (USDARS_BNA) at year-end
+    const fxRateStmt = db.prepare(`
+      SELECT price FROM price_data
+      WHERE asset_id = ? AND date <= ?
+      ORDER BY date DESC
+      LIMIT 1
+    `);
+    const fxRateResult = fxRateStmt.get(fxRateAssetId, yearEndDate);
+    const usdArsBna = fxRateResult
+      ? fromValueScale(fxRateResult.price, PRICE_SCALE)
+      : 0;
+
+    // Get asset symbol for FX rate
+    const fxAssetStmt = db.prepare("SELECT symbol FROM assets WHERE id = ?");
+    const fxAsset = fxAssetStmt.get(fxRateAssetId);
+
+    // Process each holding
+    const reportData = holdings.map((holding) => {
+      // Get price at latest available date of the year
+      const priceStmt = db.prepare(`
+        SELECT price, date FROM price_data
+        WHERE asset_id = ? AND date <= ?
+        ORDER BY date DESC
+        LIMIT 1
+      `);
+      const priceResult = priceStmt.get(holding.asset_id, yearEndDate);
+      const price = priceResult
+        ? fromValueScale(priceResult.price, PRICE_SCALE)
+        : 0;
+      const priceDate = priceResult?.date || null;
+
+      // Calculate values
+      const marketValue = holding.quantity * price;
+      const priceInCcy = price * usdArsBna;
+      const marketValueInCcy = marketValue * usdArsBna;
+
+      return {
+        asset_id: holding.asset_id,
+        asset: holding.symbol,
+        asset_name: holding.name,
+        asset_type: holding.asset_type,
+        currency: holding.currency,
+        broker: holding.broker_name,
+        quantity: holding.quantity,
+        price: price,
+        price_date: priceDate,
+        market_value: marketValue,
+        usdars_bna: usdArsBna,
+        price_in_ccy: priceInCcy,
+        market_value_in_ccy: marketValueInCcy,
+      };
+    });
+    return {
+      year: year,
+      year_end_date: yearEndDate,
+      fx_rate_asset: fxAsset?.symbol || "Unknown",
+      fx_rate: usdArsBna,
+      holdings: reportData,
+      total_market_value: reportData.reduce(
+        (sum, h) => sum + h.market_value,
+        0
+      ),
+      total_market_value_in_ccy: reportData.reduce(
+        (sum, h) => sum + h.market_value_in_ccy,
+        0
+      ),
+    };
+  }
+
+  /**
+   * Get rebalancing recommendations based on target allocations
+   */
+  static getRebalancingRecommendations(userId) {
+    const AssetAllocationTarget = require("../models/AssetAllocationTarget");
+    const UserSettings = require("../models/UserSettings");
+
+    try {
+      // Get user settings for rebalancing tolerance
+      const userSettings = UserSettings.findByUserId(userId);
+      const rebalancingTolerance = userSettings?.rebalancing_tolerance;
+
+      // Get current portfolio analytics
+      const portfolio = this.getPortfolioAnalytics(userId);
+      const currentAllocation = portfolio.transactions.asset_allocation;
+      const totalPortfolioValue = portfolio.nav;
+      const holdings = portfolio.transactions.holdings;
+
+      // Get target allocations
+      const targets = AssetAllocationTarget.getAllByUser(userId);
+
+      if (targets.length === 0) {
+        return {
+          has_targets: false,
+          message: "No allocation targets defined",
+          current_allocation: currentAllocation,
+          targets: [],
+          recommendations: [],
+        };
+      }
+
+      // Separate asset-type and asset-level targets
+      const assetTypeTargets = targets.filter(
+        (t) => t.asset_type && !t.asset_id
+      );
+      const assetLevelTargets = targets.filter(
+        (t) => !t.asset_type && t.asset_id
+      );
+
+      // Build recommendations for asset types
+      const typeRecommendations = [];
+      const targetMap = {};
+
+      assetTypeTargets.forEach((t) => {
+        targetMap[t.asset_type] = t.target_percentage;
+      });
+
+      // Get all asset types (combine current and target)
+      const allAssetTypes = new Set([
+        ...currentAllocation.map((a) => a.type),
+        ...assetTypeTargets.map((t) => t.asset_type),
+      ]);
+
+      allAssetTypes.forEach((assetType) => {
+        const current = currentAllocation.find((a) => a.type === assetType);
+        const currentPercentage = current ? current.percentage : 0;
+        const currentValue = current ? current.value : 0;
+        const targetPercentage = targetMap[assetType] || 0;
+        const targetValue = (targetPercentage / 100) * totalPortfolioValue;
+        const difference = targetValue - currentValue;
+        const differencePercentage = targetPercentage - currentPercentage;
+
+        const isBalanced =
+          Math.abs(differencePercentage) <= rebalancingTolerance;
+        const action = isBalanced
+          ? "HOLD"
+          : difference > 0
+          ? "BUY"
+          : difference < 0
+          ? "SELL"
+          : "HOLD";
+
+        typeRecommendations.push({
+          level: "type",
+          asset_type: assetType,
+          current_value: currentValue,
+          current_percentage: currentPercentage,
+          target_percentage: targetPercentage,
+          target_value: targetValue,
+          difference: difference,
+          difference_percentage: differencePercentage,
+          action: action,
+          is_balanced: isBalanced,
+        });
+      });
+
+      // Build recommendations for individual assets
+      // Asset-level targets are percentages within their asset type
+      const assetRecommendations = [];
+
+      assetLevelTargets.forEach((target) => {
+        // Sum all holdings for this asset across all brokers
+        const assetHoldings = holdings.filter(
+          (h) => h.asset_id === target.asset_id
+        );
+        const currentValue = assetHoldings.reduce(
+          (sum, h) => sum + h.market_value,
+          0
+        );
+
+        // Get the asset type's allocation
+        const assetType = target.asset_asset_type;
+        const typeAllocation = currentAllocation.find(
+          (a) => a.type === assetType
+        );
+        const typeValue = typeAllocation ? typeAllocation.value : 0;
+        const typeTargetPercentage = targetMap[assetType] || 0;
+        const typeTargetValue =
+          (typeTargetPercentage / 100) * totalPortfolioValue;
+
+        // Calculate current percentage within asset type
+        const currentPercentageWithinType =
+          typeValue > 0 ? (currentValue / typeValue) * 100 : 0;
+
+        // Calculate current percentage of total portfolio
+        const currentPercentageOfTotal =
+          totalPortfolioValue > 0
+            ? (currentValue / totalPortfolioValue) * 100
+            : 0;
+
+        // Target percentage within asset type
+        const targetPercentageWithinType = target.target_percentage;
+
+        // Calculate target value (percentage of type's target value)
+        const targetValue =
+          (targetPercentageWithinType / 100) * typeTargetValue;
+
+        // Target percentage of total portfolio
+        const targetPercentageOfTotal =
+          totalPortfolioValue > 0
+            ? (targetValue / totalPortfolioValue) * 100
+            : 0;
+
+        const difference = targetValue - currentValue;
+        const differencePercentageWithinType =
+          targetPercentageWithinType - currentPercentageWithinType;
+
+        const isBalanced =
+          Math.abs(differencePercentageWithinType) <= rebalancingTolerance;
+        const action = isBalanced
+          ? "HOLD"
+          : difference > 0
+          ? "BUY"
+          : difference < 0
+          ? "SELL"
+          : "HOLD";
+
+        assetRecommendations.push({
+          level: "asset",
+          asset_id: target.asset_id,
+          symbol: target.symbol,
+          asset_name: target.asset_name,
+          asset_type: target.asset_asset_type,
+          current_value: currentValue,
+          current_percentage: currentPercentageOfTotal,
+          current_percentage_within_type: currentPercentageWithinType,
+          target_percentage: targetPercentageOfTotal,
+          target_percentage_within_type: targetPercentageWithinType,
+          target_value: targetValue,
+          difference: difference,
+          difference_percentage: differencePercentageWithinType,
+          action: action,
+          is_balanced: isBalanced,
+        });
+      });
+
+      // Combine and sort all recommendations
+      const recommendations = [...typeRecommendations, ...assetRecommendations];
+      recommendations.sort(
+        (a, b) => Math.abs(b.difference) - Math.abs(a.difference)
+      );
+
+      // Calculate overall balance score
+      const totalDrift = recommendations.reduce(
+        (sum, r) => sum + Math.abs(r.difference_percentage),
+        0
+      );
+      const averageDrift =
+        recommendations.length > 0 ? totalDrift / recommendations.length : 0;
+      const isBalanced = averageDrift <= rebalancingTolerance;
+
+      return {
+        has_targets: true,
+        is_balanced: isBalanced,
+        average_drift: averageDrift,
+        rebalancing_tolerance: rebalancingTolerance,
+        total_portfolio_value: totalPortfolioValue,
+        current_allocation: currentAllocation,
+        targets: targets,
+        recommendations: recommendations,
+      };
+    } catch (error) {
+      logger.error(
+        `Error calculating rebalancing recommendations: ${error.message}`
+      );
+      throw error;
+    }
+  }
+}
+
+module.exports = AnalyticsService;
