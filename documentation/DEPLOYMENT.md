@@ -53,16 +53,3 @@ cd ~/finny/frontend
 npm install
 npm run build
 ```
-
-## Maintenance
-
-```bash
-# Update app
-cd ~/finny
-git pull
-cd backend && npm install --production
-cd ../frontend
-npm install   # Ensure frontend dependencies are up to date
-npm run build
-sudo systemctl restart finny-backend
-```
