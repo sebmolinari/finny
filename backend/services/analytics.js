@@ -104,11 +104,16 @@ class AnalyticsService {
         market_value: marketValue,
         unrealized_gain: unrealizedGain,
         unrealized_gain_percent: unrealizedGainPercent,
-        average_cost: holding.cost_basis / holding.total_quantity,
+        average_cost:
+          holding.total_quantity > 0
+            ? holding.cost_basis / holding.total_quantity
+            : 0,
         realized_gain: holding.realized_gain,
       };
     });
 
+    // SORT BY MARKET VALUE (DESC)
+    enrichedHoldings.sort((a, b) => b.market_value - a.market_value);
     return enrichedHoldings;
   }
 

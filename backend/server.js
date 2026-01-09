@@ -134,17 +134,6 @@ app.use("/api/v1/email", emailRoutes);
 app.use("/api/v1/allocation", allocationRoutes);
 app.use("/api/v1/metrics", hostMetricsRoutes);
 
-// Serve static files from React app in production
-if (process.env.NODE_ENV === "production") {
-  const frontendBuildPath = path.join(__dirname, "..", "frontend", "build");
-  app.use(express.static(frontendBuildPath));
-
-  // Handle React routing - return index.html for all non-API routes
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, "index.html"));
-  });
-}
-
 // Health check with database validation
 app.get("/api/v1/health", (req, res) => {
   try {
@@ -163,6 +152,17 @@ app.get("/api/v1/health", (req, res) => {
     });
   }
 });
+
+// Serve static files from React app in production
+if (process.env.NODE_ENV === "production") {
+  const frontendBuildPath = path.join(__dirname, "..", "frontend", "build");
+  app.use(express.static(frontendBuildPath));
+
+  // Handle React routing - return index.html for all non-API routes
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, "index.html"));
+  });
+}
 
 // 404 handler
 app.use((req, res) => {
@@ -193,7 +193,7 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json(response);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   logger.info("========================================");
   logger.info("Server started successfully");
   logger.info(`Port: ${PORT}`);
