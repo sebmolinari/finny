@@ -140,7 +140,7 @@ router.get("/export", authMiddleware, (req, res) => {
       "Notes",
     ];
 
-    const csvRows = result.data.map((tx) => [
+    const csvRows = result.data.slice().reverse().map((tx) => [
       tx.date,
       tx.symbol || "",
       tx.asset_name || "",
