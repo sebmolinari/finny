@@ -140,18 +140,21 @@ router.get("/export", authMiddleware, (req, res) => {
       "Notes",
     ];
 
-    const csvRows = result.data.slice().reverse().map((tx) => [
-      tx.date,
-      tx.symbol || "",
-      tx.asset_name || "",
-      tx.transaction_type,
-      tx.quantity || "",
-      tx.price || "",
-      tx.fee || "",
-      tx.total_amount,
-      tx.broker_name || "",
-      (tx.notes || "").replace(/"/g, '""'), // Escape quotes
-    ]);
+    const csvRows = result.data
+      .slice()
+      .reverse()
+      .map((tx) => [
+        tx.date,
+        tx.symbol || "",
+        tx.asset_name || "",
+        tx.transaction_type,
+        tx.quantity || "",
+        tx.price || "",
+        tx.fee || "",
+        tx.total_amount,
+        tx.broker_name || "",
+        (tx.notes || "").replace(/"/g, '""'), // Escape quotes
+      ]);
 
     const csv = [
       csvHeaders.join(","),
