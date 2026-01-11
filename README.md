@@ -148,7 +148,17 @@ cp .env.example .env
 # - EMAIL_* settings (optional, for email notifications)
 ```
 
-3. **Start servers:**
+3. **Configure Database Enciption (only Linux):**
+
+   Edit your .env file and change DB_ENCRYPTION_ENABLED to true and set DB_KEY
+
+```bash
+# install and configure additional packages
+sudo apt install -y sqlcipher libsqlcipher-dev
+npm install better-sqlite3 --build-from-source #one off
+```
+
+4. **Start servers:**
 
 ```bash
 # Backend (from backend/)
@@ -158,7 +168,7 @@ npm start          # Runs on http://localhost:5000
 npm start          # Runs on http://localhost:3000
 ```
 
-4. **Start using:**
+5. **Start using:**
 
 - Navigate to http://localhost:3000
 - Register a new user account
