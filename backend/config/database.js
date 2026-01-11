@@ -9,20 +9,6 @@ const db = new Database(
   // }
 );
 
-// 🔐 SQLCipher ONLY in production (Linux)
-if (process.env.DB_ENCRYPTION_ENABLED === "true") {
-  if (!process.env.DB_KEY) {
-    throw new Error("DB_KEY is required in production");
-  }
-
-  // Must be the VERY FIRST pragmas
-  db.pragma(`key = '${process.env.DB_KEY}'`);
-
-  // Optional but recommended hardening
-  db.pragma("cipher_page_size = 4096");
-  db.pragma("kdf_iter = 64000");
-}
-
 // Enable foreign keys
 db.pragma("foreign_keys = ON");
 // Enable WAL mode

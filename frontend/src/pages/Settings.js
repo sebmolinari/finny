@@ -318,9 +318,9 @@ export default function Settings() {
                 onChange={handleChange}
                 disabled={!settings.email_notifications_enabled}
               >
-                <MenuItem value="daily">Daily (4:45 PM EST)</MenuItem>
-                <MenuItem value="weekly">Weekly (Fridays, 5 PM EST)</MenuItem>
-                <MenuItem value="monthly">Monthly (1st day, 5 PM EST)</MenuItem>
+                <MenuItem value="daily">Daily</MenuItem>
+                <MenuItem value="weekly">Weekly</MenuItem>
+                <MenuItem value="monthly">Monthly</MenuItem>
               </TextField>
             </Grid>
 
