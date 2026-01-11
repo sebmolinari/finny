@@ -28,8 +28,6 @@ function applyMigration(filename) {
 function runSchemaMigrations() {
   const appliedFilenames = getAppliedMigrationFilenames();
   const files = getMigrationFiles();
-  console.log("Applied Migrations:", appliedFilenames);
-  console.log("Migration Files:", files);
   for (const file of files) {
     if (!appliedFilenames.has(file)) {
       applyMigration(file);

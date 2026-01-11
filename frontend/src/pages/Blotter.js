@@ -242,7 +242,7 @@ export default function Blotter() {
         }
       } catch (error) {
         // Price not available, just set the asset_id
-        console.log("No price available for asset");
+        console.error("No price available for asset");
       }
     }
   };

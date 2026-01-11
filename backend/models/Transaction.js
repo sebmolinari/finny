@@ -349,11 +349,6 @@ class Transaction {
 
     for (const t of transactions) {
       const qty = t.quantity || 0;
-      console.log(
-        t.transaction_type,
-        t.quantity,
-        fromValueScale(t.quantity, QUANTITY_SCALE)
-      );
       if (t.transaction_type === "buy") {
         balanceValue += qty;
       } else if (t.transaction_type === "sell") {
@@ -363,7 +358,6 @@ class Transaction {
 
     // Convert to float only at the end
     const balance = fromValueScale(balanceValue, QUANTITY_SCALE);
-    console.log("Final balance:", balance);
     return balance;
   }
 
