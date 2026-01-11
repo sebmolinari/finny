@@ -427,24 +427,22 @@ export default function Assets() {
             sx={{ ml: 2 }}
           />
         </Box>
-        {isAdminOrSuperuser && (
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleRefreshAllPrices}
-            >
-              Refresh All Prices
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenDialog()}
-            >
-              Add Asset
-            </Button>
-          </Box>
-        )}
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefreshAllPrices}
+          >
+            Refresh All Prices
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add Asset
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
@@ -543,53 +541,51 @@ export default function Assets() {
                     : "—"}
                 </TableCell>
                 <ActionsCell>
-                  {isAdminOrSuperuser ? (
-                    <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRefreshAssetPrice(asset.id)}
-                        title="Refresh Price"
-                        color="primary"
-                        disabled={
-                          !asset.active || asset.price_source === "manual"
-                        }
-                        sx={{ padding: "4px" }}
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenPriceDialog(asset)}
-                        title="Manage Prices"
-                        color="success"
-                        sx={{ padding: "4px" }}
-                      >
-                        <ShowChartIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenDialog(asset)}
-                        title="Edit"
-                        color="primary"
-                        sx={{ padding: "4px" }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(asset.id)}
-                        title="Delete"
-                        color="error"
-                        sx={{ padding: "4px" }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      —
-                    </Typography>
-                  )}
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRefreshAssetPrice(asset.id)}
+                      title="Refresh Price"
+                      color="primary"
+                      disabled={
+                        !asset.active || asset.price_source === "manual"
+                      }
+                      sx={{ padding: "4px" }}
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </IconButton>
+                    {isAdminOrSuperuser && (
+                      <>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenPriceDialog(asset)}
+                          title="Manage Prices"
+                          color="success"
+                          sx={{ padding: "4px" }}
+                        >
+                          <ShowChartIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog(asset)}
+                          title="Edit"
+                          color="primary"
+                          sx={{ padding: "4px" }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(asset.id)}
+                          title="Delete"
+                          color="error"
+                          sx={{ padding: "4px" }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </>
+                    )}
+                  </Box>
                 </ActionsCell>
               </TableRow>
             ))}

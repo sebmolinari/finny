@@ -814,59 +814,55 @@ router.delete(
  *   post:
  *     summary: Refresh prices for all assets (Admin/Superuser only)
  *     tags: [Assets]
- *     security:
- *       - bearerAuth: []
+ *     security: []
  *     responses:
  *       200:
  *         description: Price refresh completed
  *       500:
  *         description: Server error
  */
-router.post(
-  "/prices/refresh-all",
-  authMiddleware,
-  adminOrSuperuser,
-  async (req, res) => {
-    try {
-      // Get user's timezone from settings
-      const userSettings = UserSettings.findByUserId(req.user.id);
-      const timezone = userSettings.timezone;
+router.post("/prices/refresh-all", async (req, res) => {
+  try {
+    const userId = req.user?.id ?? null;
+    const username = req.user?.username ?? null;
 
-      const results = await PriceService.refreshAllPrices(
-        timezone,
-        req.user.id
-      );
+    let timezone = null;
 
-      // Log price refresh action
-      AuditLog.create({
-        user_id: req.user.id,
-        username: req.user.username,
-        action_type: "import",
-        table_name: "price_data",
-        new_values: {
-          action: "refresh_all_prices",
-          updated: results.updated,
-          skipped: results.skipped,
-          failed: results.failed,
-          total: results.total,
-        },
-      });
-
-      res.json({
-        message: "Price refresh completed",
-        results,
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    if (userId) {
+      const userSettings = await UserSettings.findByUserId(userId);
+      timezone = userSettings?.timezone ?? null;
     }
+
+    const results = await PriceService.refreshAllPrices(timezone, userId);
+
+    await AuditLog.create({
+      user_id: userId,
+      username,
+      action_type: "import",
+      table_name: "price_data",
+      new_values: {
+        action: "refresh_all_prices",
+        updated: results.updated,
+        skipped: results.skipped,
+        failed: results.failed,
+        total: results.total,
+      },
+    });
+
+    res.json({
+      message: "Price refresh completed",
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
 /**
  * @swagger
  * /assets/{id}/prices/refresh:
  *   post:
- *     summary: Refresh price for a single asset (Admin/Superuser only)
+ *     summary: Refresh price for a single asset
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -885,48 +881,43 @@ router.post(
  *       500:
  *         description: Server error
  */
-router.post(
-  "/:id/prices/refresh",
-  authMiddleware,
-  adminOrSuperuser,
-  async (req, res) => {
-    try {
-      // Get user's timezone from settings
-      const userSettings = UserSettings.findByUserId(req.user.id);
-      const timezone = userSettings.timezone;
+router.post("/:id/prices/refresh", authMiddleware, async (req, res) => {
+  try {
+    // Get user's timezone from settings
+    const userSettings = UserSettings.findByUserId(req.user.id);
+    const timezone = userSettings.timezone;
 
-      const result = await PriceService.refreshAssetPrice(
-        req.params.id,
-        timezone,
-        req.user.id
+    const result = await PriceService.refreshAssetPrice(
+      req.params.id,
+      timezone,
+      req.user.id
+    );
+
+    // Log price refresh action
+    if (result.success) {
+      AuditLog.logCreate(
+        req.user.id,
+        req.user.username,
+        "price_data",
+        result.price.id,
+        {
+          asset_id: req.params.id,
+          date: result.price.date,
+          price: result.price.price,
+          source: result.price.source,
+        },
+        req.ip,
+        req.get("user-agent")
       );
-
-      // Log price refresh action
-      if (result.success) {
-        AuditLog.logCreate(
-          req.user.id,
-          req.user.username,
-          "price_data",
-          result.price.id,
-          {
-            asset_id: req.params.id,
-            date: result.price.date,
-            price: result.price.price,
-            source: result.price.source,
-          },
-          req.ip,
-          req.get("user-agent")
-        );
-      }
-
-      res.json(result);
-    } catch (error) {
-      if (error.message.includes("inactive")) {
-        return res.status(400).json({ message: error.message });
-      }
-      res.status(500).json({ message: error.message });
     }
+
+    res.json(result);
+  } catch (error) {
+    if (error.message.includes("inactive")) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
 module.exports = router;

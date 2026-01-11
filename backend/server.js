@@ -4,7 +4,6 @@ const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const cron = require("node-cron");
 const logger = require("./config/logger");
 const { db, closeDatabase } = require("./config/database");
 const PriceService = require("./services/priceService");
@@ -214,73 +213,6 @@ app.listen(PORT, "0.0.0.0", () => {
       }
     });
   }
-
-  // Cron schedules
-  // Daily at 4:30 PM EST
-  cron.schedule(
-    "30 16 * * *",
-    async () => {
-      logger.info("Starting scheduled price refresh...");
-      try {
-        const results = await PriceService.refreshAllPrices();
-        logger.info(
-          `Scheduled price refresh completed: ${results.updated} updated, ${results.failed} failed`
-        );
-      } catch (error) {
-        logger.error(`Scheduled price refresh failed: ${error.message}`);
-      }
-    },
-    {
-      timezone: "America/New_York",
-    }
-  );
-
-  logger.info("Price refresh scheduled: Daily at 16:30 PM EST");
-
-  // Schedule portfolio summary emails
-  // Daily at 4:45 PM EST
-  cron.schedule(
-    "45 16 * * *",
-    async () => {
-      logger.info("Starting daily portfolio summary emails...");
-      await PortfolioEmailService.sendBatchEmails("daily");
-    },
-    {
-      timezone: "America/New_York",
-    }
-  );
-
-  // Weekly on Friday at 5:00 PM EST
-  cron.schedule(
-    "0 17 * * 5",
-    async () => {
-      logger.info("Starting weekly portfolio summary emails...");
-      await PortfolioEmailService.sendBatchEmails("weekly");
-    },
-    {
-      timezone: "America/New_York",
-    }
-  );
-
-  // Monthly on 1st day at 5:00 PM EST
-  cron.schedule(
-    "0 17 1 * *",
-    async () => {
-      logger.info("Starting monthly portfolio summary emails...");
-      await PortfolioEmailService.sendBatchEmails("monthly");
-    },
-    {
-      timezone: "America/New_York",
-    }
-  );
-
-  logger.info("Portfolio email summaries scheduled daily at 16:45 PM EST");
-  logger.info(
-    "Portfolio email summaries scheduled weekly on Fridays at 17:00 PM EST"
-  );
-  logger.info(
-    "Portfolio email summaries scheduled monthly on the 1st at 17:00 PM EST"
-  );
 });
 
 const shutdown = (signal) => {

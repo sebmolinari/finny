@@ -79,4 +79,58 @@ router.post("/summary", authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /email/batch:
+ *   post:
+ *     summary: Send batch portfolio summary emails
+ *     description: Sends portfolio summary emails to all users with the specified frequency (daily, weekly, or monthly).
+ *     tags:
+ *       - Email
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               frequency:
+ *                 type: string
+ *                 enum: [daily, weekly, monthly]
+ *                 description: Frequency of the email batch
+ *             required:
+ *               - frequency
+ *     responses:
+ *       200:
+ *         description: Batch email send result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sent:
+ *                   type: integer
+ *                   description: Number of emails sent
+ *                 failed:
+ *                   type: integer
+ *                   description: Number of emails failed
+ *       400:
+ *         description: Invalid or missing frequency
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/batch", async (req, res) => {
+  const { frequency } = req.body;
+  if (!frequency || !["daily", "weekly", "monthly"].includes(frequency)) {
+    return res.status(400).json({ error: "Invalid or missing frequency" });
+  }
+  try {
+    const result = await PortfolioEmailService.sendBatchEmails(frequency);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
