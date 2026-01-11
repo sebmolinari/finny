@@ -22,6 +22,7 @@ const constantsRoutes = require("./routes/constants");
 const emailRoutes = require("./routes/email");
 const allocationRoutes = require("./routes/allocation");
 const hostMetricsRoutes = require("./routes/hostMetrics");
+const { runSchemaMigrations } = require("./scripts/migrationRunner");
 
 const app = express();
 const PORT = process.env.PORT;
@@ -193,6 +194,9 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json(response);
 });
 
+// Run DB migrations before starting the server
+runSchemaMigrations();
+
 app.listen(PORT, "0.0.0.0", () => {
   logger.info("========================================");
   logger.info("Server started successfully");
@@ -280,10 +284,10 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 
 const shutdown = (signal) => {
-  console.log(`\n${signal} received. Shutting down...`);
+  logger.info(`${signal} received. Shutting down...`);
 
   closeDatabase();
-  console.log("SQLite connection closed");
+  logger.info("SQLite connection closed");
   process.exit(0);
 };
 

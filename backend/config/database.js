@@ -1,6 +1,5 @@
 const Database = require("better-sqlite3");
 const path = require("path");
-const { getSqlCheckConstraint } = require("../constants/validValues");
 
 const db = new Database(
   path.join(__dirname, `../${process.env.DATABASE_PATH}`)
@@ -22,7 +21,7 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    role TEXT DEFAULT 'user' ${getSqlCheckConstraint("role", "USER_ROLES")},
+    role TEXT DEFAULT 'user',
     active INTEGER DEFAULT 1,
     created_by INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -39,10 +38,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     symbol TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
-    asset_type TEXT NOT NULL ${getSqlCheckConstraint(
-      "asset_type",
-      "ASSET_TYPES"
-    )},
+    asset_type TEXT NOT NULL,
     currency TEXT NOT NULL,
     price_source TEXT,
     price_symbol TEXT,
@@ -85,10 +81,7 @@ db.exec(`
     asset_id INTEGER,
     broker_id INTEGER,
     date DATE NOT NULL,
-    transaction_type TEXT NOT NULL ${getSqlCheckConstraint(
-      "transaction_type",
-      "TRANSACTION_TYPES"
-    )},
+    transaction_type TEXT NOT NULL,
     quantity INTEGER,
     price INTEGER,
     fee INTEGER,
@@ -114,7 +107,7 @@ db.exec(`
     date DATE NOT NULL,
     price INTEGER NOT NULL,
     source TEXT,
-    created_by INTEGER NOT NULL,
+    created_by INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by INTEGER,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -131,7 +124,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER UNIQUE NOT NULL,
     date_format TEXT DEFAULT 'YYYY-MM-DD',
-    theme TEXT DEFAULT 'light' ${getSqlCheckConstraint("theme", "THEMES")},
+    theme TEXT DEFAULT 'light',
     timezone TEXT DEFAULT 'America/Argentina/Buenos_Aires',
     language TEXT DEFAULT 'en',
     liquidity_asset_id INTEGER,
@@ -159,10 +152,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
     username TEXT,
-    action_type TEXT NOT NULL ${getSqlCheckConstraint(
-      "action_type",
-      "AUDIT_ACTION_TYPES"
-    )},
+    action_type TEXT NOT NULL,
     table_name TEXT,
     record_id INTEGER,
     old_values TEXT,
@@ -181,7 +171,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS asset_allocation_targets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    asset_type TEXT ${getSqlCheckConstraint("asset_type", "ASSET_TYPES")},
+    asset_type TEXT,
     asset_id INTEGER,
     target_percentage NUMERIC(5,2) NOT NULL,
     notes TEXT,
@@ -201,6 +191,15 @@ db.exec(`
   )
 `);
 
+// Create schema_version table for migrations
+db.exec(`
+  CREATE TABLE IF NOT EXISTS schema_version (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT UNIQUE NOT NULL,
+    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // Create indices for performance
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date);
@@ -211,7 +210,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action_type, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_asset_allocation_targets_user ON asset_allocation_targets(user_id);
 `);
-
 function closeDatabase() {
   db.close(); // sync & safe
 }

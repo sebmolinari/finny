@@ -40,17 +40,7 @@ const isValid = (value, validSet) => {
   return VALID_VALUES[validSet] && VALID_VALUES[validSet].includes(value);
 };
 
-// Helper function to get SQL CHECK constraint string
-const getSqlCheckConstraint = (columnName, validSet) => {
-  if (!VALID_VALUES[validSet]) {
-    throw new Error(`Unknown valid set: ${validSet}`);
-  }
-  const values = VALID_VALUES[validSet].map((v) => `'${v}'`).join(", ");
-  return `CHECK(${columnName} IN (${values}))`;
-};
-
 module.exports = {
   VALID_VALUES,
   isValid,
-  getSqlCheckConstraint,
 };
