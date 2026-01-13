@@ -1,13 +1,6 @@
 const Database = require("better-sqlite3-multiple-ciphers");
 const path = require("path");
 
-const dbToEncryot = new Database(
-  path.join(__dirname, `../${process.env.DATABASE_PATH}`)
-);
-
-dbToEncryot.pragma(`rekey='${process.env.DB_KEY}'`);
-dbToEncryot.close(); // sync & safe
-
 const db = new Database(
   path.join(__dirname, `../${process.env.DATABASE_PATH}`)
   // Enable for debugging
