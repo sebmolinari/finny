@@ -57,6 +57,12 @@ if (!process.env.DATABASE_PATH) {
   process.exit(1);
 }
 
+if (!process.env.DB_KEY || process.env.DB_KEY.length < 8) {
+  logger.error("FATAL: DB_KEY is not set or too short (min 8 characters)");
+  logger.error("Please set DB_KEY in .env file");
+  process.exit(1);
+}
+
 // Trust proxy - needed for rate limiting when behind a proxy/load balancer
 // For development, trust the first hop. For production, configure appropriately.
 app.set("trust proxy", 1);

@@ -1,5 +1,12 @@
-const Database = require("better-sqlite3");
+const Database = require("better-sqlite3-multiple-ciphers");
 const path = require("path");
+
+const dbToEncryot = new Database(
+  path.join(__dirname, `../${process.env.DATABASE_PATH}`)
+);
+
+dbToEncryot.pragma(`rekey='${process.env.DB_KEY}'`);
+dbToEncryot.close(); // sync & safe
 
 const db = new Database(
   path.join(__dirname, `../${process.env.DATABASE_PATH}`)
@@ -9,9 +16,8 @@ const db = new Database(
   // }
 );
 
-// Enable foreign keys
+db.pragma(`key='${process.env.DB_KEY}'`);
 db.pragma("foreign_keys = ON");
-// Enable WAL mode
 db.pragma("journal_mode = WAL");
 
 // Create users table

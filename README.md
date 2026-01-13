@@ -99,7 +99,7 @@ A professional-grade finance management application designed to help you track t
 ### 🔧 Backend Technologies
 
 - Node.js with Express.js
-- SQLite database with better-sqlite3
+- SQLite database with better-sqlite3-multiple-ciphers
 - **High-Precision Arithmetic**: Integer storage pattern for financial data
   - All values stored as scaled integers (quantity, price, fee, total_amount columns)
   - Scale constants defined in code: Quantity (8 decimals), Price (6 decimals), Fees (4 decimals), Amounts (4 decimals)
@@ -141,7 +141,7 @@ npm install
 cd backend
 cp .env.example .env
 # Edit .env with your configuration:
-# - PORT, NODE_ENV, DATABASE_PATH
+# - PORT, NODE_ENV, DATABASE_PATH, DB_KEY
 # - JWT_SECRET (min 32 characters)
 # - CORS_ORIGIN
 # - RATE_LIMIT settings
