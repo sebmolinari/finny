@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Paper,
@@ -21,7 +21,10 @@ import {
   Chip,
 } from "@mui/material";
 import { Preview as PreviewIcon } from "@mui/icons-material";
-import { analyticsAPI, assetAPI, brokerAPI } from "../api/api";
+import { analyticsAPI, assetAPI, brokerAPI, settingsAPI } from "../api/api";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { formatDate } from "../utils/dateUtils";
+
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
 import {
@@ -43,18 +46,34 @@ const MenuProps = {
 
 export default function TaxReport() {
   const [year, setYear] = useState(new Date().getFullYear() - 1);
-  const [loading, setLoading] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
   const [assetTypes, setAssetTypes] = useState([]);
   const [brokers, setBrokers] = useState([]);
   const [excludeAssetTypes, setExcludeAssetTypes] = useState([]);
   const [excludeBrokers, setExcludeBrokers] = useState([]);
+  const [userDateFormat, setUserDateFormat] = useState(null);
+  const [userSettingsLoading, setUserSettingsLoading] = useState(true);
+
+  // Load user settings
+  const loadUserSettings = useCallback(async () => {
+    setUserSettingsLoading(true);
+    try {
+      const res = await settingsAPI.get();
+      setUserDateFormat(res.data.date_format);
+    } catch (error) {
+      setUserDateFormat(null);
+    } finally {
+      setUserSettingsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadConstants();
     loadBrokers();
-  }, []);
+    loadUserSettings();
+  }, [loadUserSettings]);
 
   const loadConstants = async () => {
     try {
@@ -82,7 +101,7 @@ export default function TaxReport() {
       return;
     }
 
-    setLoading(true);
+    setLoadingReport(true);
     setError(null);
     setReportData(null);
 
@@ -97,9 +116,13 @@ export default function TaxReport() {
       setError(err.response?.data?.message || "Failed to load tax report");
       handleApiError(err, "Failed to load tax report");
     } finally {
-      setLoading(false);
+      setLoadingReport(false);
     }
   };
+
+  if (loadingReport || userSettingsLoading) {
+    return <LoadingSpinner maxWidth="lg" />;
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -176,13 +199,13 @@ export default function TaxReport() {
             variant="contained"
             startIcon={<PreviewIcon />}
             onClick={handlePreview}
-            disabled={loading || !year}
+            disabled={!year}
           >
             Preview Report
           </Button>
         </Box>
 
-        {loading && (
+        {loadingReport && (
           <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
             <CircularProgress />
           </Box>
@@ -194,14 +217,15 @@ export default function TaxReport() {
           </Alert>
         )}
 
-        {reportData && !loading && (
+        {reportData && !loadingReport && (
           <>
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Report for Year {reportData.year}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Year-End Date: {reportData.year_end_date}
+                Year-End Date:{" "}
+                {formatDate(reportData.year_end_date, userDateFormat)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 FX Rate Asset: {reportData.fx_rate_asset} ={" "}
