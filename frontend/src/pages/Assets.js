@@ -41,7 +41,11 @@ import { assetAPI, settingsAPI, constantsAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
-import { formatDateInTimezone, getTodayInTimezone } from "../utils/dateUtils";
+import {
+  formatDatetimeInTimezone,
+  getTodayInTimezone,
+  formatDate,
+} from "../utils/dateUtils";
 import { useAuth } from "../context/AuthContext";
 import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 
@@ -50,8 +54,8 @@ export default function Assets() {
   const isAdminOrSuperuser = user && ["admin", "superuser"].includes(user.role);
   const [assets, setAssets] = useState([]);
   const [showInactiveAssets, setShowInactiveAssets] = useState(false);
-  const [userTimezone, setUserTimezone] = useState(null);
-  const [userDateFormat, setUserDateFormat] = useState("YYYY-MM-DD");
+  const [userTimezone, setUserTimezone] = useState();
+  const [userDateFormat, setUserDateFormat] = useState();
   const [validAssetTypes, setValidAssetTypes] = useState([]);
   const [validPriceSources, setValidPriceSources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,10 +100,7 @@ export default function Assets() {
     loadAssets();
     loadValidAssetTypes();
     loadValidPriceSources();
-    // Load user settings to get timezone
-    if (user?.id) {
-      loadUserSettings();
-    }
+    loadUserSettings();
   }, [user, showInactiveAssets, loadAssets]);
 
   const loadValidAssetTypes = async () => {
@@ -114,16 +115,9 @@ export default function Assets() {
   };
 
   const loadUserSettings = async () => {
-    try {
-      const response = await settingsAPI.get();
-      setUserTimezone(response.data.timezone);
-      setUserDateFormat(response.data.date_format);
-    } catch (error) {
-      console.error("Error loading user settings:", error);
-      toast.error("Failed to load user settings. Please refresh the page.");
-      setUserTimezone("America/Argentina/Buenos_Aires");
-      setUserDateFormat("YYYY-MM-DD");
-    }
+    const response = await settingsAPI.get();
+    setUserTimezone(response.data.timezone);
+    setUserDateFormat(response.data.date_format);
   };
 
   const loadValidPriceSources = async () => {
@@ -383,22 +377,6 @@ export default function Assets() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString || !userDateFormat) return dateString;
-
-    const [year, month, day] = dateString.split("-");
-
-    switch (userDateFormat) {
-      case "MM/DD/YYYY":
-        return `${month}/${day}/${year}`;
-      case "DD/MM/YYYY":
-        return `${day}/${month}/${year}`;
-      case "YYYY-MM-DD":
-      default:
-        return dateString;
-    }
-  };
-
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
@@ -528,15 +506,11 @@ export default function Assets() {
                     : "—"}
                 </TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>
-                  {asset.price_updated_at ||
-                  asset.price_created_at ||
-                  asset.price_date
-                    ? formatDateInTimezone(
-                        asset.price_updated_at ||
-                          asset.price_created_at ||
-                          asset.price_date,
-                        userTimezone,
-                        userDateFormat
+                  {asset.price_updated_at || asset.price_created_at
+                    ? formatDatetimeInTimezone(
+                        asset.price_updated_at || asset.price_created_at,
+                        userDateFormat,
+                        userTimezone
                       )
                     : "—"}
                 </TableCell>
@@ -823,12 +797,14 @@ export default function Assets() {
                 <TableBody>
                   {priceData.map((price) => (
                     <TableRow key={price.id}>
-                      <TableCell>{formatDate(price.date)}</TableCell>
                       <TableCell>
-                        {formatDateInTimezone(
+                        {formatDate(price.date, userDateFormat)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDatetimeInTimezone(
                           price.updated_at || price.created_at,
-                          userTimezone,
-                          userDateFormat
+                          userDateFormat,
+                          userTimezone
                         )}
                       </TableCell>
                       <TableCell>

@@ -41,7 +41,7 @@ import {
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
-import { getTodayInTimezone } from "../utils/dateUtils";
+import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
 import {
   StyledTable,
   StyledHeaderCell,
@@ -56,7 +56,9 @@ export default function Blotter() {
   const [filterAssets, setFilterAssets] = useState([]); // All - for filters
   const [validTransactionTypes, setValidTransactionTypes] = useState([]);
   const [userTimezone, setUserTimezone] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [userDateFormat, setUserDateFormat] = useState();
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -91,7 +93,7 @@ export default function Blotter() {
   // Load transactions when page/filters change
   const loadTransactions = useCallback(async () => {
     try {
-      setLoading(true);
+      setTransactionsLoading(true);
       const params = {
         page,
         limit,
@@ -108,7 +110,7 @@ export default function Blotter() {
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
-      setLoading(false);
+      setTransactionsLoading(false);
     }
   }, [
     page,
@@ -158,14 +160,12 @@ export default function Blotter() {
   }, []);
 
   const loadUserSettings = useCallback(async () => {
-    try {
-      const response = await settingsAPI.get();
-      setUserTimezone(response.data.timezone);
-    } catch (error) {
-      console.error("Error loading user settings:", error);
-      toast.error("Failed to load user settings. Please refresh the page.");
-      setUserTimezone("America/Argentina/Buenos_Aires");
-    }
+    setSettingsLoading(true);
+    const response = await settingsAPI.get();
+    console.log("User settings response:", response);
+    setUserTimezone(response.data.timezone);
+    setUserDateFormat(response.data.date_format);
+    setSettingsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -366,9 +366,7 @@ export default function Blotter() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `transactions_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
+      link.download = `transactions_${getTodayInTimezone(userTimezone)}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -548,7 +546,7 @@ export default function Blotter() {
     setPage(1);
   };
 
-  if (loading) {
+  if (transactionsLoading || settingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
@@ -686,7 +684,7 @@ export default function Blotter() {
             <TableBody>
               {transactions.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell>{tx.date}</TableCell>
+                  <TableCell>{formatDate(tx.date, userDateFormat)}</TableCell>
                   <TableCell>{tx.symbol || "-"}</TableCell>
                   <TableCell>{tx.transaction_type}</TableCell>
                   <TableCell>{tx.broker_name || "-"}</TableCell>

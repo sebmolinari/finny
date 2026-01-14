@@ -1,4 +1,6 @@
 const db = require("../config/database");
+const UserSettings = require("./UserSettings");
+const { getTodayInTimezone } = require("../utils/dateUtils");
 const {
   QUANTITY_SCALE,
   PRICE_SCALE,
@@ -501,9 +503,12 @@ class Transaction {
   // Only considers deposits and withdrawals (cash flows in/out of portfolio)
   static calculateMWRR(userId, currentValue) {
     const transactions = this.getAllTransactionsForMWRR(userId);
+    const userSettings = UserSettings.findByUserId(userId);
+    const todayStr = getTodayInTimezone(userSettings.timezone);
+
     if (transactions.length === 0) return 0;
 
-    const today = new Date();
+    const today = new Date(todayStr);
     const startDate = new Date(transactions[0].date);
 
     const cashFlows = transactions.map((t) => {
@@ -556,11 +561,14 @@ class Transaction {
   // Detailed MWRR with cash flows and iteration steps
   static calculateMWRRDetails(userId, currentValue) {
     const transactions = this.getAllTransactionsForMWRR(userId);
+    const userSettings = UserSettings.findByUserId(userId);
+    const todayStr = getTodayInTimezone(userSettings.timezone);
+
     if (transactions.length === 0) {
       return { mwrr: 0, cashFlows: [], iterations: [] };
     }
 
-    const today = new Date();
+    const today = new Date(todayStr);
     const startDate = new Date(transactions[0].date);
 
     const cashFlows = transactions.map((t) => {
@@ -636,6 +644,9 @@ class Transaction {
   // Detailed CAGR components
   static calculateCAGRDetails(userId, currentValue) {
     const evolution = this.calculateCAGREvolution(userId);
+    const userSettings = UserSettings.findByUserId(userId);
+    const todayStr = getTodayInTimezone(userSettings.timezone);
+
     if (evolution.length === 0) {
       return {
         cagr: 0,
@@ -652,7 +663,7 @@ class Transaction {
     const firstEntry = evolution[0];
     const transactions = this.getAllTransactionsForMWRR(userId);
     const firstDate = new Date(transactions[0].date);
-    const today = new Date();
+    const today = new Date(todayStr);
     const years = (today - firstDate) / (MS_PER_DAY * DAYS_PER_YEAR);
 
     // Calculate net deposits for reference
@@ -678,11 +689,14 @@ class Transaction {
   // Returns array of {year, mtm, cagr} showing portfolio value and CAGR at each year-end
   static calculateCAGREvolution(userId) {
     const transactions = this.getAllTransactionsForMWRR(userId);
+    const userSettings = UserSettings.findByUserId(userId);
+    const todayStr = getTodayInTimezone(userSettings.timezone);
+
     if (transactions.length === 0) return [];
 
     const firstDate = new Date(transactions[0].date);
     const firstYear = firstDate.getFullYear();
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date(todayStr).getFullYear();
 
     const evolution = [];
     let firstYearMTM = null;

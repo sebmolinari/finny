@@ -1,6 +1,11 @@
 const Transaction = require("../models/Transaction");
 const PriceData = require("../models/PriceData");
 const Broker = require("../models/Broker");
+const UserSettings = require("../models/UserSettings");
+const {
+  getTodayInTimezone,
+  getYesterdayInTimezone,
+} = require("../utils/dateUtils");
 const {
   fromValueScale,
   PRICE_SCALE,
@@ -37,13 +42,10 @@ class AnalyticsService {
   }
 
   // Calculate daily P&L based on yesterday's prices
-  static _calculateDailyPnL(holdings) {
+  static _calculateDailyPnL(userId, holdings) {
     const db = require("../config/database");
-
-    // Get yesterday's date
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const userSettings = UserSettings.findByUserId(userId);
+    const yesterday = getYesterdayInTimezone(userSettings.timezone);
 
     let yesterdayMarketValue = 0;
     let todayMarketValue = 0;
@@ -59,7 +61,7 @@ class AnalyticsService {
         ORDER BY date DESC
         LIMIT 1
       `);
-      const yesterdayPriceRow = stmt.get(holding.asset_id, yesterdayStr);
+      const yesterdayPriceRow = stmt.get(holding.asset_id, yesterday);
 
       if (yesterdayPriceRow) {
         const yesterdayPrice = fromValueScale(
@@ -154,8 +156,7 @@ class AnalyticsService {
     const assetAllocation = this._calculateAssetAllocation(enrichedHoldings);
 
     // Calculate daily P&L
-    const dailyPnL = this._calculateDailyPnL(enrichedHoldings);
-
+    const dailyPnL = this._calculateDailyPnL(userId, enrichedHoldings);
     return {
       nav: totalPortfolioValue,
       transactions: {
@@ -185,12 +186,13 @@ class AnalyticsService {
   // Get portfolio performance over time
   static getPortfolioPerformance(userId, days = 30) {
     const db = require("../config/database");
+    const userSettings = UserSettings.findByUserId(userId);
+    const today = getTodayInTimezone(userSettings.timezone);
 
     // Calculate cutoff date
-    const cutoffDate = new Date();
+    const cutoffDate = new Date(today);
     cutoffDate.setDate(cutoffDate.getDate() - days);
     const cutoffDateStr = cutoffDate.toISOString().split("T")[0];
-    const todayStr = new Date().toISOString().split("T")[0];
 
     // Get all transactions in the date range
     const stmt = db.prepare(`
@@ -209,8 +211,8 @@ class AnalyticsService {
     const uniqueDates = [...new Set(transactions.map((t) => t.date))];
 
     // Add today if not already included
-    if (!uniqueDates.includes(todayStr)) {
-      uniqueDates.push(todayStr);
+    if (!uniqueDates.includes(today)) {
+      uniqueDates.push(today);
     }
 
     const performance = [];
@@ -359,13 +361,16 @@ class AnalyticsService {
 
   // Get market trends with sparkline data (for all active assets)
   static getMarketTrends(userId, days = 30) {
+    const userSettings = UserSettings.findByUserId(userId);
+    const today = getTodayInTimezone(userSettings.timezone);
+
     const Asset = require("../models/Asset");
 
     // Get all active assets
     const assets = Asset.getAll({ includeInactive: false });
 
     // Calculate cutoff date
-    const cutoffDate = new Date();
+    const cutoffDate = new Date(today);
     cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
     const cutoffDateStr = cutoffDate.toISOString().split("T")[0];
 

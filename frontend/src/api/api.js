@@ -161,9 +161,6 @@ export const analyticsAPI = {
   getMarketTrends: (days = 30) =>
     api.get("/analytics/market-trends", { params: { days } }),
 
-  getPortfolioHoldings: (hideZeroQuantity = true) =>
-    api.get("/analytics/portfolio/holdings", { params: { hideZeroQuantity } }),
-
   getTaxReport: (year, excludeAssetTypes = [], excludeBrokers = []) => {
     const params = { year };
     if (excludeAssetTypes.length > 0) {

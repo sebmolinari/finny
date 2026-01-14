@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, TextField, Typography } from "@mui/material";
-import { formatDateInTimezone } from "../utils/dateUtils";
+import { formatDatetimeInTimezone } from "../utils/dateUtils";
 
 /**
  * Display read-only audit fields for edit dialogs
@@ -9,11 +9,7 @@ import { formatDateInTimezone } from "../utils/dateUtils";
  * @param {string} userDateFormat - User's date format from settings
  * @returns {React.ReactElement}
  */
-export const AuditFieldsDisplay = ({
-  item,
-  userTimezone = "America/Argentina/Buenos_Aires",
-  userDateFormat = "YYYY-MM-DD",
-}) => {
+export const AuditFieldsDisplay = ({ item, userTimezone, userDateFormat }) => {
   if (!item) return null;
 
   return (
@@ -35,10 +31,10 @@ export const AuditFieldsDisplay = ({
         {item.created_at && (
           <TextField
             label="Created At"
-            value={formatDateInTimezone(
+            value={formatDatetimeInTimezone(
               item.created_at,
-              userTimezone,
-              userDateFormat
+              userDateFormat,
+              userTimezone
             )}
             fullWidth
             size="small"
@@ -71,10 +67,10 @@ export const AuditFieldsDisplay = ({
         {item.updated_at && (
           <TextField
             label="Updated At"
-            value={formatDateInTimezone(
+            value={formatDatetimeInTimezone(
               item.updated_at,
-              userTimezone,
-              userDateFormat
+              userDateFormat,
+              userTimezone
             )}
             fullWidth
             size="small"

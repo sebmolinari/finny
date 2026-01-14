@@ -1,101 +1,123 @@
 /**
- * Convert UTC datetime to user's timezone
- * @param {string|Date} dateString - ISO datetime string or Date object
- * @param {string} timezone - Timezone from user settings (e.g., 'UTC', 'America/Argentina/Buenos_Aires')
- * @param {string} dateFormat - Date format from user settings (e.g., 'YYYY-MM-DD', 'MM/DD/YYYY', 'DD/MM/YYYY')
- * @returns {string} Formatted date in user's timezone and format
+ * Format a UTC datetime from SQLite into user's date format + HH:MM:SS
+ * using user's timezone.
+ *
+ * Input MUST be: YYYY-MM-DD HH:MM:SS (UTC)
+ *
+ * @param {string} utcDateTime
+ * @param {"YYYY-MM-DD"|"DD/MM/YYYY"|"MM/DD/YYYY"} dateFormat
+ * @param {string} timezone - IANA timezone (e.g. 'UTC', 'America/Argentina/Buenos_Aires')
+ * @returns {string}
  */
-export const formatDateInTimezone = (
-  dateString,
-  timezone = "UTC",
-  dateFormat = "YYYY-MM-DD"
-) => {
-  if (!dateString) return "—";
+export const formatDatetimeInTimezone = (utcDateTime, dateFormat, timezone) => {
+  if (!utcDateTime || !dateFormat || !timezone) {
+    throw new Error("utcDateTime, dateFormat and timezone are required");
+  }
 
-  try {
-    const dateStringUTC = new Date(dateString.replace(" ", "T") + "Z");
-    const date = new Date(dateStringUTC);
+  // Validate SQLite UTC datetime
+  const match = utcDateTime.match(
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+  );
+  if (!match) {
+    throw new Error(
+      "Invalid UTC datetime format (expected YYYY-MM-DD HH:MM:SS)"
+    );
+  }
 
-    // Map date format to locale and options
-    let locale = "en-CA"; // Default for YYYY-MM-DD
-    let dateOptions = {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    };
+  // Parse as UTC instant
+  const date = new Date(utcDateTime.replace(" ", "T") + "Z");
+  if (isNaN(date)) {
+    throw new Error("Invalid date");
+  }
 
-    if (dateFormat === "MM/DD/YYYY") {
-      locale = "en-US";
-    } else if (dateFormat === "DD/MM/YYYY") {
+  // Map date format → locale
+  let locale;
+  switch (dateFormat) {
+    case "YYYY-MM-DD":
+      locale = "en-CA";
+      break;
+    case "DD/MM/YYYY":
       locale = "en-GB";
-    }
-
-    const formatter = new Intl.DateTimeFormat(locale, {
-      ...dateOptions,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      timeZone: timezone,
-    });
-
-    return formatter.format(date);
-  } catch (error) {
-    console.error(`Error formatting date with timezone ${timezone}:`, error);
-    return dateString;
+      break;
+    case "MM/DD/YYYY":
+      locale = "en-US";
+      break;
+    default:
+      throw new Error(`Unsupported dateFormat: ${dateFormat}`);
   }
+
+  const formatter = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: timezone,
+  });
+
+  return formatter.format(date);
 };
 
 /**
- * Format date with time for display (uses browser's default timezone)
- * @param {string|Date} dateString
- * @returns {string} Formatted date string
- */
-export const formatDatetime = (dateString) => {
-  if (!dateString) return "—";
-
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return dateString;
-  }
-};
-
-/**
- * Format date only (without time)
- * @param {string|Date} dateString
- * @returns {string} Formatted date string
- */
-export const formatDate = (dateString) => {
-  if (!dateString) return "—";
-
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return dateString;
-  }
-};
-
-/**
- * Get today's date in YYYY-MM-DD format for a specific timezone
- * @param {string} timezone - Timezone from user settings (e.g., 'UTC', 'America/Argentina/Buenos_Aires')
+ * Get today's date in YYYY-MM-DD format.
+ * Uses provided timezone or server local timezone if omitted.
+ *
+ * @param {string} [timezone] - IANA timezone (e.g. 'UTC', 'America/Argentina/Buenos_Aires')
  * @returns {string} Date string in YYYY-MM-DD format
  */
-export const getTodayInTimezone = (timezone = "UTC") => {
-  try {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat("en-CA", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      timeZone: timezone,
-    });
-    return formatter.format(now); // Returns YYYY-MM-DD
-  } catch (error) {
-    console.error(`Error getting today's date in timezone ${timezone}:`, error);
-    return new Date().toISOString().split("T")[0];
+export const getTodayInTimezone = (timezone) => {
+  const now = new Date();
+
+  const options = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  };
+
+  if (timezone) {
+    options.timeZone = timezone;
+  }
+
+  return new Intl.DateTimeFormat("en-CA", options).format(now);
+};
+
+/**
+ * Format a calendar date string according to user date format.
+ * Pure formatting only — no timezone, no Date parsing.
+ *
+ * Input MUST be in YYYY-MM-DD format.
+ *
+ * @param {string} dateString - Date string in YYYY-MM-DD format
+ * @param {"YYYY-MM-DD"|"DD/MM/YYYY"|"MM/DD/YYYY"} userDateFormat
+ * @returns {string}
+ * @throws {Error} If parameters are missing or invalid
+ */
+export const formatDate = (dateString, userDateFormat) => {
+  if (!dateString || !userDateFormat) {
+    throw new Error("dateString and userDateFormat are required");
+  }
+
+  // Validate input format explicitly
+  const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    throw new Error("Invalid dateString format (expected YYYY-MM-DD)");
+  }
+
+  const [, year, month, day] = match;
+
+  switch (userDateFormat) {
+    case "MM/DD/YYYY":
+      return `${month}/${day}/${year}`;
+
+    case "DD/MM/YYYY":
+      return `${day}/${month}/${year}`;
+
+    case "YYYY-MM-DD":
+      return `${year}-${month}-${day}`;
+
+    default:
+      throw new Error(`Unsupported userDateFormat: ${userDateFormat}`);
   }
 };

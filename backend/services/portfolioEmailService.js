@@ -1,4 +1,6 @@
 const AnalyticsService = require("./analytics");
+const UserSettings = require("../models/UserSettings");
+const { getTodayInTimezone } = require("../utils/dateUtils");
 const { formatCurrency, formatPercent } = require("../utils/formatters");
 const emailService = require("./emailService");
 const logger = require("../config/logger");
@@ -7,16 +9,17 @@ class PortfolioEmailService {
   /**
    * Generate HTML email content with portfolio summary
    */
-  static generatePortfolioSummaryEmail(userId, userEmail, username) {
+  static generatePortfolioSummaryEmail(userId, username) {
     try {
+      const userSettings = UserSettings.findByUserId(req.user.id);
+      const today = getTodayInTimezone(userSettings.timezone);
       // Get portfolio analytics data
       const dashboard = AnalyticsService.getPortfolioAnalytics(userId);
 
-      const htmlContent = this._generateHTML(dashboard, username);
-      const textContent = this._generateText(dashboard, username);
-
+      const htmlContent = this._generateHTML(dashboard, username, today);
+      const textContent = this._generateText(dashboard, username, today);
       return {
-        subject: `Portfolio Summary - ${new Date().toLocaleDateString()}`,
+        subject: `Portfolio Summary - ${today}`,
         html: htmlContent,
         text: textContent,
       };
@@ -31,7 +34,7 @@ class PortfolioEmailService {
   /**
    * Generate HTML email template
    */
-  static _generateHTML(dashboard, username) {
+  static _generateHTML(dashboard, username, today) {
     const { nav, transactions } = dashboard;
     const {
       holdings_market_value,
@@ -160,15 +163,7 @@ class PortfolioEmailService {
 <body>
   <div class="container">
     <h1>Hello ${username}! 👋</h1>
-    <div class="date">Portfolio Summary for ${new Date().toLocaleDateString(
-      "en-US",
-      {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }
-    )}</div>
+    <div class="date">Portfolio Summary for ${today}</div>
 
     <h2>📊 Portfolio Overview</h2>
     <div class="metrics-grid">
@@ -330,7 +325,7 @@ class PortfolioEmailService {
   /**
    * Generate plain text email content
    */
-  static _generateText(dashboard, username) {
+  static _generateText(dashboard, username, today) {
     const { nav, transactions } = dashboard;
     const {
       holdings_market_value,
@@ -349,7 +344,7 @@ class PortfolioEmailService {
       .slice(0, 10);
 
     let text = `Hello ${username}!\n\n`;
-    text += `Portfolio Summary for ${new Date().toLocaleDateString()}\n`;
+    text += `Portfolio Summary for ${today}\n`;
     text += `${"=".repeat(60)}\n\n`;
 
     text += `PORTFOLIO OVERVIEW\n`;
@@ -444,7 +439,6 @@ class PortfolioEmailService {
         try {
           const emailContent = this.generatePortfolioSummaryEmail(
             user.id,
-            user.email,
             user.username
           );
 

@@ -42,7 +42,6 @@ router.post("/summary", authMiddleware, async (req, res) => {
     // Generate and send email
     const emailContent = PortfolioEmailService.generatePortfolioSummaryEmail(
       req.user.id,
-      user.email,
       user.username
     );
 

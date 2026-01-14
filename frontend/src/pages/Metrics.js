@@ -14,22 +14,22 @@ import {
 
 import api from "../api/api";
 import { settingsAPI } from "../api/api";
-import { formatDateInTimezone } from "../utils/dateUtils";
+import { formatDatetimeInTimezone } from "../utils/dateUtils";
 
 export default function Metrics() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [userTimezone, setUserTimezone] = useState("UTC");
-  const [userDateFormat, setUserDateFormat] = useState("YYYY-MM-DD");
+  const [userTimezone, setUserTimezone] = useState();
+  const [userDateFormat, setUserDateFormat] = useState();
 
   useEffect(() => {
     async function fetchUserSettings() {
       try {
         const response = await settingsAPI.get();
-        setUserTimezone(response.data.timezone || "UTC");
-        setUserDateFormat(response.data.date_format || "YYYY-MM-DD");
+        setUserTimezone(response.data.timezone);
+        setUserDateFormat(response.data.date_format);
       } catch {}
     }
     fetchUserSettings();
@@ -54,6 +54,10 @@ export default function Metrics() {
     return () => clearInterval(interval);
   }, []);
 
+  const formatDate = (dateString) => {
+    return formatDatetimeInTimezone(dateString, userDateFormat, userTimezone);
+  };
+
   return (
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 3 }}>
@@ -69,17 +73,7 @@ export default function Metrics() {
         ) : metrics ? (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Last refresh:{" "}
-              {lastRefresh
-                ? formatDateInTimezone(
-                    // use space-separated datetime so dateUtils adds a single trailing Z
-                    lastRefresh instanceof Date
-                      ? lastRefresh.toISOString().slice(0, 19).replace("T", " ")
-                      : String(lastRefresh),
-                    userTimezone,
-                    userDateFormat
-                  )
-                : ""}
+              Last refresh: {formatDate(lastRefresh)}
             </Typography>
             <Table>
               <TableHead>

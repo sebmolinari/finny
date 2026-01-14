@@ -26,7 +26,7 @@ import { toast } from "react-toastify";
 import api from "../api/api";
 import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
 import { settingsAPI } from "../api/api";
-import { formatDateInTimezone } from "../utils/dateUtils";
+import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const AuditLogs = () => {
@@ -124,25 +124,20 @@ const AuditLogs = () => {
     }
   };
 
-  const [userTimezone, setUserTimezone] = useState("UTC");
-  const [userDateFormat, setUserDateFormat] = useState("YYYY-MM-DD");
+  const [userTimezone, setUserTimezone] = useState();
+  const [userDateFormat, setUserDateFormat] = useState();
 
   useEffect(() => {
     async function loadUserSettings() {
-      try {
-        const response = await settingsAPI.get();
-        setUserTimezone(response.data.timezone || "UTC");
-        setUserDateFormat(response.data.date_format || "YYYY-MM-DD");
-      } catch (error) {
-        setUserTimezone("UTC");
-        setUserDateFormat("YYYY-MM-DD");
-      }
+      const response = await settingsAPI.get();
+      setUserTimezone(response.data.timezone);
+      setUserDateFormat(response.data.date_format);
     }
     loadUserSettings();
   }, []);
 
   const formatDate = (dateString) => {
-    return formatDateInTimezone(dateString, userTimezone, userDateFormat);
+    return formatDatetimeInTimezone(dateString, userDateFormat, userTimezone);
   };
 
   if (loading && logs.length === 0) {

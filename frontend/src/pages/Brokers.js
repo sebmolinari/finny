@@ -42,6 +42,7 @@ export default function Brokers() {
   const [brokers, setBrokers] = useState([]);
   const [showInactiveBrokers, setShowInactiveBrokers] = useState(false);
   const [userTimezone, setUserTimezone] = useState(null);
+  const [userDateFormat, setUserDateFormat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingBroker, setEditingBroker] = useState(null);
@@ -75,14 +76,9 @@ export default function Brokers() {
   }, [user, showInactiveBrokers, loadBrokers]);
 
   const loadUserSettings = async () => {
-    try {
-      const response = await settingsAPI.get();
-      setUserTimezone(response.data.timezone);
-    } catch (error) {
-      console.error("Error loading user settings:", error);
-      toast.error("Failed to load user settings. Please refresh the page.");
-      setUserTimezone("America/Argentina/Buenos_Aires");
-    }
+    const response = await settingsAPI.get();
+    setUserTimezone(response.data.timezone);
+    setUserDateFormat(response.data.date_format);
   };
 
   const handleOpenDialog = (broker = null) => {
@@ -334,6 +330,7 @@ export default function Brokers() {
               <AuditFieldsDisplay
                 item={editingBroker}
                 userTimezone={userTimezone}
+                userDateFormat={userDateFormat}
               />
             )}
           </Box>

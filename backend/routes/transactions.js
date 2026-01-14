@@ -6,6 +6,7 @@ const AuditLog = require("../models/AuditLog");
 const UserSettings = require("../models/UserSettings");
 const authMiddleware = require("../middleware/auth");
 const { validate } = require("../utils/validationMiddleware");
+const { getTodayInTimezone } = require("../utils/dateUtils");
 const {
   transactionValidation,
 } = require("../middleware/validators/transactionValidators");
@@ -117,7 +118,7 @@ router.get("/", authMiddleware, (req, res) => {
 router.get("/export", authMiddleware, (req, res) => {
   try {
     const { startDate, endDate, assetId, transactionType } = req.query;
-
+    const userSettings = UserSettings.findByUserId(req.user.id);
     const result = Transaction.findByUser(req.user.id, {
       limit: 10000, // Large limit for export
       assetId,
@@ -164,9 +165,9 @@ router.get("/export", authMiddleware, (req, res) => {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="transactions_${
-        new Date().toISOString().split("T")[0]
-      }.csv"`
+      `attachment; filename="transactions_${getTodayInTimezone(
+        userSettings.timezone
+      )}.csv"`
     );
     res.send(csv);
   } catch (error) {

@@ -1,5 +1,6 @@
 const axios = require("axios");
 const PriceData = require("../models/PriceData");
+const UserSettings = require("../models/UserSettings");
 const Asset = require("../models/Asset");
 const logger = require("../config/logger");
 const { getTodayInTimezone } = require("../utils/dateUtils");
@@ -232,10 +233,9 @@ class PriceService {
 
   /**
    * Refresh prices for all assets
-   * @param {string} timezone - User's timezone for date calculation
    * @param {number} userId - ID of the user performing the refresh
    */
-  static async refreshAllPrices(timezone, userId) {
+  static async refreshAllPrices(userId) {
     const results = {
       total: 0,
       updated: 0,
@@ -246,8 +246,14 @@ class PriceService {
 
     try {
       const assets = Asset.getAll({ includeInactive: false });
-      results.total = assets.length;
+      let timezone = null;
 
+      if (userId) {
+        const userSettings = await UserSettings.findByUserId(userId);
+        timezone = userSettings.timezone;
+      }
+
+      results.total = assets.length;
       const today = getTodayInTimezone(timezone);
 
       for (const asset of assets) {
@@ -324,12 +330,14 @@ class PriceService {
   /**
    * Refresh price for a single asset
    * @param {number} assetId - Asset ID to refresh price for
-   * @param {string} timezone - User's timezone for date calculation
    * @param {number} userId - ID of the user performing the refresh
    */
-  static async refreshAssetPrice(assetId, timezone, userId) {
+  static async refreshAssetPrice(assetId, userId) {
     try {
       const asset = Asset.findById(assetId);
+      const userSettings = await UserSettings.findByUserId(userId);
+      const timezone = userSettings.timezone;
+
       if (!asset) {
         throw new Error("Asset not found");
       }

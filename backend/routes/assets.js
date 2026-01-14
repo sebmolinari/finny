@@ -4,7 +4,6 @@ const Asset = require("../models/Asset");
 const PriceData = require("../models/PriceData");
 const AuditLog = require("../models/AuditLog");
 const PriceService = require("../services/priceService");
-const UserSettings = require("../models/UserSettings");
 const authMiddleware = require("../middleware/auth");
 const { adminOrSuperuser } = require("../middleware/admin");
 const { validate } = require("../utils/validationMiddleware");
@@ -825,15 +824,7 @@ router.post("/prices/refresh-all", async (req, res) => {
   try {
     const userId = req.user?.id ?? null;
     const username = req.user?.username ?? null;
-
-    let timezone = null;
-
-    if (userId) {
-      const userSettings = await UserSettings.findByUserId(userId);
-      timezone = userSettings?.timezone ?? null;
-    }
-
-    const results = await PriceService.refreshAllPrices(timezone, userId);
+    const results = await PriceService.refreshAllPrices(userId);
 
     await AuditLog.create({
       user_id: userId,
@@ -883,13 +874,8 @@ router.post("/prices/refresh-all", async (req, res) => {
  */
 router.post("/:id/prices/refresh", authMiddleware, async (req, res) => {
   try {
-    // Get user's timezone from settings
-    const userSettings = UserSettings.findByUserId(req.user.id);
-    const timezone = userSettings.timezone;
-
     const result = await PriceService.refreshAssetPrice(
       req.params.id,
-      timezone,
       req.user.id
     );
 

@@ -1,21 +1,23 @@
+const { getNowInTimezoneISO } = require("../utils/dateUtils");
+
 const logger = {
   info: (message, ...args) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = getNowInTimezoneISO();
     console.log(`[${timestamp}] INFO:`, message, ...args);
   },
 
   error: (message, ...args) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = getNowInTimezoneISO();
     console.error(`[${timestamp}] ERROR:`, message, ...args);
   },
 
   warn: (message, ...args) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = getNowInTimezoneISO();
     console.warn(`[${timestamp}] WARN:`, message, ...args);
   },
 
   debug: (message, ...args) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = getNowInTimezoneISO();
     console.log(`[${timestamp}] DEBUG:`, message, ...args);
   },
 };
