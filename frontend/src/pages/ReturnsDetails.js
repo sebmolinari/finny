@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -13,23 +13,51 @@ import {
   Divider,
 } from "@mui/material";
 import { analyticsAPI } from "../api/api";
+import { settingsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
 import { StatCard } from "../components/StyledCard";
+import { formatDate } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function ReturnsDetails() {
   const [details, setDetails] = useState(null);
+  const [userSettings, setUserSettings] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [userSettingsLoading, setUserSettingsLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
+  // Load return details
+  const loadDetails = useCallback(async () => {
+    setDetailsLoading(true);
+    try {
       const res = await analyticsAPI.getReturnDetails();
       setDetails(res.data);
-    };
-    load();
+    } catch (error) {
+      setDetails(null);
+    } finally {
+      setDetailsLoading(false);
+    }
   }, []);
 
-  if (!details) {
+  // Load user settings
+  const loadUserSettings = useCallback(async () => {
+    setUserSettingsLoading(true);
+    try {
+      const res = await settingsAPI.get();
+      setUserSettings(res.data);
+    } catch (error) {
+      setUserSettings(null);
+    } finally {
+      setUserSettingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDetails();
+    loadUserSettings();
+  }, [loadDetails, loadUserSettings]);
+
+  if (detailsLoading || userSettingsLoading || !details) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
@@ -119,7 +147,9 @@ export default function ReturnsDetails() {
             <TableBody>
               {mwrr_cash_flows.map((cf, idx) => (
                 <TableRow key={idx}>
-                  <TableCell>{cf.date}</TableCell>
+                  <TableCell>
+                    {formatDate(cf.date, userSettings?.date_format)}
+                  </TableCell>
                   <TableCell>{cf.type}</TableCell>
                   <TableCell align="right">
                     {formatCurrency(cf.amount)}

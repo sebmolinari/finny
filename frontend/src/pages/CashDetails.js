@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Button,
   Container,
@@ -16,8 +16,10 @@ import {
 } from "@mui/material";
 import { MetricCard, StatCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { settingsAPI } from "../api/api";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
+import { formatDate } from "../utils/dateUtils";
 import {
   StyledTable,
   StyledHeaderCell,
@@ -47,16 +49,43 @@ function exportToCSV(data, filename) {
 
 export default function CashDetails() {
   const [details, setDetails] = useState(null);
+  const [userSettings, setUserSettings] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [userSettingsLoading, setUserSettingsLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
+  // Load cash details
+  const loadDetails = useCallback(async () => {
+    setDetailsLoading(true);
+    try {
       const res = await analyticsAPI.getCashBalanceDetails();
       setDetails(res.data);
-    };
-    load();
+    } catch (error) {
+      // Optionally handle error
+      setDetails(null);
+    } finally {
+      setDetailsLoading(false);
+    }
   }, []);
 
-  if (!details) {
+  // Load user settings
+  const loadUserSettings = useCallback(async () => {
+    setUserSettingsLoading(true);
+    try {
+      const res = await settingsAPI.get();
+      setUserSettings(res.data);
+    } catch (error) {
+      setUserSettings(null);
+    } finally {
+      setUserSettingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDetails();
+    loadUserSettings();
+  }, [loadDetails, loadUserSettings]);
+
+  if (detailsLoading || userSettingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
@@ -335,7 +364,9 @@ export default function CashDetails() {
             <TableBody>
               {cash_flows.map((flow) => (
                 <TableRow key={flow.id} hover>
-                  <TableCell>{flow.date}</TableCell>
+                  <TableCell>
+                    {formatDate(flow.date, userSettings?.date_format)}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={flow.type}
