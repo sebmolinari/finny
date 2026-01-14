@@ -233,6 +233,7 @@ class AnalyticsService {
           case "sell":
           case "dividend":
           case "interest":
+          case "rental":
           case "coupon":
             cashBalanceValue += amountValue;
             break;

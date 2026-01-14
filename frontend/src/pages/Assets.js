@@ -377,6 +377,11 @@ export default function Assets() {
     }
   };
 
+  const LABELS = {
+    realestate: "Real Estate",
+    fixedincome: "Fixed Income",
+  };
+
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
@@ -463,6 +468,8 @@ export default function Assets() {
                           ? "#fff3e0"
                           : asset.asset_type === "fixedincome"
                           ? "#e0f2f1"
+                          : asset.asset_type === "realestate"
+                          ? "#fce4ec"
                           : "#f5f5f5",
                       color:
                         asset.asset_type === "currency"
@@ -473,6 +480,8 @@ export default function Assets() {
                           ? "#ff9800"
                           : asset.asset_type === "fixedincome"
                           ? "#00796b"
+                          : asset.asset_type === "realestate"
+                          ? "#c2185b"
                           : "#757575",
                       fontSize: "0.875rem",
                     }}
@@ -619,8 +628,9 @@ export default function Assets() {
               >
                 {validAssetTypes.map((type) => (
                   <MenuItem key={type} value={type}>
-                    {type.charAt(0).toUpperCase() +
-                      type.slice(1).replace(/([A-Z])/g, " $1")}
+                    {LABELS[type] ??
+                      type.charAt(0).toUpperCase() +
+                        type.slice(1).replace(/([A-Z])/g, " $1")}
                   </MenuItem>
                 ))}
               </Select>

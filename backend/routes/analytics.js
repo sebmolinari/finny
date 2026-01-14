@@ -259,6 +259,8 @@ router.get("/portfolio/cash-details", authMiddleware, (req, res) => {
      *                       type: number
      *                     total_coupons:
      *                       type: number
+     *                     total_rentals:
+     *                       type: number
      *                     net_inflow:
      *                       type: number
      *                     net_trading:

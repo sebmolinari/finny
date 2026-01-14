@@ -278,6 +278,7 @@ router.post(
         transaction_type === "sell" ||
         transaction_type === "dividend" ||
         transaction_type === "interest" ||
+        transaction_type === "rental" ||
         transaction_type === "coupon"
       ) {
         if (
@@ -675,7 +676,7 @@ router.delete("/:id", authMiddleware, (req, res) => {
  *                       format: date
  *                     transaction_type:
  *                       type: string
- *                       enum: [buy, sell, dividend, deposit, withdraw, interest, coupon]
+ *                       enum: [buy, sell, dividend, deposit, withdraw, interest, coupon, rental]
  *                     quantity:
  *                       type: number
  *                       description: Asset quantity (required for buy/sell)
@@ -741,6 +742,7 @@ router.post("/bulk", authMiddleware, (req, res) => {
           "withdraw",
           "interest",
           "coupon",
+          "rental",
         ];
         if (!validTypes.includes(transaction_type)) {
           results.errors.push({

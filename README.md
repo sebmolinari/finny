@@ -8,7 +8,7 @@ A professional-grade finance management application designed to help you track t
 
 - Track transactions across multiple brokers
 - Support for Crypto, Currency, Equity and Fixed Income
-- Record buy/sell/dividend/interest/coupoin transactions with broker attribution
+- Record buy/sell/dividend/interest/coupon/rental transactions with broker attribution
 - Cash flow management (deposits/withdrawals) per broker
 - Monitor portfolio exposure by broker
 
@@ -56,7 +56,7 @@ A professional-grade finance management application designed to help you track t
 
 - CSV bulk import for transactions with broker support
 - Transaction export to CSV format with all details
-- Support for deposits, withdrawals, buys, sells, dividends, interest and coupon
+- Support for deposits, withdrawals, buys, sells, dividends, interest, coupon and rental
 - Flexible import template with optional fields
 - Error reporting and import validation
 

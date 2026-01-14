@@ -107,6 +107,8 @@ export default function CashDetails() {
         return "secondary";
       case "Coupon":
         return "secondary";
+      case "Rental":
+        return "secondary";
       default:
         return "default";
     }
@@ -209,6 +211,14 @@ export default function CashDetails() {
                   +{formatCurrency(summary.total_coupons || 0)}
                 </Typography>
               </Box>
+              <Box
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+              >
+                <Typography variant="body2">Rentals:</Typography>
+                <Typography variant="body2" color="secondary.main">
+                  +{formatCurrency(summary.total_rentals || 0)}
+                </Typography>
+              </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                 <Typography variant="subtitle2">Total Inflows:</Typography>
@@ -218,8 +228,9 @@ export default function CashDetails() {
                     summary.total_deposits +
                       summary.total_sell +
                       summary.total_dividends +
-                      (summary.total_interest || 0) +
-                      (summary.total_coupons || 0)
+                      summary.total_interest +
+                      summary.total_coupons +
+                      summary.total_rentals
                   )}
                 </Typography>
               </Box>
@@ -275,8 +286,9 @@ export default function CashDetails() {
                     summary.total_deposits +
                       summary.total_sell +
                       summary.total_dividends +
-                      (summary.total_interest || 0) +
-                      (summary.total_coupons || 0)
+                      summary.total_interest +
+                      summary.total_coupons +
+                      summary.total_rentals
                   )}
                 </Typography>
               </Box>

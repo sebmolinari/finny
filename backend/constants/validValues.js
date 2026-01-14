@@ -1,7 +1,7 @@
 // Centralized validation constants for the application
 
 const VALID_VALUES = {
-  ASSET_TYPES: ["crypto", "currency", "equity", "fixedincome"],
+  ASSET_TYPES: ["crypto", "currency", "equity", "fixedincome", "realestate"],
 
   TRANSACTION_TYPES: [
     "buy",
@@ -11,6 +11,7 @@ const VALID_VALUES = {
     "coupon",
     "deposit",
     "withdraw",
+    "rental",
   ],
 
   USER_ROLES: ["user", "superuser", "admin"],

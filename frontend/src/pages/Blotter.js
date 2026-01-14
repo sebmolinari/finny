@@ -162,7 +162,6 @@ export default function Blotter() {
   const loadUserSettings = useCallback(async () => {
     setSettingsLoading(true);
     const response = await settingsAPI.get();
-    console.log("User settings response:", response);
     setUserTimezone(response.data.timezone);
     setUserDateFormat(response.data.date_format);
     setSettingsLoading(false);
@@ -263,8 +262,8 @@ export default function Blotter() {
   const feeEnabled = ["buy", "sell"].includes(transactionType);
 
   const assetHelp = requiresAsset
-    ? ["dividend", "coupon", "interest"].includes(transactionType)
-      ? "Asset is required for dividend/coupon/interest"
+    ? ["dividend", "coupon", "interest", "rental"].includes(transactionType)
+      ? "Asset is required for dividend/coupon/interest/rental"
       : "Asset is required for buy/sell"
     : "";
 
@@ -272,7 +271,7 @@ export default function Blotter() {
     ? "Enter a positive quantity of units"
     : "";
 
-  const priceHelp = requiresQtyPrice ? "Enter a positive" : "";
+  const priceHelp = requiresQtyPrice ? "Enter a positive price" : "";
 
   const feeHelp = feeEnabled
     ? transactionType === "buy"
@@ -305,9 +304,12 @@ export default function Blotter() {
       }
 
       const isCash = type === "deposit" || type === "withdraw";
-      const incomeNoQtyPrice = ["dividend", "coupon", "interest"].includes(
-        type
-      );
+      const incomeNoQtyPrice = [
+        "dividend",
+        "coupon",
+        "interest",
+        "rental",
+      ].includes(type);
 
       // Prepare data, nulling out disabled fields
       const submitData = { ...formData };
@@ -546,6 +548,11 @@ export default function Blotter() {
     setPage(1);
   };
 
+  const LABELS = {
+    realestate: "Real Estate",
+    fixedincome: "Fixed Income",
+  };
+
   if (transactionsLoading || settingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
@@ -615,7 +622,9 @@ export default function Blotter() {
                 <MenuItem value="">All Types</MenuItem>
                 {validTransactionTypes.map((type) => (
                   <MenuItem key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                    {LABELS[type] ??
+                      type.charAt(0).toUpperCase() +
+                        type.slice(1).replace(/([A-Z])/g, " $1")}
                   </MenuItem>
                 ))}
               </Select>

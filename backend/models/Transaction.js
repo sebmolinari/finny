@@ -447,6 +447,7 @@ class Transaction {
         case "sell":
         case "dividend":
         case "interest":
+        case "rental":
         case "coupon":
           cashBalanceValue += amountValue;
           break;
@@ -737,6 +738,7 @@ class Transaction {
           case "sell":
           case "dividend":
           case "interest":
+          case "rental":
           case "coupon":
             cashBalance += amount;
             break;
@@ -852,6 +854,7 @@ class Transaction {
       total_dividends: 0,
       total_interest: 0,
       total_coupons: 0,
+      total_rentals: 0,
       net_inflow: 0,
       net_trading: 0,
       current_balance: 0,
@@ -894,6 +897,11 @@ class Transaction {
           cashEffect = amount;
           flowType = "Interest";
           summary.total_interest += amount;
+          break;
+        case "rental":
+          cashEffect = amount;
+          flowType = "Rental";
+          summary.total_rentals += amount;
           break;
         case "coupon":
           cashEffect = amount;

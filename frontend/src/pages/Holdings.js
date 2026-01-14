@@ -196,6 +196,8 @@ export default function Holdings() {
                             ? "#fff3e0"
                             : holding.asset_type === "fixedincome"
                             ? "#e0f2f1"
+                            : holding.asset_type === "realestate"
+                            ? "#fce4ec"
                             : "#f5f5f5",
                         color:
                           holding.asset_type === "currency"
@@ -206,6 +208,8 @@ export default function Holdings() {
                             ? "#ff9800"
                             : holding.asset_type === "fixedincome"
                             ? "#00796b"
+                            : holding.asset_type === "realestate"
+                            ? "#c2185b"
                             : "#757575",
                         fontSize: "0.75rem",
                         fontWeight: 600,
@@ -219,6 +223,8 @@ export default function Holdings() {
                         ? "CCY"
                         : holding.asset_type === "fixedincome"
                         ? "FI"
+                        : holding.asset_type === "realestate"
+                        ? "RE"
                         : holding.asset_type.toUpperCase()}
                     </Box>
                   </TableCell>
