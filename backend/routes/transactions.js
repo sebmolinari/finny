@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Transaction = require("../models/Transaction");
 const Asset = require("../models/Asset");
+const Broker = require("../models/Broker");
 const AuditLog = require("../models/AuditLog");
 const UserSettings = require("../models/UserSettings");
 const authMiddleware = require("../middleware/auth");
@@ -9,6 +10,7 @@ const { validate } = require("../utils/validationMiddleware");
 const { getTodayInTimezone } = require("../utils/dateUtils");
 const {
   transactionValidation,
+  validateTransactionBusiness,
 } = require("../middleware/validators/transactionValidators");
 
 /**
@@ -260,6 +262,11 @@ router.post(
   validate(transactionValidation),
   (req, res) => {
     try {
+      validateTransactionBusiness({
+        tx: req.body,
+        userId: req.user.id,
+      });
+
       const {
         asset_id,
         broker_id,
@@ -271,78 +278,6 @@ router.post(
         fee,
         notes,
       } = req.body;
-
-      // Per-type validation
-      if (
-        transaction_type === "buy" ||
-        transaction_type === "sell" ||
-        transaction_type === "dividend" ||
-        transaction_type === "interest" ||
-        transaction_type === "rental" ||
-        transaction_type === "coupon"
-      ) {
-        if (
-          !asset_id ||
-          quantity === undefined ||
-          price === undefined ||
-          !broker_id
-        ) {
-          return res.status(400).json({
-            message:
-              "broker_id, asset_id, quantity, and price are required for buy/sell",
-          });
-        }
-        const asset = Asset.findById(asset_id);
-        if (!asset) {
-          return res.status(404).json({ message: "Asset not found" });
-        }
-
-        // Validate buy total_amount against available cash balance
-        if (transaction_type === "buy") {
-          // Check if user has cash balance validation enabled
-          const userSettings = UserSettings.findByUserId(req.user.id);
-          const shouldValidate = userSettings?.validate_cash_balance !== 0;
-
-          if (shouldValidate) {
-            const availableCash = Transaction.getCashBalance(req.user.id);
-            if (total_amount > availableCash) {
-              return res.status(400).json({
-                message: `Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`,
-              });
-            }
-          }
-        }
-
-        // Validate sell quantity against available balance
-        if (transaction_type === "sell") {
-          // Check if user has balance validation enabled
-          const userSettings = UserSettings.findByUserId(req.user.id);
-          const shouldValidate = userSettings?.validate_sell_balance !== 0;
-
-          if (shouldValidate) {
-            const availableQuantity = Transaction.getAssetBrokerBalance(
-              req.user.id,
-              asset_id,
-              broker_id
-            );
-            if (quantity > availableQuantity) {
-              return res.status(400).json({
-                message: `Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`,
-              });
-            }
-          }
-        }
-      } else if (transaction_type === "dividend") {
-        if (!asset_id) {
-          return res.status(400).json({
-            message: "asset_id is required for dividend",
-          });
-        }
-        const asset = Asset.findById(asset_id);
-        if (!asset) {
-          return res.status(404).json({ message: "Asset not found" });
-        }
-      }
 
       const id = Transaction.create(
         req.user.id,
@@ -379,7 +314,7 @@ router.post(
 
       res.status(201).json(transaction);
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(error.status || 500).json({ message: error.message });
     }
   }
 );
@@ -441,6 +376,22 @@ router.put(
   validate(transactionValidation),
   (req, res) => {
     try {
+      const currentTransaction = Transaction.findById(
+        req.params.id,
+        req.user.id
+      );
+
+      if (!currentTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      validateTransactionBusiness({
+        tx: req.body,
+        userId: req.user.id,
+        isUpdate: true,
+        currentTx: currentTransaction,
+      });
+
       const {
         asset_id,
         broker_id,
@@ -453,88 +404,16 @@ router.put(
         notes,
       } = req.body;
 
-      // Per-type validation
-      if (transaction_type === "buy" || transaction_type === "sell") {
-        if (!asset_id || quantity === undefined || price === undefined) {
-          return res.status(400).json({
-            message: "asset_id, quantity, and price are required for buy/sell",
-          });
-        }
-
-        // Validate buy total_amount against available cash balance
-        if (transaction_type === "buy") {
-          // Check if user has cash balance validation enabled
-          const userSettings = UserSettings.findByUserId(req.user.id);
-          const shouldValidate = userSettings?.validate_cash_balance !== 0;
-
-          if (shouldValidate) {
-            const availableCash = Transaction.getCashBalance(req.user.id);
-            if (total_amount > availableCash) {
-              return res.status(400).json({
-                message: `Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`,
-              });
-            }
-          }
-        }
-
-        // Validate sell quantity against available balance (excluding current transaction)
-        if (transaction_type === "sell") {
-          // Check if user has balance validation enabled
-          const userSettings = UserSettings.findByUserId(req.user.id);
-          const shouldValidate = userSettings?.validate_sell_balance !== 0;
-
-          if (shouldValidate) {
-            const currentTransaction = Transaction.findById(
-              req.params.id,
-              req.user.id
-            );
-            if (!currentTransaction) {
-              return res.status(404).json({ message: "Transaction not found" });
-            }
-
-            // Get current balance
-            let availableQuantity = Transaction.getAssetBrokerBalance(
-              req.user.id,
-              asset_id,
-              broker_id
-            );
-
-            // If we're updating an existing sell, add back its quantity to check new quantity
-            if (currentTransaction.transaction_type === "sell") {
-              availableQuantity += currentTransaction.quantity;
-            }
-
-            if (quantity > availableQuantity) {
-              return res.status(400).json({
-                message: `Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`,
-              });
-            }
-          }
-        }
-      } else if (transaction_type === "dividend") {
-        if (!asset_id) {
-          return res.status(400).json({
-            message: "asset_id is required for dividend",
-          });
-        }
-      }
-
-      // Get old transaction data for audit log
-      const oldTransaction = Transaction.findById(req.params.id, req.user.id);
-      if (!oldTransaction) {
-        return res.status(404).json({ message: "Transaction not found" });
-      }
-
       const oldValues = {
-        asset_id: oldTransaction.asset_id,
-        broker_id: oldTransaction.broker_id,
-        date: oldTransaction.date,
-        transaction_type: oldTransaction.transaction_type,
-        quantity: oldTransaction.quantity,
-        price: oldTransaction.price,
-        fee: oldTransaction.fee,
-        total_amount: oldTransaction.total_amount,
-        notes: oldTransaction.notes,
+        asset_id: currentTransaction.asset_id,
+        broker_id: currentTransaction.broker_id,
+        date: currentTransaction.date,
+        transaction_type: currentTransaction.transaction_type,
+        quantity: currentTransaction.quantity,
+        price: currentTransaction.price,
+        fee: currentTransaction.fee,
+        total_amount: currentTransaction.total_amount,
+        notes: currentTransaction.notes,
       };
 
       const updated = Transaction.update(
@@ -584,7 +463,7 @@ router.put(
 
       res.json(transaction);
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(error.status || 500).json({ message: error.message });
     }
   }
 );
@@ -714,155 +593,67 @@ router.post("/bulk", authMiddleware, (req, res) => {
     const shouldValidateCash = userSettings?.validate_cash_balance !== 0;
     const shouldValidateSell = userSettings?.validate_sell_balance !== 0;
 
+    const brokers = Broker.findByUser(req.user.id, {
+      includeInactive: true,
+    });
+
+    const assets = Asset.getAll({
+      includeInactive: true,
+    });
+
     const results = {
       success: [],
       errors: [],
     };
 
     transactions.forEach((txData, index) => {
+      const {
+        asset_symbol,
+        broker_name,
+        date,
+        transaction_type,
+        quantity,
+        price,
+        fee,
+        total_amount,
+        notes,
+      } = txData;
+
+      let asset_id = null;
+      let broker_id = null;
+
+      // For non-cash transactions, get the asset and broker IDs
+      if (transaction_type !== "deposit" && transaction_type !== "withdraw") {
+        const asset = assets.find(
+          (a) => a.symbol.toLowerCase() === asset_symbol.toLowerCase()
+        );
+        const broker = brokers.find(
+          (b) => b.name.toLowerCase() === broker_name.toLowerCase()
+        );
+        asset_id = asset?.id;
+        broker_id = broker?.id;
+      }
+
       try {
-        const {
-          asset_symbol,
-          broker_name,
-          date,
-          transaction_type,
-          quantity,
-          price,
-          fee,
-          total_amount,
-          notes,
-        } = txData;
-
-        // Validate transaction type
-        const validTypes = [
-          "buy",
-          "sell",
-          "dividend",
-          "deposit",
-          "withdraw",
-          "interest",
-          "coupon",
-          "rental",
-        ];
-        if (!validTypes.includes(transaction_type)) {
-          results.errors.push({
-            row: index + 2,
-            error: `Invalid transaction type: ${transaction_type}`,
-          });
-          return;
-        }
-
-        // Validate required fields
-        if (!date || !transaction_type || total_amount === undefined) {
-          results.errors.push({
-            row: index + 2,
-            error:
-              "Missing required fields: date, transaction_type, total_amount",
-          });
-          return;
-        }
-
-        let asset_id = null;
-
-        // For non-cash transactions, get or create asset
-        if (transaction_type !== "deposit" && transaction_type !== "withdraw") {
-          if (!asset_symbol || quantity === undefined || price === undefined) {
-            results.errors.push({
-              row: index + 2,
-              error: "Missing required fields: asset_symbol, quantity, price",
-            });
-            return;
-          }
-
-          // Try to find asset by symbol
-          let asset = Asset.findBySymbol(asset_symbol);
-
-          if (!asset) {
-            results.errors.push({
-              row: index + 2,
-              error: `Asset not found: ${asset_symbol}. Please create the asset first.`,
-            });
-            return;
-          }
-
-          asset_id = asset.id;
-        }
-
-        let broker_id = null;
-
-        // Broker is not required for deposit/withdraw
-        if (transaction_type !== "deposit" && transaction_type !== "withdraw") {
-          // Lookup broker by name
-          const Broker = require("../models/Broker");
-          const brokers = Broker.findByUser(req.user.id, {
-            includeInactive: true,
-          });
-          const broker = brokers.find(
-            (b) => b.name.toLowerCase() === broker_name.toLowerCase()
-          );
-
-          if (!broker) {
-            results.errors.push({
-              row: index + 2,
-              error: `Broker not found: ${broker_name}. Please create the broker first.`,
-            });
-            return;
-          }
-
-          broker_id = broker.id;
-        }
-
-        // Per-type validation for buy/sell transactions
-        if (transaction_type === "buy" || transaction_type === "sell") {
-          if (!asset_id || quantity === undefined || price === undefined) {
-            results.errors.push({
-              row: index + 2,
-              error: "asset_id, quantity, and price are required for buy/sell",
-            });
-            return;
-          }
-
-          // Validate buy total_amount against available cash balance
-          if (transaction_type === "buy") {
-            if (shouldValidateCash) {
-              const availableCash = Transaction.getCashBalance(req.user.id);
-              if (total_amount > availableCash) {
-                results.errors.push({
-                  row: index + 2,
-                  error: `Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`,
-                });
-                return;
-              }
-            }
-          }
-
-          // Validate sell quantity against available balance
-          if (transaction_type === "sell") {
-            if (shouldValidateSell) {
-              const availableQuantity = Transaction.getAssetBrokerBalance(
-                req.user.id,
-                asset_id,
-                broker_id
-              );
-              if (quantity > availableQuantity) {
-                results.errors.push({
-                  row: index + 2,
-                  error: `Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`,
-                });
-                return;
-              }
-            }
-          }
-        } else if (transaction_type === "dividend") {
-          if (!asset_id) {
-            results.errors.push({
-              row: index + 2,
-              error: "asset_id is required for dividend",
-            });
-            return;
-          }
-        }
-
+        validateTransactionBusiness({
+          tx: {
+            asset_id,
+            broker_id,
+            transaction_type,
+            quantity,
+            price,
+            total_amount,
+          },
+          userId: req.user.id,
+        });
+      } catch (err) {
+        results.errors.push({
+          row: index + 2,
+          error: err.message,
+        });
+        return;
+      }
+      try {
         // Create transaction
         const id = Transaction.create(
           req.user.id,
@@ -914,7 +705,7 @@ router.post("/bulk", authMiddleware, (req, res) => {
       results,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.status || 500).json({ message: error.message });
   }
 });
 

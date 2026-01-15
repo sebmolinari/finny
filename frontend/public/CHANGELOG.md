@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented below.
 
-## [0.0.3] – 2026-01-14
+## [0.0.3] – 2026-01-15
 
 ### Added
 
@@ -13,6 +13,7 @@ All notable changes to this project are documented below.
 
 - Issues with email generation
 - Various minor bugs related to asset allocation and transaction validation
+- Refactor Transaction validations into a single function
 
 ---
 

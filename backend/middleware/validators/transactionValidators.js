@@ -1,4 +1,7 @@
 const { body } = require("express-validator");
+const Transaction = require("../../models/Transaction");
+const UserSettings = require("../../models/UserSettings");
+
 const { VALID_VALUES } = require("../../constants/validValues");
 
 /**
@@ -75,6 +78,94 @@ const transactionValidation = [
     .withMessage("Notes must not exceed 1000 characters"),
 ];
 
+/**
+ * Core transaction business validation
+ *
+ * @param {Object} params.tx               Transaction payload
+ * @param {string} params.userId
+ * @param {boolean} params.isUpdate
+ * @param {Object|null} params.currentTx   Existing transaction (PUT only)
+ */
+function validateTransactionBusiness({
+  tx,
+  userId,
+  isUpdate = false,
+  currentTx = null,
+}) {
+  const {
+    asset_id,
+    broker_id,
+    transaction_type,
+    quantity,
+    price,
+    total_amount,
+  } = tx;
+
+  const userSettings = UserSettings.findByUserId(userId);
+  const validateCash = userSettings.validate_cash_balance;
+  const validateSell = userSettings.validate_sell_balance;
+
+  const error = (message) => {
+    const err = new Error(message);
+    err.status = 400;
+    throw err;
+  };
+
+  const assetRequiredTypes = [
+    "buy",
+    "sell",
+    "dividend",
+    "interest",
+    "rental",
+    "coupon",
+  ];
+
+  if (assetRequiredTypes.includes(transaction_type)) {
+    if (!asset_id) {
+      error("asset_id is required");
+    }
+  }
+
+  if (transaction_type === "buy" || transaction_type === "sell") {
+    if (quantity === undefined || price === undefined || !broker_id) {
+      error(
+        "broker_id, asset_id, quantity, and price are required for buy/sell"
+      );
+    }
+
+    // BUY: cash balance
+    if (transaction_type === "buy" && validateCash) {
+      const availableCash = Transaction.getCashBalance(userId);
+      if (total_amount > availableCash) {
+        error(
+          `Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`
+        );
+      }
+    }
+
+    // SELL: asset balance
+    if (transaction_type === "sell" && validateSell) {
+      let availableQuantity = Transaction.getAssetBrokerBalance(
+        userId,
+        asset_id,
+        broker_id
+      );
+
+      // PUT: add back existing sell quantity
+      if (isUpdate && currentTx && currentTx.transaction_type === "sell") {
+        availableQuantity += currentTx.quantity;
+      }
+
+      if (quantity > availableQuantity) {
+        error(
+          `Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`
+        );
+      }
+    }
+  }
+}
+
 module.exports = {
   transactionValidation,
+  validateTransactionBusiness,
 };
