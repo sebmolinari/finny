@@ -123,6 +123,7 @@ const Layout = () => {
     { text: "Tax Report", icon: <DescriptionIcon />, path: "/tax-report" },
     { type: "divider" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
+    { text: "Changelog", icon: <HistoryIcon />, path: "/changelog" },
     ...(isAdmin
       ? [
           { type: "divider" },

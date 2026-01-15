@@ -13,27 +13,12 @@ import {
 } from "@mui/material";
 
 import api from "../api/api";
-import { settingsAPI } from "../api/api";
-import { formatDatetimeInTimezone } from "../utils/dateUtils";
 
 export default function Metrics() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [userTimezone, setUserTimezone] = useState();
-  const [userDateFormat, setUserDateFormat] = useState();
-
-  useEffect(() => {
-    async function fetchUserSettings() {
-      try {
-        const response = await settingsAPI.get();
-        setUserTimezone(response.data.timezone);
-        setUserDateFormat(response.data.date_format);
-      } catch {}
-    }
-    fetchUserSettings();
-  }, []);
 
   useEffect(() => {
     async function fetchMetrics() {
@@ -42,7 +27,11 @@ export default function Metrics() {
       try {
         const res = await api.get("/metrics/host-metrics");
         setMetrics(res.data);
-        setLastRefresh(new Date());
+        setLastRefresh(
+          new Date().toLocaleDateString() +
+            " " +
+            new Date().toLocaleTimeString()
+        );
       } catch (e) {
         setError("Failed to fetch metrics");
       } finally {
@@ -53,10 +42,6 @@ export default function Metrics() {
     const interval = setInterval(fetchMetrics, 10000); // refresh every 10s
     return () => clearInterval(interval);
   }, []);
-
-  const formatDate = (dateString) => {
-    return formatDatetimeInTimezone(dateString, userDateFormat, userTimezone);
-  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
@@ -73,7 +58,7 @@ export default function Metrics() {
         ) : metrics ? (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Last refresh: {formatDate(lastRefresh)}
+              Last refresh: {lastRefresh}
             </Typography>
             <Table>
               <TableHead>

@@ -31,7 +31,8 @@ import LoadingSpinner from "../components/LoadingSpinner";
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingAudit, setLoadingAudit] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
   const [filters, setFilters] = useState({
     action_type: "",
     table_name: "",
@@ -64,7 +65,7 @@ const AuditLogs = () => {
 
   const fetchLogs = useCallback(async () => {
     try {
-      setLoading(true);
+      setLoadingAudit(true);
       const params = {};
       Object.keys(filters).forEach((key) => {
         if (filters[key]) params[key] = filters[key];
@@ -78,7 +79,7 @@ const AuditLogs = () => {
         error.response?.data?.message || "Failed to fetch audit logs"
       );
     } finally {
-      setLoading(false);
+      setLoadingAudit(false);
     }
   }, [filters]);
 
@@ -129,9 +130,11 @@ const AuditLogs = () => {
 
   useEffect(() => {
     async function loadUserSettings() {
+      setLoadingSettings(true);
       const response = await settingsAPI.get();
       setUserTimezone(response.data.timezone);
       setUserDateFormat(response.data.date_format);
+      setLoadingSettings(false);
     }
     loadUserSettings();
   }, []);
@@ -140,7 +143,7 @@ const AuditLogs = () => {
     return formatDatetimeInTimezone(dateString, userDateFormat, userTimezone);
   };
 
-  if (loading && logs.length === 0) {
+  if (loadingAudit || loadingSettings) {
     return <LoadingSpinner />;
   }
 
@@ -382,7 +385,7 @@ const AuditLogs = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading ? (
+            {loadingAudit && loadingSettings ? (
               <TableRow>
                 <TableCell colSpan={9} align="center">
                   Loading...

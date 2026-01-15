@@ -32,6 +32,7 @@ import MarketTrends from "./pages/MarketTrends";
 import TaxReport from "./pages/TaxReport";
 import ChangePassword from "./pages/ChangePassword";
 import AssetAllocation from "./pages/AssetAllocation";
+import Changelog from "./pages/Changelog";
 
 const theme = createTheme({
   palette: {
@@ -82,6 +83,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/change-password" element={<ChangePassword />} />
+                <Route path="/changelog" element={<Changelog />} />
                 <Route
                   path="/users"
                   element={
