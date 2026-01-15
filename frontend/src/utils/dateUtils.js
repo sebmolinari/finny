@@ -10,11 +10,6 @@
  * @returns {string}
  */
 export const formatDatetimeInTimezone = (utcDateTime, dateFormat, timezone) => {
-  console.log("formatDatetimeInTimezone called with:", {
-    utcDateTime,
-    dateFormat,
-    timezone,
-  });
   if (!utcDateTime || !dateFormat || !timezone) {
     throw new Error("utcDateTime, dateFormat and timezone are required");
   }

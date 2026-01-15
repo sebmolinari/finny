@@ -369,7 +369,7 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip
+                  <RechartsTooltip
                     formatter={(value) => formatCurrency(value)}
                     contentStyle={{
                       backgroundColor: "rgba(255, 255, 255, 0.95)",

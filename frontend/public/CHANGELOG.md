@@ -15,6 +15,7 @@ All notable changes to this project are documented below.
 - Various minor bugs related to asset allocation and transaction validation
 - Refactor Transaction validations into a single function
 - Rebalance drift change from average to intensity calculation
+- Minor fix on Dashboard MUI Tooltip component
 
 ---
 
