@@ -1,3 +1,4 @@
+const logger = require("../config/logger");
 const Transaction = require("../models/Transaction");
 const PriceData = require("../models/PriceData");
 const Broker = require("../models/Broker");
@@ -587,7 +588,7 @@ class AnalyticsService {
     try {
       // Get user settings for rebalancing tolerance
       const userSettings = UserSettings.findByUserId(userId);
-      const rebalancingTolerance = userSettings?.rebalancing_tolerance;
+      const rebalancingTolerance = userSettings.rebalancing_tolerance;
 
       // Get current portfolio analytics
       const portfolio = this.getPortfolioAnalytics(userId);
@@ -749,19 +750,20 @@ class AnalyticsService {
         (a, b) => Math.abs(b.difference) - Math.abs(a.difference)
       );
 
-      // Calculate overall balance score
-      const totalDrift = recommendations.reduce(
+      // rebalancing_amount = ½ × Σ |current_weight − target_weight|
+
+      const totalAbsDrift = typeRecommendations.reduce(
         (sum, r) => sum + Math.abs(r.difference_percentage),
         0
       );
-      const averageDrift =
-        recommendations.length > 0 ? totalDrift / recommendations.length : 0;
-      const isBalanced = averageDrift <= rebalancingTolerance;
+
+      const rebalanceIntensity = totalAbsDrift / 2;
+      const isBalanced = rebalanceIntensity <= rebalancingTolerance;
 
       return {
         has_targets: true,
         is_balanced: isBalanced,
-        average_drift: averageDrift,
+        rebalance_intensity: rebalanceIntensity,
         rebalancing_tolerance: rebalancingTolerance,
         total_portfolio_value: totalPortfolioValue,
         current_allocation: currentAllocation,

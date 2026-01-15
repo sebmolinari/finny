@@ -588,11 +588,6 @@ router.post("/bulk", authMiddleware, (req, res) => {
         .json({ message: "Transactions array is required" });
     }
 
-    // Read user settings once before loop
-    const userSettings = UserSettings.findByUserId(req.user.id);
-    const shouldValidateCash = userSettings?.validate_cash_balance !== 0;
-    const shouldValidateSell = userSettings?.validate_sell_balance !== 0;
-
     const brokers = Broker.findByUser(req.user.id, {
       includeInactive: true,
     });

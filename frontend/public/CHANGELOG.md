@@ -14,6 +14,7 @@ All notable changes to this project are documented below.
 - Issues with email generation
 - Various minor bugs related to asset allocation and transaction validation
 - Refactor Transaction validations into a single function
+- Rebalance drift change from average to intensity calculation
 
 ---
 

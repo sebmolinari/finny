@@ -292,8 +292,10 @@ export default function AssetAllocation() {
             title="Portfolio Status"
             value={rebalancing?.is_balanced ? "Balanced" : "Needs Rebalancing"}
             subtitle={
-              rebalancing?.average_drift
-                ? `Avg drift: ${formatPercent(rebalancing.average_drift)}`
+              rebalancing?.rebalance_intensity
+                ? `Rebalance Intensity: ${formatPercent(
+                    rebalancing.rebalance_intensity
+                  )}`
                 : "No targets set"
             }
             color={rebalancing?.is_balanced ? "success" : "warning"}
@@ -631,14 +633,14 @@ export default function AssetAllocation() {
 
             {rebalancing.is_balanced ? (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Your portfolio is well-balanced! Average drift is within
-                tolerance ({formatPercent(rebalancing.average_drift)}).
+                Your portfolio is well-balanced! Rebalance intensity is within
+                tolerance ({formatPercent(rebalancing.rebalance_intensity)}).
               </Alert>
             ) : (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Your portfolio needs rebalancing. Average drift:{" "}
-                {formatPercent(rebalancing.average_drift)} exceeds tolerance of{" "}
-                {formatPercent(rebalancing.rebalancing_tolerance)}.
+                Your portfolio needs rebalancing. Rebalance intensity:{" "}
+                {formatPercent(rebalancing.rebalance_intensity)} exceeds
+                tolerance of {formatPercent(rebalancing.rebalancing_tolerance)}.
               </Alert>
             )}
 

@@ -148,7 +148,7 @@ export default function ReturnsDetails() {
               {mwrr_cash_flows.map((cf, idx) => (
                 <TableRow key={idx}>
                   <TableCell>
-                    {formatDate(cf.date, userSettings?.date_format)}
+                    {formatDate(cf.date, userSettings.date_format)}
                   </TableCell>
                   <TableCell>{cf.type}</TableCell>
                   <TableCell align="right">

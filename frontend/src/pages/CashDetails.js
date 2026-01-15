@@ -377,7 +377,7 @@ export default function CashDetails() {
               {cash_flows.map((flow) => (
                 <TableRow key={flow.id} hover>
                   <TableCell>
-                    {formatDate(flow.date, userSettings?.date_format)}
+                    {formatDate(flow.date, userSettings.date_format)}
                   </TableCell>
                   <TableCell>
                     <Chip
