@@ -82,8 +82,14 @@ export default function Blotter() {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(50);
 
-  // Filter state
+  // Filter state (edit and applied)
   const [filters, setFilters] = useState({
+    asset_id: "",
+    transaction_type: "",
+    start_date: "",
+    end_date: "",
+  });
+  const [pendingFilters, setPendingFilters] = useState({
     asset_id: "",
     transaction_type: "",
     start_date: "",
@@ -277,16 +283,16 @@ export default function Blotter() {
     ? transactionType === "buy"
       ? "Fee increases cash outflow (added to total)"
       : transactionType === "sell"
-      ? "Fee decreases cash inflow (subtracted from total)"
-      : "Optional; enter 0 if none"
+        ? "Fee decreases cash inflow (subtracted from total)"
+        : "Optional; enter 0 if none"
     : "";
 
   const totalAmountHelp =
     transactionType === "buy"
       ? "Calculated as Quantity × Price + Fee"
       : transactionType === "sell"
-      ? "Calculated as Quantity × Price − Fee"
-      : "Total cash amount for this transaction";
+        ? "Calculated as Quantity × Price − Fee"
+        : "Total cash amount for this transaction";
 
   const notesHelp =
     transactionType === "sell"
@@ -533,13 +539,25 @@ export default function Blotter() {
     setPage(value);
   };
 
+  // Only update pendingFilters on change, not filters
   const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setPage(1); // Reset to first page when filters change
+    setPendingFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Apply filters when button is clicked
+  const applyFilters = () => {
+    setFilters({ ...pendingFilters });
+    setPage(1);
   };
 
   const clearFilters = () => {
     setFilters({
+      asset_id: "",
+      transaction_type: "",
+      start_date: "",
+      end_date: "",
+    });
+    setPendingFilters({
       asset_id: "",
       transaction_type: "",
       start_date: "",
@@ -587,16 +605,17 @@ export default function Blotter() {
       </Box>
 
       {/* Filters Section */}
+
       <Paper sx={{ p: 2, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Filters
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Asset</InputLabel>
               <Select
-                value={filters.asset_id}
+                value={pendingFilters.asset_id}
                 onChange={(e) => handleFilterChange("asset_id", e.target.value)}
                 label="Asset"
               >
@@ -609,11 +628,11 @@ export default function Blotter() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Type</InputLabel>
               <Select
-                value={filters.transaction_type}
+                value={pendingFilters.transaction_type}
                 onChange={(e) =>
                   handleFilterChange("transaction_type", e.target.value)
                 }
@@ -634,7 +653,7 @@ export default function Blotter() {
             <TextField
               label="Start Date"
               type="date"
-              value={filters.start_date}
+              value={pendingFilters.start_date}
               onChange={(e) => handleFilterChange("start_date", e.target.value)}
               InputLabelProps={{ shrink: true }}
               fullWidth
@@ -645,14 +664,25 @@ export default function Blotter() {
             <TextField
               label="End Date"
               type="date"
-              value={filters.end_date}
+              value={pendingFilters.end_date}
               onChange={(e) => handleFilterChange("end_date", e.target.value)}
               InputLabelProps={{ shrink: true }}
               fullWidth
               size="small"
             />
           </Grid>
-          <Grid item xs={12} sm={12} md={1}>
+          <Grid item xs={6} sm={6} md={1.5}>
+            <Button
+              variant="contained"
+              onClick={applyFilters}
+              fullWidth
+              size="medium"
+              sx={{ mb: { xs: 1, md: 0 } }}
+            >
+              Apply
+            </Button>
+          </Grid>
+          <Grid item xs={6} sm={6} md={1.5}>
             <Button
               variant="outlined"
               onClick={clearFilters}
