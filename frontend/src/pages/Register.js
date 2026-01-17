@@ -59,11 +59,11 @@ const Register = () => {
       const responseData = err.response?.data;
       if (responseData?.errors && Array.isArray(responseData.errors)) {
         setError(
-          responseData.errors.map((e) => `${e.field}: ${e.message}`).join(", ")
+          responseData.errors.map((e) => `${e.field}: ${e.message}`).join(", "),
         );
       } else {
         setError(
-          responseData?.message || "Registration failed. Please try again."
+          responseData?.message || "Registration failed. Please try again.",
         );
       }
     } finally {

@@ -128,7 +128,7 @@ router.patch(
       logger.info(
         `USER STATUS UPDATED: ${updatedUser.username} ${
           active ? "enabled" : "disabled"
-        } by ${req.user.username}`
+        } by ${req.user.username}`,
       );
 
       // Log user status update
@@ -140,7 +140,7 @@ router.patch(
         { active: !active },
         { active: activeValue },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.json({
@@ -157,7 +157,7 @@ router.patch(
       logger.error(`Error updating user status: ${error.message}`);
       res.status(500).json({ message: "Server error updating user status" });
     }
-  }
+  },
 );
 
 // Update user role
@@ -217,7 +217,7 @@ router.patch("/:id/role", validate(updateUserRoleValidation), (req, res) => {
     }
 
     logger.info(
-      `USER ROLE UPDATED: ${updatedUser.username} changed to ${role} by ${req.user.username}`
+      `USER ROLE UPDATED: ${updatedUser.username} changed to ${role} by ${req.user.username}`,
     );
 
     // Log user role update
@@ -229,7 +229,7 @@ router.patch("/:id/role", validate(updateUserRoleValidation), (req, res) => {
       { role: updatedUser.role === role ? "user" : updatedUser.role },
       { role: role },
       req.ip,
-      req.get("user-agent")
+      req.get("user-agent"),
     );
 
     res.json({
@@ -293,7 +293,7 @@ router.delete("/:id", (req, res) => {
     User.deleteById(id);
 
     logger.info(
-      `USER DELETED: ${user.username} (ID: ${id}) deleted by ${req.user.username}`
+      `USER DELETED: ${user.username} (ID: ${id}) deleted by ${req.user.username}`,
     );
 
     // Log user deletion
@@ -308,7 +308,7 @@ router.delete("/:id", (req, res) => {
         role: user.role,
       },
       req.ip,
-      req.get("user-agent")
+      req.get("user-agent"),
     );
 
     res.json({ message: "User deleted successfully" });

@@ -84,7 +84,7 @@ router.post("/register", validate(registerValidation), async (req, res) => {
         role: "user",
       },
       req.ip,
-      req.get("user-agent")
+      req.get("user-agent"),
     );
 
     // Generate token
@@ -148,7 +148,7 @@ router.post("/login", validate(loginValidation), async (req, res) => {
         username,
         req.ip,
         req.get("user-agent"),
-        "User not found"
+        "User not found",
       );
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -160,7 +160,7 @@ router.post("/login", validate(loginValidation), async (req, res) => {
         username,
         req.ip,
         req.get("user-agent"),
-        "Account is disabled"
+        "Account is disabled",
       );
       return res.status(403).json({
         message: "Account is disabled. Please contact an administrator.",
@@ -175,7 +175,7 @@ router.post("/login", validate(loginValidation), async (req, res) => {
         username,
         req.ip,
         req.get("user-agent"),
-        "Invalid password"
+        "Invalid password",
       );
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -226,7 +226,7 @@ router.post("/logout", authMiddleware, (req, res) => {
     req.user.id,
     req.user.username,
     req.ip,
-    req.get("user-agent")
+    req.get("user-agent"),
   );
 
   res.json({ message: "Logout successful" });
@@ -321,11 +321,11 @@ router.post(
       // Verify current password
       const isValidPassword = User.verifyPassword(
         currentPassword,
-        user.password
+        user.password,
       );
       if (!isValidPassword) {
         logger.warn(
-          `PASSWORD CHANGE FAILED: Invalid current password - ${user.username}`
+          `PASSWORD CHANGE FAILED: Invalid current password - ${user.username}`,
         );
         return res
           .status(400)
@@ -355,7 +355,7 @@ router.post(
         },
         undefined,
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.json({ message: "Password changed successfully" });
@@ -363,7 +363,7 @@ router.post(
       logger.error(`Password change error: ${error.message}`);
       res.status(500).json({ message: "Server error during password change" });
     }
-  }
+  },
 );
 
 module.exports = router;

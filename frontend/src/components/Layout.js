@@ -199,7 +199,7 @@ const Layout = () => {
                 <ListItemText primary={item.text} />
               </ListItemButton>
             </ListItem>
-          )
+          ),
         )}
       </List>
     </Box>

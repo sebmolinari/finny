@@ -8,7 +8,7 @@ const authMiddleware = (req, res, next) => {
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       logger.warn(
-        `AUTH FAILED: No token provided for ${req.method} ${req.path}`
+        `AUTH FAILED: No token provided for ${req.method} ${req.path}`,
       );
       return res.status(401).json({ message: "Authentication required" });
     }

@@ -46,16 +46,19 @@ export default function AssetAllocation() {
   const [tabValue, setTabValue] = useState(0);
   const [assets, setAssets] = useState([]);
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [assetTypes, setAssetTypes] = useState([]);
+  const [includedAssetTypes, setIncludedAssetTypes] = useState([]);
+  const [selectedAssetType, setSelectedAssetType] = useState(null);
 
   const loadRebalancing = useCallback(async () => {
     try {
-      const response = await allocationAPI.getRebalancing();
+      const response = await allocationAPI.getRebalancing(includedAssetTypes);
       setRebalancing(response.data);
     } catch (error) {
       console.error("Error loading rebalancing:", error);
       // Don't show error for rebalancing - it's optional
     }
-  }, []);
+  }, [includedAssetTypes]);
 
   const loadData = useCallback(async () => {
     try {
@@ -65,15 +68,40 @@ export default function AssetAllocation() {
       // Load asset types
       const constantsResponse = await constantsAPI.getByCategory("ASSET_TYPES");
       const assetTypesArray = constantsResponse.data || [];
+      setAssetTypes(assetTypesArray);
+
+      // Do not default to including every asset type. Instead, keep
+      // `includedAssetTypes` empty unless there are existing saved
+      // type-level targets — in that case default to those types so
+      // previously configured targets remain visible.
 
       // Load all assets
       const assetsResponse = await assetAPI.getAll({ active: 1 });
-      setAssets(assetsResponse.data || []);
+      let allAssets = assetsResponse.data || [];
 
-      // Load targets
-      const targetsResponse = await allocationAPI.getTargets();
-      const existingTargets = targetsResponse.data.targets || [];
-      setTotalAllocated(targetsResponse.data.total_allocated || 0);
+      // Load targets (ask backend to filter by included asset types)
+      const targetsResponse =
+        await allocationAPI.getTargets(includedAssetTypes);
+      let existingTargets = targetsResponse.data.targets || [];
+
+      // Client-side fallback: filter assets and targets to only included asset types
+      if (includedAssetTypes && includedAssetTypes.length > 0) {
+        const includedSet = new Set(
+          includedAssetTypes.map((t) => String(t).toLowerCase()),
+        );
+        allAssets = allAssets.filter((a) =>
+          includedSet.has((a.asset_type || "").toLowerCase()),
+        );
+        existingTargets = existingTargets.filter((t) => {
+          if (t.asset_type)
+            return includedSet.has(String(t.asset_type).toLowerCase());
+          if (t.asset_asset_type)
+            return includedSet.has(String(t.asset_asset_type).toLowerCase());
+          return true;
+        });
+      }
+
+      setAssets(allAssets);
 
       // Separate type-level and asset-level targets
       const typeTargets = existingTargets.filter(
@@ -82,6 +110,19 @@ export default function AssetAllocation() {
       const assetLevelTargets = existingTargets.filter(
         (t) => !t.asset_type && t.asset_id,
       );
+
+      // If the user hasn't explicitly selected included types, default
+      // the included list to the set of already-saved type-level
+      // targets (so previously configured targets remain visible).
+      const existingTypeAssetTypes = Array.from(
+        new Set(typeTargets.map((t) => t.asset_type).filter(Boolean)),
+      );
+      if (
+        (!includedAssetTypes || includedAssetTypes.length === 0) &&
+        existingTypeAssetTypes.length > 0
+      ) {
+        setIncludedAssetTypes(existingTypeAssetTypes);
+      }
 
       // Initialize type targets with existing or empty
       const targetMap = {};
@@ -94,19 +135,33 @@ export default function AssetAllocation() {
         };
       });
 
-      const initializedTargets = assetTypesArray.map((assetType) => {
-        return (
+      // Only display types that are explicitly included or already
+      // exist as saved type-level targets. Do NOT default to showing
+      // every available `assetTypesArray`.
+      const displayedAssetTypes =
+        includedAssetTypes && includedAssetTypes.length > 0
+          ? includedAssetTypes
+          : existingTypeAssetTypes;
+
+      const initializedTargets = (displayedAssetTypes || []).map(
+        (assetType) =>
           targetMap[assetType] || {
             id: null,
             asset_type: assetType,
             target_percentage: 0,
             notes: "",
-          }
-        );
-      });
+          },
+      );
 
       setTargets(initializedTargets);
       setAssetTargets(assetLevelTargets);
+
+      // Recompute totalAllocated from the initialized (possibly filtered) type targets
+      const total = initializedTargets.reduce(
+        (sum, t) => sum + parseFloat(t.target_percentage || 0),
+        0,
+      );
+      setTotalAllocated(total);
 
       // Load rebalancing recommendations
       await loadRebalancing();
@@ -116,7 +171,7 @@ export default function AssetAllocation() {
     } finally {
       setLoading(false);
     }
-  }, [loadRebalancing]);
+  }, [loadRebalancing, includedAssetTypes]);
 
   useEffect(() => {
     loadData();
@@ -151,6 +206,12 @@ export default function AssetAllocation() {
     const totals = {};
     assetTargets.forEach((target) => {
       const assetType = target.asset_asset_type;
+      if (includedAssetTypes && includedAssetTypes.length > 0) {
+        const included = new Set(
+          includedAssetTypes.map((t) => String(t).toLowerCase()),
+        );
+        if (!included.has((assetType || "").toLowerCase())) return;
+      }
       if (!totals[assetType]) {
         totals[assetType] = 0;
       }
@@ -199,10 +260,23 @@ export default function AssetAllocation() {
       setError(null);
 
       // Filter out zero targets and combine both types
-      const activeTypeTargets = targets.filter((t) => t.target_percentage > 0);
-      const activeAssetTargets = assetTargets.filter(
+      let activeTypeTargets = targets.filter((t) => t.target_percentage > 0);
+      let activeAssetTargets = assetTargets.filter(
         (t) => t.target_percentage > 0,
       );
+
+      if (includedAssetTypes && includedAssetTypes.length > 0) {
+        const included = new Set(
+          includedAssetTypes.map((t) => String(t).toLowerCase()),
+        );
+        activeTypeTargets = activeTypeTargets.filter((t) =>
+          included.has(String(t.asset_type).toLowerCase()),
+        );
+        activeAssetTargets = activeAssetTargets.filter((t) =>
+          included.has(String(t.asset_asset_type).toLowerCase()),
+        );
+      }
+
       const allTargets = [...activeTypeTargets, ...activeAssetTargets];
 
       await allocationAPI.batchUpdateTargets(allTargets);
@@ -261,6 +335,8 @@ export default function AssetAllocation() {
       <Typography variant="h4" sx={{ mb: 3 }}>
         Asset Allocation & Rebalancing
       </Typography>
+
+      {/* selection moved into Asset Type tab */}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -342,6 +418,55 @@ export default function AssetAllocation() {
 
         {tabValue === 0 && (
           <>
+            <Box display="flex" gap={2} mb={2} alignItems="center">
+              <Autocomplete
+                value={selectedAssetType}
+                onChange={(event, newValue) => setSelectedAssetType(newValue)}
+                options={assetTypes.filter(
+                  (t) => !targets.some((x) => x.asset_type === t),
+                )}
+                getOptionLabel={(option) => option}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Asset Type"
+                    size="small"
+                  />
+                )}
+                sx={{ flexGrow: 1 }}
+              />
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  if (!selectedAssetType) return;
+                  // avoid duplicates
+                  if (targets.some((t) => t.asset_type === selectedAssetType)) {
+                    setError("This asset type is already added");
+                    return;
+                  }
+                  setTargets((prev) => [
+                    ...prev,
+                    {
+                      id: null,
+                      asset_type: selectedAssetType,
+                      target_percentage: 0,
+                      notes: "",
+                    },
+                  ]);
+                  // ensure includedAssetTypes contains it
+                  setIncludedAssetTypes((prev) =>
+                    prev && prev.includes(selectedAssetType)
+                      ? prev
+                      : [...(prev || []), selectedAssetType],
+                  );
+                  setSelectedAssetType(null);
+                }}
+                disabled={!selectedAssetType}
+              >
+                Add Type
+              </Button>
+            </Box>
             <Alert severity="info" sx={{ mb: 2 }}>
               Set your portfolio allocation by asset type. These percentages
               should sum to 100% of your total portfolio.
@@ -396,17 +521,28 @@ export default function AssetAllocation() {
                         />
                       </TableCell>
                       <TableCell align="center">
-                        {target.id && (
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDelete(target.id)}
-                              color="error"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
+                        <Tooltip title="Remove">
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              target.id
+                                ? handleDelete(target.id)
+                                : (setTargets((prev) =>
+                                    prev.filter(
+                                      (t) => t.asset_type !== target.asset_type,
+                                    ),
+                                  ),
+                                  setIncludedAssetTypes((prev) =>
+                                    (prev || []).filter(
+                                      (p) => p !== target.asset_type,
+                                    ),
+                                  ))
+                            }
+                            color="error"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}

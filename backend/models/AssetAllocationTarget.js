@@ -17,13 +17,13 @@ class AssetAllocationTarget {
     assetId,
     targetPercentage,
     notes,
-    createdBy
+    createdBy,
   ) {
     try {
       // Validate that either assetType or assetId is provided, but not both
       if ((assetType && assetId) || (!assetType && !assetId)) {
         throw new Error(
-          "Must provide either asset_type or asset_id, not both or neither"
+          "Must provide either asset_type or asset_id, not both or neither",
         );
       }
 
@@ -52,7 +52,7 @@ class AssetAllocationTarget {
           notes,
           createdBy,
           userId,
-          assetType || assetId
+          assetType || assetId,
         );
         return assetType
           ? this.getByAssetType(userId, assetType)
@@ -70,7 +70,7 @@ class AssetAllocationTarget {
           assetId,
           targetPercentage,
           notes,
-          createdBy
+          createdBy,
         );
         return this.getById(result.lastInsertRowid, userId);
       }
@@ -110,7 +110,7 @@ class AssetAllocationTarget {
       return result.changes > 0;
     } catch (error) {
       logger.error(
-        `Error deleting allocation target for ${assetType}: ${error.message}`
+        `Error deleting allocation target for ${assetType}: ${error.message}`,
       );
       throw error;
     }
@@ -129,7 +129,7 @@ class AssetAllocationTarget {
       return result.changes > 0;
     } catch (error) {
       logger.error(
-        `Error deleting allocation target for asset ${assetId}: ${error.message}`
+        `Error deleting allocation target for asset ${assetId}: ${error.message}`,
       );
       throw error;
     }
@@ -147,13 +147,13 @@ class AssetAllocationTarget {
       // Validate type-level targets don't exceed 100%
       const totalTypePercentage = typeTargets.reduce(
         (sum, t) => sum + t.target_percentage,
-        0
+        0,
       );
       if (totalTypePercentage > 100) {
         throw new Error(
           `Total type-level allocation exceeds 100% (got ${totalTypePercentage.toFixed(
-            2
-          )}%)`
+            2,
+          )}%)`,
         );
       }
 
@@ -178,13 +178,13 @@ class AssetAllocationTarget {
       for (const [assetType, assets] of Object.entries(assetsByType)) {
         const totalAssetPercentage = assets.reduce(
           (sum, t) => sum + t.target_percentage,
-          0
+          0,
         );
         if (totalAssetPercentage > 100) {
           throw new Error(
             `Asset-level allocation for ${assetType} exceeds 100% (got ${totalAssetPercentage.toFixed(
-              2
-            )}%)`
+              2,
+            )}%)`,
           );
         }
       }
@@ -198,7 +198,7 @@ class AssetAllocationTarget {
             target.asset_id || null,
             target.target_percentage,
             target.notes || null,
-            createdBy
+            createdBy,
           );
         }
       });
@@ -207,7 +207,7 @@ class AssetAllocationTarget {
       return this.getAllByUser(userId);
     } catch (error) {
       logger.error(
-        `Error batch upserting allocation targets: ${error.message}`
+        `Error batch upserting allocation targets: ${error.message}`,
       );
       throw error;
     }
@@ -216,8 +216,21 @@ class AssetAllocationTarget {
   /**
    * Get all allocation targets for a user
    */
-  static getAllByUser(userId) {
+  static getAllByUser(userId, excludeAssetTypes = []) {
     try {
+      // Build base query and params
+      let whereClause = "aat.user_id = ?";
+      const params = [userId];
+
+      if (excludeAssetTypes && excludeAssetTypes.length > 0) {
+        const placeholders = excludeAssetTypes.map(() => "?").join(", ");
+        // Exclude type-level targets where asset_type is in the excluded list
+        whereClause += ` AND (aat.asset_type IS NULL OR aat.asset_type NOT IN (${placeholders}))`;
+        // Also exclude joined asset rows where asset.asset_type is in excluded list
+        whereClause += ` AND (a.asset_type IS NULL OR a.asset_type NOT IN (${placeholders}))`;
+        params.push(...excludeAssetTypes, ...excludeAssetTypes);
+      }
+
       const stmt = db.prepare(`
         SELECT 
           aat.*,
@@ -226,16 +239,16 @@ class AssetAllocationTarget {
           a.asset_type AS asset_asset_type
         FROM asset_allocation_targets aat
         LEFT JOIN assets a ON aat.asset_id = a.id
-        WHERE aat.user_id = ?
+        WHERE ${whereClause}
         ORDER BY 
           CASE WHEN aat.asset_type IS NOT NULL THEN 0 ELSE 1 END,
           aat.asset_type ASC,
           a.symbol ASC
       `);
-      return stmt.all(userId);
+      return stmt.all(...params);
     } catch (error) {
       logger.error(
-        `Error getting allocation targets for user ${userId}: ${error.message}`
+        `Error getting allocation targets for user ${userId}: ${error.message}`,
       );
       throw error;
     }
@@ -269,7 +282,7 @@ class AssetAllocationTarget {
       return stmt.get(userId, assetType);
     } catch (error) {
       logger.error(
-        `Error getting allocation target for ${assetType}: ${error.message}`
+        `Error getting allocation target for ${assetType}: ${error.message}`,
       );
       throw error;
     }
@@ -293,7 +306,7 @@ class AssetAllocationTarget {
       return stmt.get(userId, assetId);
     } catch (error) {
       logger.error(
-        `Error getting allocation target for asset ${assetId}: ${error.message}`
+        `Error getting allocation target for asset ${assetId}: ${error.message}`,
       );
       throw error;
     }
@@ -307,7 +320,8 @@ class AssetAllocationTarget {
   static validateTotalAllocation(
     userId,
     excludeAssetType = null,
-    excludeAssetId = null
+    excludeAssetId = null,
+    excludeAssetTypes = [],
   ) {
     try {
       let stmt;
@@ -315,13 +329,20 @@ class AssetAllocationTarget {
 
       if (excludeAssetType) {
         // Validating type-level targets only
+        // Build query excluding specified asset types as well
+        let where = `user_id = ? AND asset_type IS NOT NULL AND asset_id IS NULL AND asset_type != ?`;
+        const params = [userId, excludeAssetType];
+        if (excludeAssetTypes && excludeAssetTypes.length > 0) {
+          const placeholders = excludeAssetTypes.map(() => "?").join(", ");
+          where += ` AND asset_type NOT IN (${placeholders})`;
+          params.push(...excludeAssetTypes);
+        }
         stmt = db.prepare(`
           SELECT SUM(target_percentage) as total
           FROM asset_allocation_targets
-          WHERE user_id = ? AND asset_type IS NOT NULL AND asset_id IS NULL
-            AND asset_type != ?
+          WHERE ${where}
         `);
-        total = stmt.get(userId, excludeAssetType).total || 0;
+        total = stmt.get(...params).total || 0;
       } else if (excludeAssetId) {
         // Validating asset-level targets within their asset type
         // First get the asset's type
@@ -331,22 +352,36 @@ class AssetAllocationTarget {
           throw new Error(`Asset with ID ${excludeAssetId} not found`);
         }
 
+        // Build query and params
+        let where = `aat.user_id = ? AND aat.asset_id IS NOT NULL AND a.asset_type = ? AND aat.asset_id != ?`;
+        const params = [userId, asset.asset_type, excludeAssetId];
+        if (excludeAssetTypes && excludeAssetTypes.length > 0) {
+          const placeholders = excludeAssetTypes.map(() => "?").join(", ");
+          where += ` AND a.asset_type NOT IN (${placeholders})`;
+          params.push(...excludeAssetTypes);
+        }
         stmt = db.prepare(`
           SELECT SUM(aat.target_percentage) as total
           FROM asset_allocation_targets aat
           JOIN assets a ON aat.asset_id = a.id
-          WHERE aat.user_id = ? AND aat.asset_id IS NOT NULL
-            AND a.asset_type = ? AND aat.asset_id != ?
+          WHERE ${where}
         `);
-        total = stmt.get(userId, asset.asset_type, excludeAssetId).total || 0;
+        total = stmt.get(...params).total || 0;
       } else {
         // Get total for type-level only (asset-level is within type, doesn't count toward 100%)
+        let where = `user_id = ? AND asset_type IS NOT NULL AND asset_id IS NULL`;
+        const params = [userId];
+        if (excludeAssetTypes && excludeAssetTypes.length > 0) {
+          const placeholders = excludeAssetTypes.map(() => "?").join(", ");
+          where += ` AND asset_type NOT IN (${placeholders})`;
+          params.push(...excludeAssetTypes);
+        }
         stmt = db.prepare(`
           SELECT SUM(target_percentage) as total
           FROM asset_allocation_targets
-          WHERE user_id = ? AND asset_type IS NOT NULL AND asset_id IS NULL
+          WHERE ${where}
         `);
-        total = stmt.get(userId).total || 0;
+        total = stmt.get(...params).total || 0;
       }
 
       return {

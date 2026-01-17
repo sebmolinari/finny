@@ -9,7 +9,7 @@ const allocationTargetValidation = [
     .optional({ nullable: true })
     .isIn(VALID_VALUES.ASSET_TYPES)
     .withMessage(
-      `Asset type must be one of: ${VALID_VALUES.ASSET_TYPES.join(", ")}`
+      `Asset type must be one of: ${VALID_VALUES.ASSET_TYPES.join(", ")}`,
     ),
   body("asset_id")
     .optional({ nullable: true })
@@ -23,7 +23,7 @@ const allocationTargetValidation = [
 
     if ((hasAssetType && hasAssetId) || (!hasAssetType && !hasAssetId)) {
       throw new Error(
-        "Must provide either asset_type or asset_id, not both or neither"
+        "Must provide either asset_type or asset_id, not both or neither",
       );
     }
     return true;
@@ -43,7 +43,7 @@ const batchAllocationTargetsValidation = [
     .optional({ nullable: true })
     .isIn(VALID_VALUES.ASSET_TYPES)
     .withMessage(
-      `Asset type must be one of: ${VALID_VALUES.ASSET_TYPES.join(", ")}`
+      `Asset type must be one of: ${VALID_VALUES.ASSET_TYPES.join(", ")}`,
     ),
   body("targets.*.asset_id")
     .optional({ nullable: true })

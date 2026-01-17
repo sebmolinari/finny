@@ -113,7 +113,7 @@ router.put(
         email_frequency,
         validate_cash_balance,
         validate_sell_balance,
-        req.user.id
+        req.user.id,
       );
 
       // Log settings change
@@ -157,7 +157,7 @@ router.put(
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 module.exports = router;

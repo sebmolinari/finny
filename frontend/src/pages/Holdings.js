@@ -75,7 +75,7 @@ export default function Holdings() {
                 label="Cash Balance"
                 value={formatCurrency(
                   analytics?.transactions?.cash_balance || 0,
-                  0
+                  0,
                 )}
                 icon={<AttachMoneyIcon color="warning" />}
               />
@@ -93,7 +93,7 @@ export default function Holdings() {
                 label="Liquidity"
                 value={formatCurrency(
                   analytics?.transactions?.liquidity_balance || 0,
-                  0
+                  0,
                 )}
                 icon={<AttachMoneyIcon color="info" />}
               />
@@ -110,7 +110,7 @@ export default function Holdings() {
               <MetricCard
                 label="Liquidity %"
                 value={formatPercent(
-                  analytics?.transactions?.liquidity_percent || 0
+                  analytics?.transactions?.liquidity_percent || 0,
                 )}
                 icon={<AttachMoneyIcon color="info" />}
               />
@@ -191,26 +191,26 @@ export default function Holdings() {
                           holding.asset_type === "currency"
                             ? "#e3f2fd"
                             : holding.asset_type === "equity"
-                            ? "#f3e5f5"
-                            : holding.asset_type === "crypto"
-                            ? "#fff3e0"
-                            : holding.asset_type === "fixedincome"
-                            ? "#e0f2f1"
-                            : holding.asset_type === "realestate"
-                            ? "#fce4ec"
-                            : "#f5f5f5",
+                              ? "#f3e5f5"
+                              : holding.asset_type === "crypto"
+                                ? "#fff3e0"
+                                : holding.asset_type === "fixedincome"
+                                  ? "#e0f2f1"
+                                  : holding.asset_type === "realestate"
+                                    ? "#fce4ec"
+                                    : "#f5f5f5",
                         color:
                           holding.asset_type === "currency"
                             ? "#1976d2"
                             : holding.asset_type === "equity"
-                            ? "#9c27b0"
-                            : holding.asset_type === "crypto"
-                            ? "#ff9800"
-                            : holding.asset_type === "fixedincome"
-                            ? "#00796b"
-                            : holding.asset_type === "realestate"
-                            ? "#c2185b"
-                            : "#757575",
+                              ? "#9c27b0"
+                              : holding.asset_type === "crypto"
+                                ? "#ff9800"
+                                : holding.asset_type === "fixedincome"
+                                  ? "#00796b"
+                                  : holding.asset_type === "realestate"
+                                    ? "#c2185b"
+                                    : "#757575",
                         fontSize: "0.75rem",
                         fontWeight: 600,
                       }}
@@ -218,14 +218,14 @@ export default function Holdings() {
                       {holding.asset_type === "equity"
                         ? "EQT"
                         : holding.asset_type === "crypto"
-                        ? "CRY"
-                        : holding.asset_type === "currency"
-                        ? "CCY"
-                        : holding.asset_type === "fixedincome"
-                        ? "FI"
-                        : holding.asset_type === "realestate"
-                        ? "RE"
-                        : holding.asset_type.toUpperCase()}
+                          ? "CRY"
+                          : holding.asset_type === "currency"
+                            ? "CCY"
+                            : holding.asset_type === "fixedincome"
+                              ? "FI"
+                              : holding.asset_type === "realestate"
+                                ? "RE"
+                                : holding.asset_type.toUpperCase()}
                     </Box>
                   </TableCell>
                   <TableCell align="right">

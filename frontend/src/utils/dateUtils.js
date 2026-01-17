@@ -16,11 +16,11 @@ export const formatDatetimeInTimezone = (utcDateTime, dateFormat, timezone) => {
 
   // Validate SQLite UTC datetime
   const match = utcDateTime.match(
-    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
   );
   if (!match) {
     throw new Error(
-      "Invalid UTC datetime format (expected YYYY-MM-DD HH:MM:SS)"
+      "Invalid UTC datetime format (expected YYYY-MM-DD HH:MM:SS)",
     );
   }
 

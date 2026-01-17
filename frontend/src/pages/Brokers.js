@@ -142,7 +142,7 @@ export default function Brokers() {
         active: !broker.active,
       });
       toast.success(
-        `Broker ${broker.active ? "deactivated" : "activated"} successfully`
+        `Broker ${broker.active ? "deactivated" : "activated"} successfully`,
       );
       loadBrokers();
     } catch (error) {

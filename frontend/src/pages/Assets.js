@@ -86,7 +86,7 @@ export default function Assets() {
           } catch {
             return { ...asset, currentPrice: null };
           }
-        })
+        }),
       );
       setAssets(assetsWithPrices);
     } catch (error) {
@@ -237,7 +237,7 @@ export default function Assets() {
         active: !asset.active,
       });
       toast.success(
-        `Asset ${asset.symbol} ${asset.active ? "deactivated" : "activated"}`
+        `Asset ${asset.symbol} ${asset.active ? "deactivated" : "activated"}`,
       );
       loadAssets();
     } catch (error) {
@@ -263,7 +263,7 @@ export default function Assets() {
       const results = response.data.results;
 
       toast.success(
-        `Price refresh completed: ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed`
+        `Price refresh completed: ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed`,
       );
 
       if (results.errors.length > 0) {
@@ -310,7 +310,7 @@ export default function Assets() {
         await assetAPI.updatePrice(
           selectedAsset.id,
           editingPrice.id,
-          priceFormData
+          priceFormData,
         );
         toast.success("Price updated successfully");
         setEditingPrice(null);
@@ -463,26 +463,26 @@ export default function Assets() {
                         asset.asset_type === "currency"
                           ? "#e3f2fd"
                           : asset.asset_type === "equity"
-                          ? "#f3e5f5"
-                          : asset.asset_type === "crypto"
-                          ? "#fff3e0"
-                          : asset.asset_type === "fixedincome"
-                          ? "#e0f2f1"
-                          : asset.asset_type === "realestate"
-                          ? "#fce4ec"
-                          : "#f5f5f5",
+                            ? "#f3e5f5"
+                            : asset.asset_type === "crypto"
+                              ? "#fff3e0"
+                              : asset.asset_type === "fixedincome"
+                                ? "#e0f2f1"
+                                : asset.asset_type === "realestate"
+                                  ? "#fce4ec"
+                                  : "#f5f5f5",
                       color:
                         asset.asset_type === "currency"
                           ? "#1976d2"
                           : asset.asset_type === "equity"
-                          ? "#9c27b0"
-                          : asset.asset_type === "crypto"
-                          ? "#ff9800"
-                          : asset.asset_type === "fixedincome"
-                          ? "#00796b"
-                          : asset.asset_type === "realestate"
-                          ? "#c2185b"
-                          : "#757575",
+                            ? "#9c27b0"
+                            : asset.asset_type === "crypto"
+                              ? "#ff9800"
+                              : asset.asset_type === "fixedincome"
+                                ? "#00796b"
+                                : asset.asset_type === "realestate"
+                                  ? "#c2185b"
+                                  : "#757575",
                       fontSize: "0.875rem",
                     }}
                   >
@@ -519,7 +519,7 @@ export default function Assets() {
                     ? formatDatetimeInTimezone(
                         asset.price_updated_at || asset.price_created_at,
                         userDateFormat,
-                        userTimezone
+                        userTimezone,
                       )
                     : "—"}
                 </TableCell>
@@ -814,7 +814,7 @@ export default function Assets() {
                         {formatDatetimeInTimezone(
                           price.updated_at || price.created_at,
                           userDateFormat,
-                          userTimezone
+                          userTimezone,
                         )}
                       </TableCell>
                       <TableCell>

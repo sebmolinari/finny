@@ -109,7 +109,7 @@ export default function TaxReport() {
       const response = await analyticsAPI.getTaxReport(
         year,
         excludeAssetTypes,
-        excludeBrokers
+        excludeBrokers,
       );
       setReportData(response.data);
     } catch (err) {

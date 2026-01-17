@@ -17,7 +17,7 @@ class Broker {
       description,
       website,
       active,
-      createdBy
+      createdBy,
     );
     return result.lastInsertRowid;
   }

@@ -42,7 +42,7 @@ router.post("/summary", authMiddleware, async (req, res) => {
     // Generate and send email
     const emailContent = PortfolioEmailService.generatePortfolioSummaryEmail(
       req.user.id,
-      user.username
+      user.username,
     );
 
     if (!emailContent) {
@@ -60,7 +60,7 @@ router.post("/summary", authMiddleware, async (req, res) => {
         userId: req.user.id,
         username: req.user.username,
         trigger: "manual_portfolio_summary_sent",
-      }
+      },
     );
 
     if (result.success) {

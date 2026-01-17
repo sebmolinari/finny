@@ -48,7 +48,7 @@ export default function Settings() {
       const response = await assetAPI.getAll();
       // Filter to only show currency assets
       const currencyAssets = response.data.filter(
-        (asset) => asset.asset_type === "currency"
+        (asset) => asset.asset_type === "currency",
       );
       setAssets(currencyAssets);
     } catch (error) {

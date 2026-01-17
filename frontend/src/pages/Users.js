@@ -91,8 +91,8 @@ const Users = () => {
       await userAPI.updateUserStatus(userId, newStatus);
       setUsers(
         users.map((u) =>
-          u.id === userId ? { ...u, active: newStatus ? 1 : 0 } : u
-        )
+          u.id === userId ? { ...u, active: newStatus ? 1 : 0 } : u,
+        ),
       );
       setSuccess(`User ${newStatus ? "enabled" : "disabled"} successfully`);
       setTimeout(() => setSuccess(""), 3000);
@@ -105,7 +105,7 @@ const Users = () => {
     try {
       await userAPI.updateUserRole(userId, newRole);
       setUsers(
-        users.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+        users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)),
       );
       setSuccess("User role updated successfully");
       setTimeout(() => setSuccess(""), 3000);

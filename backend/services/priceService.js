@@ -40,7 +40,7 @@ class PriceService {
       };
     } catch (error) {
       logger.error(
-        `Failed to fetch price from Yahoo for ${symbol}: ${error.message}`
+        `Failed to fetch price from Yahoo for ${symbol}: ${error.message}`,
       );
       return null;
     }
@@ -93,7 +93,7 @@ class PriceService {
       };
     } catch (error) {
       logger.error(
-        `Failed to fetch price from CoinGecko for ${symbol}: ${error.message}`
+        `Failed to fetch price from CoinGecko for ${symbol}: ${error.message}`,
       );
       return null;
     }
@@ -122,7 +122,7 @@ class PriceService {
       };
     } catch (error) {
       logger.error(
-        `Failed to fetch price from DolarAPI for ${priceSymbol}: ${error.message}`
+        `Failed to fetch price from DolarAPI for ${priceSymbol}: ${error.message}`,
       );
       return null;
     }
@@ -140,7 +140,7 @@ class PriceService {
 
       if (!baseUrl || !apiKey) {
         throw new Error(
-          "Missing SUPABASE_URL or SUPABASE_API_KEY env configuration"
+          "Missing SUPABASE_URL or SUPABASE_API_KEY env configuration",
         );
       }
 
@@ -170,9 +170,9 @@ class PriceService {
         typeof data.price === "number" && !isNaN(data.price)
           ? data.price
           : typeof data.yesterday_price === "number" &&
-            !isNaN(data.yesterday_price)
-          ? data.yesterday_price
-          : null;
+              !isNaN(data.yesterday_price)
+            ? data.yesterday_price
+            : null;
 
       if (price === null) {
         throw new Error("No price fields available from Supabase response");
@@ -190,7 +190,7 @@ class PriceService {
       };
     } catch (error) {
       logger.error(
-        `Failed to fetch price from Supabase for ${ticker}: ${error.message}`
+        `Failed to fetch price from Supabase for ${ticker}: ${error.message}`,
       );
       return null;
     }
@@ -262,7 +262,7 @@ class PriceService {
           if (asset.price_source === "manual") {
             results.skipped++;
             logger.info(
-              `Skipping ${asset.symbol} (${asset.name}) - manual price source`
+              `Skipping ${asset.symbol} (${asset.name}) - manual price source`,
             );
             continue;
           }
@@ -271,7 +271,7 @@ class PriceService {
           if (!priceData) {
             results.failed++;
             results.errors.push(
-              `Failed to fetch price for ${asset.symbol} (${asset.name})`
+              `Failed to fetch price for ${asset.symbol} (${asset.name})`,
             );
             continue;
           }
@@ -285,10 +285,10 @@ class PriceService {
               existing.id,
               priceData.price,
               priceData.source,
-              userId
+              userId,
             );
             logger.info(
-              `Updated existing price for ${asset.symbol}: ${priceData.price}`
+              `Updated existing price for ${asset.symbol}: ${priceData.price}`,
             );
           } else {
             // Create new price entry
@@ -297,10 +297,10 @@ class PriceService {
               today,
               priceData.price,
               priceData.source,
-              userId
+              userId,
             );
             logger.info(
-              `Created new price for ${asset.symbol}: ${priceData.price}`
+              `Created new price for ${asset.symbol}: ${priceData.price}`,
             );
           }
 
@@ -311,14 +311,14 @@ class PriceService {
         } catch (error) {
           results.failed++;
           results.errors.push(
-            `Error updating ${asset.symbol}: ${error.message}`
+            `Error updating ${asset.symbol}: ${error.message}`,
           );
           logger.error(`Error updating ${asset.symbol}: ${error.message}`);
         }
       }
 
       logger.info(
-        `Price refresh completed: ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed out of ${results.total} total`
+        `Price refresh completed: ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed out of ${results.total} total`,
       );
       return results;
     } catch (error) {
@@ -372,11 +372,11 @@ class PriceService {
           existing.id,
           priceData.price,
           priceData.source,
-          userId
+          userId,
         );
         savedPrice = PriceData.findById(existing.id);
         logger.info(
-          `Updated existing price for ${asset.symbol}: ${priceData.price}`
+          `Updated existing price for ${asset.symbol}: ${priceData.price}`,
         );
       } else {
         // Create new price entry
@@ -385,11 +385,11 @@ class PriceService {
           today,
           priceData.price,
           priceData.source,
-          userId
+          userId,
         );
         savedPrice = PriceData.findById(priceId);
         logger.info(
-          `Created new price for ${asset.symbol}: ${priceData.price}`
+          `Created new price for ${asset.symbol}: ${priceData.price}`,
         );
       }
 
@@ -400,7 +400,7 @@ class PriceService {
       };
     } catch (error) {
       logger.error(
-        `Failed to refresh price for asset ${assetId}: ${error.message}`
+        `Failed to refresh price for asset ${assetId}: ${error.message}`,
       );
       throw error;
     }

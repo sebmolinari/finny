@@ -32,9 +32,34 @@ const {
  */
 router.get("/targets", auth, async (req, res) => {
   try {
-    const targets = AssetAllocationTarget.getAllByUser(req.user.id);
+    // Support filtering by included asset types via query param `include_asset_types` (comma-separated)
+    const includeParam = req.query.include_asset_types;
+    let excludeAssetTypes = [];
+    if (includeParam) {
+      const includeAssetTypes = includeParam
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      // Build list of all asset types from assets table and compute excludes
+      const db = require("../config/database");
+      const rows = db.prepare("SELECT DISTINCT asset_type FROM assets").all();
+      const allTypes = rows
+        .map((r) => (r.asset_type || "").toLowerCase())
+        .filter(Boolean);
+      excludeAssetTypes = allTypes.filter(
+        (t) => !includeAssetTypes.includes(t),
+      );
+    }
+
+    const targets = AssetAllocationTarget.getAllByUser(
+      req.user.id,
+      excludeAssetTypes,
+    );
     const validation = AssetAllocationTarget.validateTotalAllocation(
-      req.user.id
+      req.user.id,
+      null,
+      null,
+      excludeAssetTypes,
     );
 
     res.json({
@@ -120,7 +145,7 @@ router.post("/targets", auth, allocationTargetValidation, async (req, res) => {
     const validation = AssetAllocationTarget.validateTotalAllocation(
       req.user.id,
       asset_type,
-      asset_id
+      asset_id,
     );
 
     if (validation.total + target_percentage > 100) {
@@ -137,7 +162,7 @@ router.post("/targets", auth, allocationTargetValidation, async (req, res) => {
       asset_id || null,
       target_percentage,
       notes,
-      req.user.id
+      req.user.id,
     );
 
     res.json(target);
@@ -193,13 +218,13 @@ router.post(
       const result = AssetAllocationTarget.batchUpsert(
         req.user.id,
         targets,
-        req.user.id
+        req.user.id,
       );
       res.json(result);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -250,8 +275,26 @@ router.delete("/targets/:id", auth, async (req, res) => {
  */
 router.get("/rebalancing", auth, async (req, res) => {
   try {
+    const includeParam = req.query.include_asset_types;
+    let excludeAssetTypes = [];
+    if (includeParam) {
+      const includeAssetTypes = includeParam
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const db = require("../config/database");
+      const rows = db.prepare("SELECT DISTINCT asset_type FROM assets").all();
+      const allTypes = rows
+        .map((r) => (r.asset_type || "").toLowerCase())
+        .filter(Boolean);
+      excludeAssetTypes = allTypes.filter(
+        (t) => !includeAssetTypes.includes(t),
+      );
+    }
+
     const recommendations = AnalyticsService.getRebalancingRecommendations(
-      req.user.id
+      req.user.id,
+      excludeAssetTypes,
     );
     res.json(recommendations);
   } catch (error) {

@@ -1,8 +1,9 @@
 const Database = require("better-sqlite3-multiple-ciphers");
+//https://github.com/m4heshd/better-sqlite3-multiple-ciphers
 const path = require("path");
 
 const db = new Database(
-  path.join(__dirname, `../${process.env.DATABASE_PATH}`)
+  path.join(__dirname, `../${process.env.DATABASE_PATH}`),
   // Enable for debugging
   // {
   //   verbose: console.log,

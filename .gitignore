@@ -7,6 +7,3 @@ node_modules/
 .DS_Store
 build/
 dist/
-
-# Ignore backend init script and data
-backend/scripts/init-data.json

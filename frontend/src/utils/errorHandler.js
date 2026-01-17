@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
  */
 export const handleApiError = (
   error,
-  fallbackMessage = "An error occurred"
+  fallbackMessage = "An error occurred",
 ) => {
   console.error("API Error:", error);
 

@@ -20,7 +20,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Global response interceptor for error handling
@@ -66,7 +66,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export const authAPI = {
@@ -202,7 +202,13 @@ export const constantsAPI = {
 };
 
 export const allocationAPI = {
-  getTargets: () => api.get("/allocation/targets"),
+  getTargets: (includeAssetTypes = []) =>
+    api.get("/allocation/targets", {
+      params:
+        includeAssetTypes && includeAssetTypes.length > 0
+          ? { include_asset_types: includeAssetTypes.join(",") }
+          : {},
+    }),
 
   getTargetById: (id) => api.get(`/allocation/targets/${id}`),
 
@@ -213,7 +219,13 @@ export const allocationAPI = {
 
   deleteTarget: (id) => api.delete(`/allocation/targets/${id}`),
 
-  getRebalancing: () => api.get("/allocation/rebalancing"),
+  getRebalancing: (includeAssetTypes = []) =>
+    api.get("/allocation/rebalancing", {
+      params:
+        includeAssetTypes && includeAssetTypes.length > 0
+          ? { include_asset_types: includeAssetTypes.join(",") }
+          : {},
+    }),
 };
 
 export default api;

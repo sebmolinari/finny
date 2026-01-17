@@ -23,9 +23,6 @@ function loadDataFile() {
 
   if (!fs.existsSync(dataFilePath)) {
     console.error(`❌ Data file not found: ${dataFilePath}`);
-    console.log(
-      "\nPlease create init-data.json based on init-data.example.json"
-    );
     process.exit(1);
   }
 
@@ -55,13 +52,13 @@ async function initBrokers(token, brokers) {
         },
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       brokerIds[broker.name] = response.data.id;
     } catch (error) {
       console.error(
         `Error creating broker ${broker.name}:`,
-        error.response?.data?.message || error.message
+        error.response?.data?.message || error.message,
       );
     }
   }
@@ -90,13 +87,13 @@ async function initAssets(token, assets) {
         },
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       assetIds[asset.symbol] = response.data.id;
     } catch (error) {
       console.error(
         `Error creating asset ${asset.symbol}:`,
-        error.response?.data?.message || error.message
+        error.response?.data?.message || error.message,
       );
     }
   }
@@ -147,13 +144,13 @@ async function initPriceData(assetIds, token, priceHistory) {
           },
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         successCount++;
       } catch (error) {
         console.error(
           `Error creating price for ${symbol} on ${priceEntry.date}:`,
-          error.response?.data?.message || error.message
+          error.response?.data?.message || error.message,
         );
       }
     }
@@ -163,7 +160,7 @@ async function initPriceData(assetIds, token, priceHistory) {
     console.log(
       `✓ ${successCount} price data points created for ${
         Object.keys(priceHistory).length
-      } assets`
+      } assets`,
     );
   } else {
     console.log("⚠ No price data created");
@@ -182,7 +179,7 @@ async function deleteTransactions(token) {
         `${API_BASE_URL}/transactions?limit=100`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       const transactions = txResponse.data.data || [];
 
@@ -215,7 +212,7 @@ async function deletePriceData(token) {
       `${API_BASE_URL}/assets?includeInactive=true`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     const assets = assetsResponse.data || [];
     let priceCount = 0;
@@ -225,7 +222,7 @@ async function deletePriceData(token) {
           `${API_BASE_URL}/assets/${asset.id}/prices`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         const prices = pricesResponse.data || [];
         for (const price of prices) {
@@ -234,7 +231,7 @@ async function deletePriceData(token) {
               `${API_BASE_URL}/assets/${asset.id}/prices/${price.id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
-              }
+              },
             );
             priceCount++;
           } catch (err) {
@@ -244,7 +241,7 @@ async function deletePriceData(token) {
       } catch (err) {
         console.error(
           `Error fetching prices for asset ${asset.id}:`,
-          err.message
+          err.message,
         );
       }
     }
@@ -261,7 +258,7 @@ async function deleteAssets(token) {
       `${API_BASE_URL}/assets?includeInactive=true`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     const assets = assetsResponse.data || [];
     for (const asset of assets) {
@@ -286,7 +283,7 @@ async function deleteBrokers(token) {
       `${API_BASE_URL}/brokers?includeInactive=true`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     const brokers = brokersResponse.data || [];
     for (const broker of brokers) {
@@ -311,7 +308,7 @@ async function deleteAllocationTargets(token) {
       `${API_BASE_URL}/allocation/targets`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     const targets = targetsResponse.data.targets || [];
     for (const target of targets) {
@@ -322,7 +319,7 @@ async function deleteAllocationTargets(token) {
       } catch (err) {
         console.error(
           `Error deleting allocation target ${target.id}:`,
-          err.message
+          err.message,
         );
       }
     }
@@ -339,7 +336,7 @@ async function cleanupAuditLogs(token) {
       `${API_BASE_URL}/audit/cleanup?days=0`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     console.log(`✓ ${cleanupResponse.data.message}\n`);
   } catch (error) {
@@ -396,7 +393,7 @@ async function main() {
 
     // Ask for confirmation before clearing data
     const confirm = await question(
-      "⚠️  This will DELETE all data.\nAre you sure you want to continue? (yes/no): "
+      "⚠️  This will DELETE all data.\nAre you sure you want to continue? (yes/no): ",
     );
 
     if (confirm.toLowerCase() !== "yes") {
@@ -411,7 +408,7 @@ async function main() {
     console.log(
       `✓ Loaded ${data.brokers.length} brokers, ${data.assets.length} assets, ${
         Object.keys(data.priceHistory).length
-      } price histories\n`
+      } price histories\n`,
     );
 
     // Clear existing data via API (call the delete function)
@@ -428,11 +425,11 @@ async function main() {
       console.error(
         "❌ API Error:",
         error.response.status,
-        error.response.data?.message || error.message
+        error.response.data?.message || error.message,
       );
     } else if (error.code === "ECONNREFUSED") {
       console.error(
-        "❌ Connection refused. Make sure the backend server is running."
+        "❌ Connection refused. Make sure the backend server is running.",
       );
     } else {
       console.error("❌ Error initializing database:", error.message);

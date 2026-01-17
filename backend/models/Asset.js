@@ -11,10 +11,10 @@ class Asset {
     priceSymbol,
     active,
     priceFactor,
-    createdBy
+    createdBy,
   ) {
     const stmt = db.prepare(
-      "INSERT INTO assets (symbol, name, asset_type, currency, price_source, price_symbol, active, price_factor, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO assets (symbol, name, asset_type, currency, price_source, price_symbol, active, price_factor, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
     const result = stmt.run(
       symbol,
@@ -25,7 +25,7 @@ class Asset {
       priceSymbol,
       active,
       priceFactor,
-      createdBy
+      createdBy,
     );
     return result.lastInsertRowid;
   }
@@ -42,7 +42,7 @@ class Asset {
     } = data;
 
     const stmt = db.prepare(
-      "UPDATE assets SET name = ?, asset_type = ?, currency = ?, price_source = ?, price_symbol = ?, active = ?, price_factor = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+      "UPDATE assets SET name = ?, asset_type = ?, currency = ?, price_source = ?, price_symbol = ?, active = ?, price_factor = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
     );
     const result = stmt.run(
       name,
@@ -53,7 +53,7 @@ class Asset {
       active,
       price_factor,
       updatedBy,
-      id
+      id,
     );
     return result.changes > 0;
   }

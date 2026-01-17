@@ -36,7 +36,7 @@ const updateUserRoleValidation = [
     .withMessage("Role is required")
     .isIn(VALID_VALUES.USER_ROLES)
     .withMessage(
-      `Invalid role. Valid roles: ${VALID_VALUES.USER_ROLES.join(", ")}`
+      `Invalid role. Valid roles: ${VALID_VALUES.USER_ROLES.join(", ")}`,
     ),
 ];
 

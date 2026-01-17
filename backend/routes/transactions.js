@@ -168,8 +168,8 @@ router.get("/export", authMiddleware, (req, res) => {
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="transactions_${getTodayInTimezone(
-        userSettings.timezone
-      )}.csv"`
+        userSettings.timezone,
+      )}.csv"`,
     );
     res.send(csv);
   } catch (error) {
@@ -292,7 +292,7 @@ router.post(
           total_amount,
           notes,
         },
-        req.user.id
+        req.user.id,
       );
 
       const transaction = Transaction.findById(id, req.user.id);
@@ -309,14 +309,14 @@ router.post(
           date,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.status(201).json(transaction);
     } catch (error) {
       res.status(error.status || 500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -378,7 +378,7 @@ router.put(
     try {
       const currentTransaction = Transaction.findById(
         req.params.id,
-        req.user.id
+        req.user.id,
       );
 
       if (!currentTransaction) {
@@ -430,7 +430,7 @@ router.put(
           total_amount,
           notes,
         },
-        req.user.id
+        req.user.id,
       );
 
       if (!updated) {
@@ -458,14 +458,14 @@ router.put(
           notes,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.json(transaction);
     } catch (error) {
       res.status(error.status || 500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -514,7 +514,7 @@ router.delete("/:id", authMiddleware, (req, res) => {
           total_amount: transaction.total_amount,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
     }
 
@@ -620,10 +620,10 @@ router.post("/bulk", authMiddleware, (req, res) => {
       // For non-cash transactions, get the asset and broker IDs
       if (transaction_type !== "deposit" && transaction_type !== "withdraw") {
         const asset = assets.find(
-          (a) => a.symbol.toLowerCase() === asset_symbol.toLowerCase()
+          (a) => a.symbol.toLowerCase() === asset_symbol.toLowerCase(),
         );
         const broker = brokers.find(
-          (b) => b.name.toLowerCase() === broker_name.toLowerCase()
+          (b) => b.name.toLowerCase() === broker_name.toLowerCase(),
         );
         asset_id = asset?.id;
         broker_id = broker?.id;
@@ -663,7 +663,7 @@ router.post("/bulk", authMiddleware, (req, res) => {
             total_amount,
             notes: notes,
           },
-          req.user.id
+          req.user.id,
         );
 
         results.success.push({
@@ -685,7 +685,7 @@ router.post("/bulk", authMiddleware, (req, res) => {
             bulk_import: true,
           },
           req.ip,
-          req.get("user-agent")
+          req.get("user-agent"),
         );
       } catch (error) {
         results.errors.push({

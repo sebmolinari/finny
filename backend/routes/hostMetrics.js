@@ -67,7 +67,7 @@ function getCpuTemperature() {
   try {
     const tempStr = fs.readFileSync(
       "/sys/class/thermal/thermal_zone0/temp",
-      "utf8"
+      "utf8",
     );
     return parseInt(tempStr, 10) / 1000;
   } catch (e) {

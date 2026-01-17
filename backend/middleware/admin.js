@@ -8,7 +8,7 @@ const adminMiddleware = (req, res, next) => {
       logger.warn(
         `AUTHORIZATION FAILED: User ${req.user?.username || "unknown"} (${
           req.user?.role || "none"
-        }) attempted admin action`
+        }) attempted admin action`,
       );
       return res
         .status(403)
@@ -30,7 +30,7 @@ const adminOrSuperuserMiddleware = (req, res, next) => {
       logger.warn(
         `AUTHORIZATION FAILED: User ${req.user?.username || "unknown"} (${
           req.user?.role || "none"
-        }) attempted privileged action`
+        }) attempted privileged action`,
       );
       return res.status(403).json({
         message: "Access denied. Admin or Superuser privileges required.",

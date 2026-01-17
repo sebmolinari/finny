@@ -34,7 +34,7 @@ export const AuditFieldsDisplay = ({ item, userTimezone, userDateFormat }) => {
             value={formatDatetimeInTimezone(
               item.created_at,
               userDateFormat,
-              userTimezone
+              userTimezone,
             )}
             fullWidth
             size="small"
@@ -70,7 +70,7 @@ export const AuditFieldsDisplay = ({ item, userTimezone, userDateFormat }) => {
             value={formatDatetimeInTimezone(
               item.updated_at,
               userDateFormat,
-              userTimezone
+              userTimezone,
             )}
             fullWidth
             size="small"

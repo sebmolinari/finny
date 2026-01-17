@@ -38,7 +38,7 @@ class PriceData {
             item.date,
             _price.value,
             item.source,
-            createdBy
+            createdBy,
           );
         } catch (error) {
           // Skip duplicates silently in bulk operations
@@ -87,7 +87,7 @@ class PriceData {
 
   static findByAssetAndDate(assetId, date) {
     const stmt = db.prepare(
-      "SELECT * FROM price_data WHERE asset_id = ? AND date = ?"
+      "SELECT * FROM price_data WHERE asset_id = ? AND date = ?",
     );
     const row = stmt.get(assetId, date);
     return PriceData._mapRowToApi(row);

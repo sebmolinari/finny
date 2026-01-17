@@ -25,7 +25,7 @@ const assetValidation = [
     .withMessage("Asset type is required")
     .isIn(VALID_VALUES.ASSET_TYPES)
     .withMessage(
-      `Invalid asset type. Valid types: ${VALID_VALUES.ASSET_TYPES.join(", ")}`
+      `Invalid asset type. Valid types: ${VALID_VALUES.ASSET_TYPES.join(", ")}`,
     ),
 
   body("currency")
@@ -34,8 +34,8 @@ const assetValidation = [
     .isIn(VALID_VALUES.CURRENCIES)
     .withMessage(
       `Invalid currency. Valid currencies: ${VALID_VALUES.CURRENCIES.join(
-        ", "
-      )}`
+        ", ",
+      )}`,
     ),
 
   body("price_source")
@@ -43,8 +43,8 @@ const assetValidation = [
     .isIn(VALID_VALUES.PRICE_SOURCES)
     .withMessage(
       `Invalid price source. Valid sources: ${VALID_VALUES.PRICE_SOURCES.join(
-        ", "
-      )}`
+        ", ",
+      )}`,
     ),
 
   body("price_symbol")

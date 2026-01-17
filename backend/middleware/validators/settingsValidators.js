@@ -51,7 +51,7 @@ const updateSettingsValidation = [
     .optional()
     .isIn([0, 1, true, false])
     .withMessage(
-      "Email notifications enabled must be a boolean (0, 1, true, or false)"
+      "Email notifications enabled must be a boolean (0, 1, true, or false)",
     )
     .toInt(),
 
@@ -65,7 +65,7 @@ const updateSettingsValidation = [
     .optional()
     .isIn([0, 1, true, false])
     .withMessage(
-      "Validate cash balance must be a boolean (0, 1, true, or false)"
+      "Validate cash balance must be a boolean (0, 1, true, or false)",
     )
     .toInt(),
 
@@ -73,7 +73,7 @@ const updateSettingsValidation = [
     .optional()
     .isIn([0, 1, true, false])
     .withMessage(
-      "Validate sell balance must be a boolean (0, 1, true, or false)"
+      "Validate sell balance must be a boolean (0, 1, true, or false)",
     )
     .toInt(),
 ];

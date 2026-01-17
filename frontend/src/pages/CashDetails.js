@@ -32,7 +32,7 @@ function exportToCSV(data, filename) {
   const csvRows = [
     header.join(","),
     ...data.map((row) =>
-      header.map((field) => JSON.stringify(row[field] ?? "")).join(",")
+      header.map((field) => JSON.stringify(row[field] ?? "")).join(","),
     ),
   ];
   const csvContent = csvRows.join("\n");
@@ -230,7 +230,7 @@ export default function CashDetails() {
                       summary.total_dividends +
                       summary.total_interest +
                       summary.total_coupons +
-                      summary.total_rentals
+                      summary.total_rentals,
                   )}
                 </Typography>
               </Box>
@@ -264,7 +264,7 @@ export default function CashDetails() {
                 <Typography variant="subtitle2" color="error.main">
                   -
                   {formatCurrency(
-                    summary.total_withdrawals + summary.total_buy
+                    summary.total_withdrawals + summary.total_buy,
                   )}
                 </Typography>
               </Box>
@@ -288,7 +288,7 @@ export default function CashDetails() {
                       summary.total_dividends +
                       summary.total_interest +
                       summary.total_coupons +
-                      summary.total_rentals
+                      summary.total_rentals,
                   )}
                 </Typography>
               </Box>
@@ -299,7 +299,7 @@ export default function CashDetails() {
                 <Typography variant="body2">
                   -
                   {formatCurrency(
-                    summary.total_withdrawals + summary.total_buy
+                    summary.total_withdrawals + summary.total_buy,
                   )}
                 </Typography>
               </Box>

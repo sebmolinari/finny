@@ -195,7 +195,7 @@ router.post(
         price_symbol,
         active,
         price_factor,
-        req.user.id
+        req.user.id,
       );
       const asset = Asset.findById(id);
 
@@ -220,7 +220,7 @@ router.post(
       }
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -314,7 +314,7 @@ router.put(
           active,
           price_factor,
         },
-        req.user.id
+        req.user.id,
       );
 
       if (!updated) {
@@ -340,14 +340,14 @@ router.put(
           price_factor,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.json(asset);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -397,7 +397,7 @@ router.delete("/:id", authMiddleware, adminOrSuperuser, (req, res) => {
           asset_type: asset.asset_type,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
     }
 
@@ -547,7 +547,7 @@ router.post(
         date,
         price,
         source,
-        req.user.id
+        req.user.id,
       );
 
       const priceData = PriceData.findByAssetAndDate(req.params.id, date);
@@ -565,7 +565,7 @@ router.post(
           source: source,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.status(201).json(priceData);
@@ -575,7 +575,7 @@ router.post(
       }
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -640,7 +640,7 @@ router.put(
         req.params.priceId,
         price,
         source !== undefined ? source : oldPriceData.source,
-        req.user.id
+        req.user.id,
       );
 
       if (!updated) {
@@ -658,14 +658,14 @@ router.put(
         { price: oldPriceData.price, source: oldPriceData.source },
         { price: priceData.price, source: priceData.source },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
 
       res.json(priceData);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -736,7 +736,7 @@ router.post(
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -796,7 +796,7 @@ router.delete(
             price: priceData.price,
           },
           req.ip,
-          req.get("user-agent")
+          req.get("user-agent"),
         );
       }
 
@@ -804,7 +804,7 @@ router.delete(
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 /**
@@ -876,7 +876,7 @@ router.post("/:id/prices/refresh", authMiddleware, async (req, res) => {
   try {
     const result = await PriceService.refreshAssetPrice(
       req.params.id,
-      req.user.id
+      req.user.id,
     );
 
     // Log price refresh action
@@ -893,7 +893,7 @@ router.post("/:id/prices/refresh", authMiddleware, async (req, res) => {
           source: result.price.source,
         },
         req.ip,
-        req.get("user-agent")
+        req.get("user-agent"),
       );
     }
 

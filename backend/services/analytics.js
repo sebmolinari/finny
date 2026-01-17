@@ -81,10 +81,14 @@ class AnalyticsService {
   }
 
   // Get portfolio holdings with enriched data (prices, P&L, etc.)
-  static getPortfolioHoldings(userId, hideZeroQuantity = true) {
+  static getPortfolioHoldings(
+    userId,
+    hideZeroQuantity = true,
+    excludeAssetTypes = [],
+  ) {
     const holdings = Transaction.getPortfolioHoldings(userId, hideZeroQuantity);
 
-    const enrichedHoldings = holdings.map((holding) => {
+    let enrichedHoldings = holdings.map((holding) => {
       const latestPrice = PriceData.getLatestPrice(holding.asset_id);
       const marketValue = latestPrice
         ? holding.total_quantity * latestPrice.price
@@ -117,14 +121,26 @@ class AnalyticsService {
     });
 
     // SORT BY MARKET VALUE (DESC)
+    // Optionally filter out excluded asset types
+    if (excludeAssetTypes && excludeAssetTypes.length > 0) {
+      const excluded = excludeAssetTypes.map((t) => String(t).toLowerCase());
+      enrichedHoldings = enrichedHoldings.filter(
+        (h) => !excluded.includes(String(h.asset_type).toLowerCase()),
+      );
+    }
+
     enrichedHoldings.sort((a, b) => b.market_value - a.market_value);
     return enrichedHoldings;
   }
 
   // Get comprehensive portfolio analytics data
-  static getPortfolioAnalytics(userId) {
+  static getPortfolioAnalytics(userId, excludeAssetTypes = []) {
     // Get enriched portfolio with current prices and FIFO calculations in one pass
-    const enrichedHoldings = this.getPortfolioHoldings(userId);
+    const enrichedHoldings = this.getPortfolioHoldings(
+      userId,
+      true,
+      excludeAssetTypes,
+    );
 
     // Transaction analytics
     const netInvested = Transaction.getNetInvested(userId);
@@ -570,7 +586,7 @@ class AnalyticsService {
   /**
    * Get rebalancing recommendations based on target allocations
    */
-  static getRebalancingRecommendations(userId) {
+  static getRebalancingRecommendations(userId, excludeAssetTypes = []) {
     const AssetAllocationTarget = require("../models/AssetAllocationTarget");
     const UserSettings = require("../models/UserSettings");
 
@@ -579,14 +595,17 @@ class AnalyticsService {
       const userSettings = UserSettings.findByUserId(userId);
       const rebalancingTolerance = userSettings.rebalancing_tolerance;
 
-      // Get current portfolio analytics
-      const portfolio = this.getPortfolioAnalytics(userId);
+      // Get current portfolio analytics (optionally excluding asset types)
+      const portfolio = this.getPortfolioAnalytics(userId, excludeAssetTypes);
       const currentAllocation = portfolio.transactions.asset_allocation;
       const totalPortfolioValue = portfolio.nav;
       const holdings = portfolio.transactions.holdings;
 
-      // Get target allocations
-      const targets = AssetAllocationTarget.getAllByUser(userId);
+      // Get target allocations (optionally excluding asset types)
+      const targets = AssetAllocationTarget.getAllByUser(
+        userId,
+        excludeAssetTypes,
+      );
 
       if (targets.length === 0) {
         return {

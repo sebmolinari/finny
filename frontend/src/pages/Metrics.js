@@ -30,7 +30,7 @@ export default function Metrics() {
         setLastRefresh(
           new Date().toLocaleDateString() +
             " " +
-            new Date().toLocaleTimeString()
+            new Date().toLocaleTimeString(),
         );
       } catch (e) {
         setError("Failed to fetch metrics");

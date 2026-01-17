@@ -123,7 +123,7 @@ router.post("/", authMiddleware, validate(brokerValidation), (req, res) => {
       description,
       website,
       active,
-      req.user.id
+      req.user.id,
     );
 
     const broker = Broker.findById(id, req.user.id);
@@ -141,7 +141,7 @@ router.post("/", authMiddleware, validate(brokerValidation), (req, res) => {
         active,
       },
       req.ip,
-      req.get("user-agent")
+      req.get("user-agent"),
     );
 
     res.status(201).json(broker);
@@ -220,7 +220,7 @@ router.put("/:id", authMiddleware, validate(brokerValidation), (req, res) => {
         website,
         active,
       },
-      req.user.id
+      req.user.id,
     );
 
     const updatedBroker = Broker.findById(req.params.id, req.user.id);
@@ -234,7 +234,7 @@ router.put("/:id", authMiddleware, validate(brokerValidation), (req, res) => {
       oldValues,
       { name, description, website, active },
       req.ip,
-      req.get("user-agent")
+      req.get("user-agent"),
     );
 
     res.json(updatedBroker);
@@ -294,7 +294,7 @@ router.delete("/:id", authMiddleware, (req, res) => {
         name: broker.name,
       },
       req.ip,
-      req.get("user-agent")
+      req.get("user-agent"),
     );
 
     res.json({ message: "Broker deleted successfully" });

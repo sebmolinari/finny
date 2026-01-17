@@ -37,7 +37,7 @@ class AuditLog {
       data.ip_address,
       data.user_agent,
       data.success !== undefined ? (data.success ? 1 : 0) : 1,
-      data.error_message
+      data.error_message,
     );
 
     return result.lastInsertRowid;
@@ -95,7 +95,7 @@ class AuditLog {
     recordId,
     newValues,
     ipAddress,
-    userAgent
+    userAgent,
   ) {
     return this.create({
       user_id: userId,
@@ -120,7 +120,7 @@ class AuditLog {
     oldValues,
     newValues,
     ipAddress,
-    userAgent
+    userAgent,
   ) {
     return this.create({
       user_id: userId,
@@ -145,7 +145,7 @@ class AuditLog {
     recordId,
     oldValues,
     ipAddress,
-    userAgent
+    userAgent,
   ) {
     return this.create({
       user_id: userId,

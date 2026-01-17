@@ -162,7 +162,7 @@ router.get("/user/:userId/logins", (req, res) => {
 
     const logs = AuditLog.getLoginHistory(
       parseInt(userId),
-      limit ? parseInt(limit) : 10
+      limit ? parseInt(limit) : 10,
     );
     res.json(logs);
   } catch (error) {
@@ -204,7 +204,7 @@ router.get("/user/:userId/summary", (req, res) => {
 
     const summary = AuditLog.getUserActivitySummary(
       parseInt(userId),
-      days ? parseInt(days) : 30
+      days ? parseInt(days) : 30,
     );
     res.json(summary);
   } catch (error) {
