@@ -874,7 +874,7 @@ export default function Blotter() {
                   fullWidth
                   required
                   inputProps={{
-                    step: "0.01",
+                    step: "0.00000001",
                     min: "0",
                   }}
                   helperText={quantityHelp}
@@ -888,7 +888,7 @@ export default function Blotter() {
                   }
                   fullWidth
                   required
-                  inputProps={{ step: "0.01", min: "0" }}
+                  inputProps={{ step: "0.000001", min: "0" }}
                   helperText={priceHelp}
                 />
               </>
@@ -903,7 +903,7 @@ export default function Blotter() {
                   setFormData({ ...formData, fee: e.target.value })
                 }
                 fullWidth
-                inputProps={{ step: "0.01", min: "0" }}
+                inputProps={{ step: "0.0001", min: "0" }}
                 helperText={feeHelp}
               />
             )}
@@ -916,7 +916,7 @@ export default function Blotter() {
               }
               fullWidth
               required
-              inputProps={{ step: "0.01", min: "0" }}
+              inputProps={{ step: "0.0001", min: "0" }}
               helperText={totalAmountHelp}
             />
             <TextField
