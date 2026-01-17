@@ -49,7 +49,9 @@ const Dashboard = () => {
             name: broker.name,
             value: broker.current_value || 0,
           }))
+          .filter((broker) => broker.value > 10) // Filter out brokers with negligible values
           .sort((a, b) => b.value - a.value);
+        console.log("Broker Chart Data:", chartData);
         setBrokerSummary(chartData);
       }
     } catch (error) {
@@ -109,7 +111,7 @@ const Dashboard = () => {
                 label="Holdings Market Value"
                 value={formatCurrency(
                   dashboard?.transactions?.holdings_market_value || 0,
-                  0
+                  0,
                 )}
                 subtitle={
                   dashboard?.transactions?.daily_pnl !== undefined ? (
@@ -133,7 +135,7 @@ const Dashboard = () => {
                                 dashboard.transactions.daily_pnl)) *
                               100
                           : 0,
-                        2
+                        2,
                       )}
                       )
                     </Typography>
@@ -156,7 +158,7 @@ const Dashboard = () => {
                 label="Unrealized P&L"
                 value={formatCurrency(
                   dashboard?.transactions?.unrealized_gain || 0,
-                  0
+                  0,
                 )}
                 valueColor={
                   (dashboard?.transactions?.unrealized_gain || 0) >= 0
@@ -179,7 +181,7 @@ const Dashboard = () => {
               <MetricCard
                 label="ROI %"
                 value={formatPercent(
-                  dashboard?.transactions?.unrealized_gain_percent || 0
+                  dashboard?.transactions?.unrealized_gain_percent || 0,
                 )}
                 valueColor={
                   (dashboard?.transactions?.unrealized_gain_percent || 0) >= 0
@@ -206,7 +208,7 @@ const Dashboard = () => {
                 label="Net Contributions"
                 value={formatCurrency(
                   dashboard?.transactions?.net_contributions || 0,
-                  0
+                  0,
                 )}
                 icon={<AttachMoneyIcon color="secondary" />}
               />
@@ -224,7 +226,7 @@ const Dashboard = () => {
                 label="Net Invested"
                 value={formatCurrency(
                   dashboard?.transactions?.net_invested || 0,
-                  0
+                  0,
                 )}
                 icon={<AttachMoneyIcon color="success" />}
               />

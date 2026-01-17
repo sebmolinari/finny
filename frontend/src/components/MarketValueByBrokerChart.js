@@ -20,8 +20,16 @@ const MarketValueByBrokerChart = ({ data, title, height }) => (
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis />
+          <XAxis
+            dataKey="name"
+            interval={0}
+            tick={{ fontSize: 14 }}
+            allowDataOverflow={false}
+          />
+          <YAxis
+            domain={[0, "dataMax"]}
+            tickFormatter={(value) => formatCurrency(value, 0)}
+          />
           <RechartsTooltip
             formatter={(value) => formatCurrency(value)}
             contentStyle={{

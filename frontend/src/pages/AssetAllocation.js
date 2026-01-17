@@ -77,10 +77,10 @@ export default function AssetAllocation() {
 
       // Separate type-level and asset-level targets
       const typeTargets = existingTargets.filter(
-        (t) => t.asset_type && !t.asset_id
+        (t) => t.asset_type && !t.asset_id,
       );
       const assetLevelTargets = existingTargets.filter(
-        (t) => !t.asset_type && t.asset_id
+        (t) => !t.asset_type && t.asset_id,
       );
 
       // Initialize type targets with existing or empty
@@ -125,8 +125,8 @@ export default function AssetAllocation() {
   const handleTargetChange = (assetType, field, value) => {
     setTargets((prev) =>
       prev.map((t) =>
-        t.asset_type === assetType ? { ...t, [field]: value } : t
-      )
+        t.asset_type === assetType ? { ...t, [field]: value } : t,
+      ),
     );
 
     // Recalculate total (only type-level targets count toward 100%)
@@ -141,7 +141,7 @@ export default function AssetAllocation() {
 
   const handleAssetTargetChange = (assetId, field, value) => {
     setAssetTargets((prev) =>
-      prev.map((t) => (t.asset_id === assetId ? { ...t, [field]: value } : t))
+      prev.map((t) => (t.asset_id === assetId ? { ...t, [field]: value } : t)),
     );
     // Asset-level targets don't affect the main total (they're within their type)
   };
@@ -161,7 +161,7 @@ export default function AssetAllocation() {
 
   const assetTypeTotals = getAssetTypeTotals();
   const hasInvalidAssetAllocations = Object.values(assetTypeTotals).some(
-    (total) => total > 100
+    (total) => total > 100,
   );
 
   const handleAddAssetTarget = () => {
@@ -201,7 +201,7 @@ export default function AssetAllocation() {
       // Filter out zero targets and combine both types
       const activeTypeTargets = targets.filter((t) => t.target_percentage > 0);
       const activeAssetTargets = assetTargets.filter(
-        (t) => t.target_percentage > 0
+        (t) => t.target_percentage > 0,
       );
       const allTargets = [...activeTypeTargets, ...activeAssetTargets];
 
@@ -294,7 +294,7 @@ export default function AssetAllocation() {
             subtitle={
               rebalancing?.rebalance_intensity
                 ? `Rebalance Intensity: ${formatPercent(
-                    rebalancing.rebalance_intensity
+                    rebalancing.rebalance_intensity,
                   )}`
                 : "No targets set"
             }
@@ -373,7 +373,7 @@ export default function AssetAllocation() {
                             handleTargetChange(
                               target.asset_type,
                               "target_percentage",
-                              parseFloat(e.target.value) || 0
+                              parseFloat(e.target.value) || 0,
                             )
                           }
                           inputProps={{ min: 0, max: 100, step: 0.1 }}
@@ -389,7 +389,7 @@ export default function AssetAllocation() {
                             handleTargetChange(
                               target.asset_type,
                               "notes",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           fullWidth
@@ -497,7 +497,7 @@ export default function AssetAllocation() {
                                 handleAssetTargetChange(
                                   target.asset_id,
                                   "target_percentage",
-                                  parseFloat(e.target.value) || 0
+                                  parseFloat(e.target.value) || 0,
                                 )
                               }
                               inputProps={{ min: 0, max: 100, step: 0.1 }}
@@ -513,7 +513,7 @@ export default function AssetAllocation() {
                                 handleAssetTargetChange(
                                   target.asset_id,
                                   "notes",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               fullWidth
@@ -576,21 +576,21 @@ export default function AssetAllocation() {
                                       total > 100
                                         ? "error"
                                         : total === 100
-                                        ? "success.main"
-                                        : "warning.main"
+                                          ? "success.main"
+                                          : "warning.main"
                                     }
                                   >
                                     {total.toFixed(1)}%{" "}
                                     {total > 100
                                       ? "(OVER)"
                                       : total === 100
-                                      ? "✓"
-                                      : ""}
+                                        ? "✓"
+                                        : ""}
                                   </Typography>
                                 </TableCell>
                                 <TableCell colSpan={2}></TableCell>
                               </TableRow>
-                            )
+                            ),
                           )}
                         </>
                       )}
@@ -708,8 +708,8 @@ export default function AssetAllocation() {
                               rec.difference_percentage > 0
                                 ? "success.main"
                                 : rec.difference_percentage < 0
-                                ? "error.main"
-                                : "text.primary"
+                                  ? "error.main"
+                                  : "text.primary"
                             }
                           >
                             {rec.difference_percentage > 0 ? "+" : ""}
@@ -732,8 +732,8 @@ export default function AssetAllocation() {
                               rec.difference > 0
                                 ? "success.main"
                                 : rec.difference < 0
-                                ? "error.main"
-                                : "text.primary"
+                                  ? "error.main"
+                                  : "text.primary"
                             }
                           >
                             {rec.difference > 0 ? "+" : ""}
@@ -806,7 +806,7 @@ export default function AssetAllocation() {
                             <Typography variant="body2">
                               {rec.current_percentage_within_type !== undefined
                                 ? formatPercent(
-                                    rec.current_percentage_within_type
+                                    rec.current_percentage_within_type,
                                   )
                                 : formatPercent(rec.current_percentage)}
                             </Typography>
@@ -823,7 +823,7 @@ export default function AssetAllocation() {
                             <Typography variant="body2">
                               {rec.target_percentage_within_type !== undefined
                                 ? formatPercent(
-                                    rec.target_percentage_within_type
+                                    rec.target_percentage_within_type,
                                   )
                                 : formatPercent(rec.target_percentage)}
                             </Typography>
@@ -842,8 +842,8 @@ export default function AssetAllocation() {
                               rec.difference_percentage > 0
                                 ? "success.main"
                                 : rec.difference_percentage < 0
-                                ? "error.main"
-                                : "text.primary"
+                                  ? "error.main"
+                                  : "text.primary"
                             }
                           >
                             {rec.difference_percentage > 0 ? "+" : ""}
@@ -866,8 +866,8 @@ export default function AssetAllocation() {
                               rec.difference > 0
                                 ? "success.main"
                                 : rec.difference < 0
-                                ? "error.main"
-                                : "text.primary"
+                                  ? "error.main"
+                                  : "text.primary"
                             }
                           >
                             {rec.difference > 0 ? "+" : ""}
