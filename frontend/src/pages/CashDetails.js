@@ -191,7 +191,7 @@ export default function CashDetails() {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body2">Dividends:</Typography>
-                <Typography variant="body2" color="primary.main">
+                <Typography variant="body2" color="secondary.main">
                   +{formatCurrency(summary.total_dividends)}
                 </Typography>
               </Box>
