@@ -184,51 +184,67 @@ class AnalyticsService {
     };
   }
 
-  // Get portfolio performance over time
   static getPortfolioPerformance(userId, days = 30) {
     const db = require("../config/database");
     const userSettings = UserSettings.findByUserId(userId);
     const today = getTodayInTimezone(userSettings.timezone);
 
-    // Calculate cutoff date
-    const cutoffDate = new Date(today);
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffDateStr = cutoffDate.toISOString().split("T")[0];
-
-    // Get all transactions in the date range
-    const stmt = db.prepare(`
-      SELECT date, transaction_type, asset_id
-      FROM transactions
-      WHERE user_id = ? AND date >= ?
-      ORDER BY date ASC, id ASC
-    `);
-    const transactions = stmt.all(userId, cutoffDateStr);
-
-    if (transactions.length === 0) {
-      return [];
+    // --- Build date range (ASC)
+    const dates = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().split("T")[0]);
     }
 
-    // Get unique dates in the range
-    const uniqueDates = [...new Set(transactions.map((t) => t.date))];
+    // --- Load transactions (ASC)
+    const txStmt = db.prepare(`
+    SELECT date, transaction_type, asset_id, quantity, total_amount
+    FROM transactions
+    WHERE user_id = ?
+      AND date <= ?
+    ORDER BY date ASC, id ASC
+  `);
+    const transactions = txStmt.all(userId, today);
 
-    // Add today if not already included
-    if (!uniqueDates.includes(today)) {
-      uniqueDates.push(today);
+    // --- Load prices (ASC)
+    const priceStmt = db.prepare(`
+    SELECT asset_id, date, price
+    FROM price_data
+    WHERE date <= ?
+    ORDER BY asset_id ASC, date ASC
+  `);
+    const prices = priceStmt.all(today);
+
+    // --- Group prices by asset
+    const priceStreams = {};
+    for (const p of prices) {
+      if (!priceStreams[p.asset_id]) priceStreams[p.asset_id] = [];
+      priceStreams[p.asset_id].push(p);
     }
+
+    const priceIndex = {};
+    const lastPrice = {};
+    Object.keys(priceStreams).forEach((a) => (priceIndex[a] = 0));
+
+    let txIndex = 0;
+    let cashValue = 0;
+    const holdings = {};
 
     const performance = [];
 
-    for (const date of uniqueDates) {
-      // Calculate cash balance at this date (integer arithmetic)
-      const cashStmt = db.prepare(`
-        SELECT transaction_type, total_amount
-        FROM transactions
-        WHERE user_id = ? AND date <= ?
-      `);
-      const cashTransactions = cashStmt.all(userId, date);
-      let cashBalanceValue = 0;
-      cashTransactions.forEach((tx) => {
+    // --- Walk forward in time
+    for (const date of dates) {
+      // Apply transactions up to this date
+      while (
+        txIndex < transactions.length &&
+        transactions[txIndex].date <= date
+      ) {
+        const tx = transactions[txIndex];
+
         const amountValue = tx.total_amount || 0;
+        const qtyValue = tx.quantity || 0;
+
         switch (tx.transaction_type) {
           case "deposit":
           case "sell":
@@ -236,79 +252,51 @@ class AnalyticsService {
           case "interest":
           case "rental":
           case "coupon":
-            cashBalanceValue += amountValue;
+            cashValue += amountValue;
             break;
           case "withdraw":
           case "buy":
-            cashBalanceValue -= amountValue;
+            cashValue -= amountValue;
             break;
         }
-      });
-      const cashBalance = fromValueScale(cashBalanceValue, AMOUNT_SCALE);
 
-      // Calculate holdings at this date (integer arithmetic)
-      const holdingsStmt = db.prepare(`
-        SELECT 
-          a.id as asset_id,
-          a.symbol,
-          a.asset_type,
-          t.transaction_type,
-          t.quantity
-        FROM transactions t
-        JOIN assets a ON t.asset_id = a.id
-        WHERE t.user_id = ? AND t.date <= ? AND t.transaction_type IN ('buy', 'sell')
-      `);
-      const holdingTransactions = holdingsStmt.all(userId, date);
-
-      // Aggregate by asset (integer arithmetic)
-      const holdingsValueMap = {};
-      holdingTransactions.forEach((tx) => {
-        const qtyValue = tx.quantity || 0;
-        const signedQtyValue =
-          tx.transaction_type === "buy" ? qtyValue : -qtyValue;
-
-        if (!holdingsValueMap[tx.asset_id]) {
-          holdingsValueMap[tx.asset_id] = {
-            asset_id: tx.asset_id,
-            symbol: tx.symbol,
-            asset_type: tx.asset_type,
-            quantityValue: 0,
-          };
+        if (tx.transaction_type === "buy" || tx.transaction_type === "sell") {
+          if (!holdings[tx.asset_id]) holdings[tx.asset_id] = 0;
+          holdings[tx.asset_id] +=
+            tx.transaction_type === "buy" ? qtyValue : -qtyValue;
         }
-        holdingsValueMap[tx.asset_id].quantityValue += signedQtyValue;
-      });
 
-      // Filter out zero/negative quantities
-      const holdings = Object.values(holdingsValueMap).filter(
-        (h) => h.quantityValue > 0
-      );
-
-      // Get prices for each holding at this date (or closest prior date)
-      let holdingsValue = 0;
-      for (const holding of holdings) {
-        const priceStmt = db.prepare(`
-          SELECT price FROM price_data
-          WHERE asset_id = ? AND date <= ?
-          ORDER BY date DESC
-          LIMIT 1
-        `);
-        const priceResult = priceStmt.get(holding.asset_id, date);
-        if (priceResult) {
-          const quantity = fromValueScale(
-            holding.quantityValue,
-            QUANTITY_SCALE
-          );
-          const price = fromValueScale(priceResult.price, PRICE_SCALE);
-          holdingsValue += quantity * price;
-        }
+        txIndex++;
       }
 
-      // Total portfolio value = holdings + cash
-      const totalValue = holdingsValue + cashBalance;
+      // Update prices up to this date
+      for (const assetId of Object.keys(priceStreams)) {
+        const stream = priceStreams[assetId];
+        let idx = priceIndex[assetId];
+
+        while (idx < stream.length && stream[idx].date <= date) {
+          lastPrice[assetId] = stream[idx].price;
+          idx++;
+        }
+
+        priceIndex[assetId] = idx;
+      }
+
+      // Value holdings
+      let holdingsValue = 0;
+      for (const [assetId, qtyValue] of Object.entries(holdings)) {
+        if (qtyValue <= 0) continue;
+        const priceValue = lastPrice[assetId];
+        if (!priceValue) continue;
+
+        const quantity = fromValueScale(qtyValue, QUANTITY_SCALE);
+        const price = fromValueScale(priceValue, PRICE_SCALE);
+        holdingsValue += quantity * price;
+      }
 
       performance.push({
         date,
-        total_value: totalValue,
+        total_value: fromValueScale(cashValue, AMOUNT_SCALE) + holdingsValue,
       });
     }
 
@@ -645,10 +633,10 @@ class AnalyticsService {
         const action = isBalanced
           ? "HOLD"
           : difference > 0
-          ? "BUY"
-          : difference < 0
-          ? "SELL"
-          : "HOLD";
+            ? "BUY"
+            : difference < 0
+              ? "SELL"
+              : "HOLD";
 
         typeRecommendations.push({
           level: "type",
@@ -720,10 +708,10 @@ class AnalyticsService {
         const action = isBalanced
           ? "HOLD"
           : difference > 0
-          ? "BUY"
-          : difference < 0
-          ? "SELL"
-          : "HOLD";
+            ? "BUY"
+            : difference < 0
+              ? "SELL"
+              : "HOLD";
 
         assetRecommendations.push({
           level: "asset",

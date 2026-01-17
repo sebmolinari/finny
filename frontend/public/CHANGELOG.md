@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented below.
 
+## [0.0.4] – 2026-01-17
+
+### Added
+
+- Dashboard charts refactored into reusable components (Portfolio Value, Asset Allocation, Market Value by Broker)
+- Market Trends: Improved mini line chart sensitivity to show small price changes
+
+### Fixed
+
+- Add explicit "Apply" filter button to Blotter and prevent auto-submission when changing dates
+- Minor UI/UX improvements to filter and chart displays
+
 ## [0.0.3] – 2026-01-15
 
 ### Added

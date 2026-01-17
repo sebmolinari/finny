@@ -9,7 +9,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import {
@@ -100,12 +100,25 @@ export default function MarketTrends() {
                     {chartData.length > 1 ? (
                       <ResponsiveContainer width={120} height={40}>
                         <LineChart data={chartData}>
+                          {/* Dynamic y-axis domain for more visible changes */}
                           <Line
                             type="monotone"
                             dataKey="price"
                             stroke={priceChangeColor}
                             strokeWidth={2}
                             dot={false}
+                            isAnimationActive={false}
+                          />
+                          <YAxis
+                            hide
+                            domain={(() => {
+                              const prices = chartData.map((d) => d.price);
+                              const min = Math.min(...prices);
+                              const max = Math.max(...prices);
+                              if (min === max) return [min * 0.99, max * 1.01];
+                              const buffer = (max - min) * 0.1 || 1;
+                              return [min - buffer, max + buffer];
+                            })()}
                           />
                         </LineChart>
                       </ResponsiveContainer>

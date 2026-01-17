@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Container,
-  Box,
-  Paper,
-  Typography,
-  Grid,
-  Tooltip,
-} from "@mui/material";
+import { Container, Box, Typography, Grid, Tooltip } from "@mui/material";
 import { MetricCard } from "../components/StyledCard";
 import {
   AccountBalance as AccountBalanceIcon,
@@ -15,21 +8,10 @@ import {
   ShowChart as ShowChartIcon,
   Percent as PercentIcon,
 } from "@mui/icons-material";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+
+import AssetAllocationChart from "../components/AssetAllocationChart";
+import PortfolioValueChart from "../components/PortfolioValueChart";
+import MarketValueByBrokerChart from "../components/MarketValueByBrokerChart";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -293,144 +275,30 @@ const Dashboard = () => {
 
       {/* Portfolio Performance Chart */}
       {performanceData.length > 0 && (
-        <Paper sx={{ p: 3, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Portfolio Performance (Last 30 Days)
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <RechartsTooltip
-                formatter={(value) => formatCurrency(value)}
-                labelStyle={{ color: "#000" }}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#1976d2"
-                strokeWidth={2}
-                dot={false}
-                name="Portfolio Value"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </Paper>
+        <PortfolioValueChart
+          data={performanceData}
+          title="Portfolio Performance (Last 30 Days)"
+          height={300}
+        />
       )}
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Asset Allocation
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={dashboard?.transactions?.asset_allocation}
-                  dataKey="value"
-                  nameKey="type"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={(entry) =>
-                    `${entry.type}: ${entry.percentage?.toFixed(1)}%`
-                  }
-                >
-                  {dashboard?.transactions?.asset_allocation?.map(
-                    (entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={
-                          ["#2196f3", "#4caf50", "#ff9800", "#9c27b0"][index]
-                        }
-                      />
-                    )
-                  )}
-                </Pie>
-                <RechartsTooltip formatter={(value) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </Paper>
+          <AssetAllocationChart
+            data={dashboard.transactions.asset_allocation}
+            title="Asset Allocation"
+            height={300}
+          />
         </Grid>
       </Grid>
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Market Value by Broker
-            </Typography>
-            {brokerSummary.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={brokerSummary}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <RechartsTooltip
-                    formatter={(value) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                      border: "1px solid #ccc",
-                      borderRadius: "4px",
-                    }}
-                  />
-                  <Bar dataKey="value" fill="#2196f3" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Typography color="text.secondary">
-                No broker data available
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Top Holdings
-            </Typography>
-            <Grid container spacing={2}>
-              {dashboard?.transactions?.holdings?.slice(0, 4).map((holding) => (
-                <Grid item xs={12} sm={6} md={3} key={holding.asset_id}>
-                  <Box
-                    sx={{
-                      p: 2,
-                      border: 1,
-                      borderColor: "divider",
-                      borderRadius: 1,
-                    }}
-                  >
-                    <Typography variant="subtitle2" gutterBottom>
-                      {holding.symbol}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {holding.name}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      {formatCurrency(holding.market_value || 0)}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color={
-                        holding.unrealized_gain >= 0
-                          ? "success.main"
-                          : "error.main"
-                      }
-                    >
-                      {holding.unrealized_gain >= 0 ? "+" : ""}
-                      {formatPercent(holding.unrealized_gain_percent || 0)}
-                    </Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
+          <MarketValueByBrokerChart
+            data={brokerSummary}
+            title="Market Value by Broker"
+            height={300}
+          />
         </Grid>
       </Grid>
     </Container>
