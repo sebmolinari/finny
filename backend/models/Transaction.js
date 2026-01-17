@@ -6,6 +6,7 @@ const {
   PRICE_SCALE,
   FEE_SCALE,
   AMOUNT_SCALE,
+  MINIMUM_HOLDING_QUANTITY,
   toValueScale,
   fromValueScale,
 } = require("../utils/valueScale");
@@ -50,7 +51,7 @@ class Transaction {
       _fee.value,
       _total.value,
       notes,
-      createdBy
+      createdBy,
     );
     return result.lastInsertRowid;
   }
@@ -93,14 +94,14 @@ class Transaction {
       notes,
       updatedBy,
       id,
-      userId
+      userId,
     );
     return result.changes > 0;
   }
 
   static delete(id, userId) {
     const stmt = db.prepare(
-      "DELETE FROM transactions WHERE id = ? AND user_id = ?"
+      "DELETE FROM transactions WHERE id = ? AND user_id = ?",
     );
     const result = stmt.run(id, userId);
     return result.changes > 0;
@@ -173,7 +174,7 @@ class Transaction {
 
     // Get total count
     const countStmt = db.prepare(
-      `SELECT COUNT(*) as total FROM transactions it WHERE ${whereClause}`
+      `SELECT COUNT(*) as total FROM transactions it WHERE ${whereClause}`,
     );
     const { total } = countStmt.get(...params);
 
@@ -277,7 +278,7 @@ class Transaction {
               const soldFromLotValue = remainingToSellValue;
               const costOfPartialSaleValue = Math.round(
                 (soldFromLotValue * oldestLot.totalCostValue) /
-                  oldestLot.quantityValue
+                  oldestLot.quantityValue,
               );
 
               costOfSoldValue += costOfPartialSaleValue;
@@ -298,11 +299,11 @@ class Transaction {
       // Sum up remaining lots (integer arithmetic)
       const totalQuantityValue = fifoLots.reduce(
         (sum, lot) => sum + lot.quantityValue,
-        0
+        0,
       );
       const costBasisValue = fifoLots.reduce(
         (sum, lot) => sum + lot.totalCostValue,
-        0
+        0,
       );
 
       // Convert to floats only at the end
@@ -311,9 +312,11 @@ class Transaction {
       const realizedGain = fromValueScale(realizedGainValue, AMOUNT_SCALE);
 
       // Apply quantity filter based on hideZeroQuantity parameter
-      // If hideZeroQuantity is true, filter to show only quantity > 0.00001
+      // If hideZeroQuantity is true, filter to show only quantity > MINIMUM_HOLDING_QUANTITY
       // If hideZeroQuantity is false, show everything (no filtering)
-      const shouldInclude = hideZeroQuantity ? totalQuantity > 0.00001 : true;
+      const shouldInclude = hideZeroQuantity
+        ? totalQuantity > MINIMUM_HOLDING_QUANTITY
+        : true;
 
       if (shouldInclude) {
         holdings.push({

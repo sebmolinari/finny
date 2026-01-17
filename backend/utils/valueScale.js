@@ -6,6 +6,8 @@ const PRICE_SCALE = 6; // Support up to 6 decimal places for prices
 const FEE_SCALE = 4; // Support up to 4 decimal places for fees
 const AMOUNT_SCALE = 4; // Support up to 4 decimal places for amounts
 
+const MINIMUM_HOLDING_QUANTITY = 0.00000001; // Minimum quantity to consider a holding valid
+
 /**
  * Convert a float value to value/scale integer representation
  * @param {number|null|undefined} floatVal - The float value to convert
@@ -43,6 +45,7 @@ module.exports = {
   PRICE_SCALE,
   FEE_SCALE,
   AMOUNT_SCALE,
+  MINIMUM_HOLDING_QUANTITY,
   toValueScale,
   fromValueScale,
 };

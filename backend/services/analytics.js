@@ -12,6 +12,7 @@ const {
   PRICE_SCALE,
   QUANTITY_SCALE,
   AMOUNT_SCALE,
+  MINIMUM_HOLDING_QUANTITY,
 } = require("../utils/valueScale");
 
 class AnalyticsService {
@@ -33,7 +34,7 @@ class AnalyticsService {
 
     const totalValue = Object.values(allocation).reduce(
       (sum, a) => sum + a.value,
-      0
+      0,
     );
 
     return Object.values(allocation).map((a) => ({
@@ -67,7 +68,7 @@ class AnalyticsService {
       if (yesterdayPriceRow) {
         const yesterdayPrice = fromValueScale(
           yesterdayPriceRow.price,
-          PRICE_SCALE
+          PRICE_SCALE,
         );
         yesterdayMarketValue += holding.total_quantity * yesterdayPrice;
       } else {
@@ -130,15 +131,15 @@ class AnalyticsService {
     const netContributions = Transaction.getNetContributions(userId);
     const holdingsMarketValue = enrichedHoldings.reduce(
       (sum, h) => sum + h.market_value,
-      0
+      0,
     );
     const totalCostBasisHoldings = enrichedHoldings.reduce(
       (sum, h) => sum + h.cost_basis,
-      0
+      0,
     );
     const totalUnrealizedGain = enrichedHoldings.reduce(
       (sum, h) => sum + h.unrealized_gain,
-      0
+      0,
     );
 
     // Cash balance (from deposits/withdrawals and trading/dividends)
@@ -309,7 +310,7 @@ class AnalyticsService {
     const enrichedHoldings = this.getPortfolioHoldings(userId);
     const holdingsMarketValue = enrichedHoldings.reduce(
       (sum, h) => sum + h.market_value,
-      0
+      0,
     );
 
     const cashBalance = Transaction.getCashBalance(userId);
@@ -318,11 +319,11 @@ class AnalyticsService {
     // Compute detailed components
     const mwrrDetails = Transaction.calculateMWRRDetails(
       userId,
-      currentTotalValue
+      currentTotalValue,
     );
     const cagrDetails = Transaction.calculateCAGRDetails(
       userId,
-      currentTotalValue
+      currentTotalValue,
     );
     const cagrEvolution = Transaction.calculateCAGREvolution(userId);
 
@@ -407,7 +408,7 @@ class AnalyticsService {
     userId,
     year,
     excludeAssetTypes = [],
-    excludeBrokers = []
+    excludeBrokers = [],
   ) {
     const db = require("../config/database");
     const UserSettings = require("../models/UserSettings");
@@ -418,7 +419,7 @@ class AnalyticsService {
 
     if (!fxRateAssetId) {
       throw new Error(
-        "FX Rate asset not configured in settings. Please configure FX Rate in Settings."
+        "FX Rate asset not configured in settings. Please configure FX Rate in Settings.",
       );
     }
 
@@ -489,13 +490,13 @@ class AnalyticsService {
       holdingsMap[key].quantityValue += signedQtyValue;
     });
 
-    // Convert to float and filter out holdings with quantity <= 1
+    // Convert to float and filter out holdings with quantity <= MINIMUM_HOLDING_QUANTITY
     const holdings = Object.values(holdingsMap)
       .map((h) => ({
         ...h,
         quantity: fromValueScale(h.quantityValue, QUANTITY_SCALE),
       }))
-      .filter((h) => h.quantity > 1);
+      .filter((h) => h.quantity > MINIMUM_HOLDING_QUANTITY);
 
     // Get FX rate (USDARS_BNA) at year-end
     const fxRateStmt = db.prepare(`
@@ -557,11 +558,11 @@ class AnalyticsService {
       holdings: reportData,
       total_market_value: reportData.reduce(
         (sum, h) => sum + h.market_value,
-        0
+        0,
       ),
       total_market_value_in_ccy: reportData.reduce(
         (sum, h) => sum + h.market_value_in_ccy,
-        0
+        0,
       ),
     };
   }
@@ -599,10 +600,10 @@ class AnalyticsService {
 
       // Separate asset-type and asset-level targets
       const assetTypeTargets = targets.filter(
-        (t) => t.asset_type && !t.asset_id
+        (t) => t.asset_type && !t.asset_id,
       );
       const assetLevelTargets = targets.filter(
-        (t) => !t.asset_type && t.asset_id
+        (t) => !t.asset_type && t.asset_id,
       );
 
       // Build recommendations for asset types
@@ -659,17 +660,17 @@ class AnalyticsService {
       assetLevelTargets.forEach((target) => {
         // Sum all holdings for this asset across all brokers
         const assetHoldings = holdings.filter(
-          (h) => h.asset_id === target.asset_id
+          (h) => h.asset_id === target.asset_id,
         );
         const currentValue = assetHoldings.reduce(
           (sum, h) => sum + h.market_value,
-          0
+          0,
         );
 
         // Get the asset type's allocation
         const assetType = target.asset_asset_type;
         const typeAllocation = currentAllocation.find(
-          (a) => a.type === assetType
+          (a) => a.type === assetType,
         );
         const typeValue = typeAllocation ? typeAllocation.value : 0;
         const typeTargetPercentage = targetMap[assetType] || 0;
@@ -735,14 +736,14 @@ class AnalyticsService {
       // Combine and sort all recommendations
       const recommendations = [...typeRecommendations, ...assetRecommendations];
       recommendations.sort(
-        (a, b) => Math.abs(b.difference) - Math.abs(a.difference)
+        (a, b) => Math.abs(b.difference) - Math.abs(a.difference),
       );
 
       // rebalancing_amount = ½ × Σ |current_weight − target_weight|
 
       const totalAbsDrift = typeRecommendations.reduce(
         (sum, r) => sum + Math.abs(r.difference_percentage),
-        0
+        0,
       );
 
       const rebalanceIntensity = totalAbsDrift / 2;
@@ -760,7 +761,7 @@ class AnalyticsService {
       };
     } catch (error) {
       logger.error(
-        `Error calculating rebalancing recommendations: ${error.message}`
+        `Error calculating rebalancing recommendations: ${error.message}`,
       );
       throw error;
     }
