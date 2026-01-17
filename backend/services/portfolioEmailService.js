@@ -276,9 +276,9 @@ class PortfolioEmailService {
       <thead>
         <tr>
           <th>Asset Type</th>
-          <th style="text-align:right;">Value</th>
+          <th style="text-align:right;">Market Value</th>
           <th style="text-align:right;">% of Portfolio</th>
-          <th style="text-align:center;">Count</th>
+          <th style="text-align:right;">Daily P&L</th>
         </tr>
       </thead>
       <tbody>
@@ -290,7 +290,9 @@ class PortfolioEmailService {
             <td><strong>${a.type.toUpperCase()}</strong></td>
             <td style="text-align:right;">${formatCurrency(a.value, 0)}</td>
             <td style="text-align:right;">${formatPercent(a.percentage, 1)}%</td>
-            <td style="text-align:center;">${a.count}</td>
+            <td style="text-align:right;" class="${a.daily_pnl >= 0 ? 'positive' : 'negative'}">
+              ${a.daily_pnl >= 0 ? '+' : ''}${formatCurrency(a.daily_pnl, 0)}
+            </td>
           </tr>
         `,
           )

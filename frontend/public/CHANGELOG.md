@@ -8,6 +8,7 @@ All notable changes to this project are documented below.
 
 - Dashboard charts refactored into reusable components (Portfolio Value, Asset Allocation, Market Value by Broker)
 - Market Trends: Improved mini line chart sensitivity to show small price changes
+- Add MTM Evolution chart to Dashboard
 - Refactored email service and portfolio summary email generation for improved reliability and formatting
 
 ### Fixed

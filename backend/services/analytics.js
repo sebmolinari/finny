@@ -93,6 +93,29 @@ class AnalyticsService {
       const marketValue = latestPrice
         ? holding.total_quantity * latestPrice.price
         : 0;
+      // Calculate yesterday's market value and daily P&L for this holding
+      const db = require("../config/database");
+      const userSettings = UserSettings.findByUserId(userId);
+      const yesterday = getYesterdayInTimezone(userSettings.timezone);
+
+      const priceStmt = db.prepare(`
+        SELECT price FROM price_data
+        WHERE asset_id = ? AND date <= ?
+        ORDER BY date DESC
+        LIMIT 1
+      `);
+      const yesterdayPriceRow = priceStmt.get(holding.asset_id, yesterday);
+      let yesterdayMarketValue = 0;
+      if (yesterdayPriceRow) {
+        const yesterdayPrice = fromValueScale(
+          yesterdayPriceRow.price,
+          PRICE_SCALE,
+        );
+        yesterdayMarketValue = holding.total_quantity * yesterdayPrice;
+      } else {
+        yesterdayMarketValue = marketValue;
+      }
+      const dailyPnL = marketValue - yesterdayMarketValue;
       const unrealizedGain = marketValue - holding.cost_basis;
       const unrealizedGainPercent =
         holding.cost_basis > 0
@@ -110,6 +133,8 @@ class AnalyticsService {
         cost_basis: holding.cost_basis,
         market_price: latestPrice?.price || 0,
         market_value: marketValue,
+        yesterday_market_value: yesterdayMarketValue,
+        daily_pnl: dailyPnL,
         unrealized_gain: unrealizedGain,
         unrealized_gain_percent: unrealizedGainPercent,
         average_cost:
@@ -170,11 +195,43 @@ class AnalyticsService {
     const mwrr = Transaction.calculateMWRR(userId, totalPortfolioValue);
     const cagr = Transaction.calculateCAGR(userId, totalPortfolioValue);
 
-    // Asset allocation
-    const assetAllocation = this._calculateAssetAllocation(enrichedHoldings);
+    // Asset allocation - aggregate per-type values and daily P&L from enriched holdings
+    const typeMap = {};
+    for (const h of enrichedHoldings) {
+      const type = h.asset_type;
+      if (!typeMap[type]) {
+        typeMap[type] = {
+          type,
+          value: 0,
+          count: 0,
+          yesterday_value: 0,
+          daily_pnl: 0,
+        };
+      }
+      typeMap[type].value += h.market_value;
+      typeMap[type].count += 1;
+      typeMap[type].yesterday_value += h.yesterday_market_value || h.market_value;
+      typeMap[type].daily_pnl += h.daily_pnl || 0;
+    }
 
-    // Calculate daily P&L
-    const dailyPnL = this._calculateDailyPnL(userId, enrichedHoldings);
+    const totalValue = Object.values(typeMap).reduce(
+      (sum, a) => sum + a.value,
+      0,
+    );
+
+    const assetAllocation = Object.values(typeMap).map((a) => ({
+      type: a.type,
+      value: a.value,
+      count: a.count,
+      percentage: totalValue > 0 ? (a.value / totalValue) * 100 : 0,
+      daily_pnl: a.daily_pnl,
+    }));
+
+    // Calculate total daily P&L by summing per-holding daily_pnl
+    const dailyPnL = enrichedHoldings.reduce(
+      (sum, h) => sum + (h.daily_pnl || 0),
+      0,
+    );
     return {
       nav: totalPortfolioValue,
       transactions: {

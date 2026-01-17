@@ -163,11 +163,11 @@ export default function Holdings() {
                 <StyledHeaderCell align="right" sx={{ width: 120 }}>
                   Market Value
                 </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 140 }}>
-                  Unrealized P&L
+                <StyledHeaderCell align="right" sx={{ width: 120 }}>
+                  Daily P&L
                 </StyledHeaderCell>
                 <StyledHeaderCell align="right" sx={{ width: 140 }}>
-                  Realized P&L
+                  Unrealized P&L
                 </StyledHeaderCell>
               </TableRow>
             </TableHead>
@@ -246,6 +246,14 @@ export default function Holdings() {
                   <TableCell
                     align="right"
                     sx={{
+                      color: holding.daily_pnl >= 0 ? "success.main" : "error.main",
+                    }}
+                  >
+                    {formatCurrency(holding.daily_pnl || 0)}
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{
                       color:
                         holding.unrealized_gain >= 0
                           ? "success.main"
@@ -255,17 +263,7 @@ export default function Holdings() {
                     {formatCurrency(holding.unrealized_gain)} (
                     {formatPercent(holding.unrealized_gain_percent)})
                   </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      color:
-                        holding.realized_gain >= 0
-                          ? "success.main"
-                          : "error.main",
-                    }}
-                  >
-                    {formatCurrency(holding.realized_gain || 0)}
-                  </TableCell>
+                  {/* Realized P&L column removed per request */}
                 </TableRow>
               ))}
             </TableBody>
