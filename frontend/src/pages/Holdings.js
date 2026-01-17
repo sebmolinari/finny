@@ -13,6 +13,10 @@ import {
   Switch,
   Grid,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { AttachMoney as AttachMoneyIcon } from "@mui/icons-material";
 import { MetricCard } from "../components/StyledCard";
@@ -22,7 +26,7 @@ import {
   StyledHeaderCell,
   TruncatedCell,
 } from "../components/StyledTable";
-import { analyticsAPI } from "../api/api";
+import { analyticsAPI, assetAPI } from "../api/api";
 import {
   formatNumber,
   formatCurrency,
@@ -33,6 +37,8 @@ export default function Holdings() {
   const [portfolio, setPortfolio] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [hideZeroQuantity, setHideZeroQuantity] = useState(true);
+  const [assetTypes, setAssetTypes] = useState([]);
+  const [selectedAssetType, setSelectedAssetType] = useState("All");
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -49,8 +55,19 @@ export default function Holdings() {
     }
   }, []);
 
+  const loadAssetTypes = useCallback(async () => {
+    try {
+      const res = await assetAPI.getAll();
+      const types = [...new Set(res.data.map((a) => a.asset_type))];
+      setAssetTypes(types);
+    } catch (err) {
+      console.error("Error loading asset types:", err);
+    }
+  }, []);
+
   useEffect(() => {
     loadData();
+    loadAssetTypes();
   }, [loadData]);
 
   if (loading) {
@@ -130,16 +147,36 @@ export default function Holdings() {
           }}
         >
           <Typography variant="h6">Current Holdings</Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={hideZeroQuantity}
-                onChange={(e) => setHideZeroQuantity(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Hide Zero Quantity"
-          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={hideZeroQuantity}
+                  onChange={(e) => setHideZeroQuantity(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Hide Zero Quantity"
+            />
+
+            <FormControl sx={{ minWidth: 180 }} size="small">
+              <InputLabel id="asset-type-label">Asset Type</InputLabel>
+              <Select
+                labelId="asset-type-label"
+                value={selectedAssetType}
+                label="Asset Type"
+                onChange={(e) => setSelectedAssetType(e.target.value)}
+                sx={{ minWidth: 160 }}
+              >
+                <MenuItem value="All">All Types</MenuItem>
+                {assetTypes.map((t) => (
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
         <TableContainer>
           <StyledTable>
@@ -172,101 +209,116 @@ export default function Holdings() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {portfolio?.map((holding) => (
-                <TableRow key={`${holding.asset_id}-${holding.broker_id}`}>
-                  <TruncatedCell maxWidth={100} title={holding.symbol}>
-                    {holding.symbol}
-                  </TruncatedCell>
-                  <TruncatedCell maxWidth={120} title={holding.broker_name}>
-                    {holding.broker_name}
-                  </TruncatedCell>
-                  <TableCell>
-                    <Box
+              {(portfolio || [])
+                .filter((holding) => {
+                  if (
+                    hideZeroQuantity &&
+                    (!holding.total_quantity || holding.total_quantity === 0)
+                  ) {
+                    return false;
+                  }
+                  if (selectedAssetType && selectedAssetType !== "All") {
+                    return holding.asset_type === selectedAssetType;
+                  }
+                  return true;
+                })
+                .map((holding) => (
+                  <TableRow key={`${holding.asset_id}-${holding.broker_id}`}>
+                    <TruncatedCell maxWidth={100} title={holding.symbol}>
+                      {holding.symbol}
+                    </TruncatedCell>
+                    <TruncatedCell maxWidth={120} title={holding.broker_name}>
+                      {holding.broker_name}
+                    </TruncatedCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: "inline-block",
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: 1,
+                          backgroundColor:
+                            holding.asset_type === "currency"
+                              ? "#e3f2fd"
+                              : holding.asset_type === "equity"
+                                ? "#f3e5f5"
+                                : holding.asset_type === "crypto"
+                                  ? "#fff3e0"
+                                  : holding.asset_type === "fixedincome"
+                                    ? "#e0f2f1"
+                                    : holding.asset_type === "realestate"
+                                      ? "#fce4ec"
+                                      : "#f5f5f5",
+                          color:
+                            holding.asset_type === "currency"
+                              ? "#1976d2"
+                              : holding.asset_type === "equity"
+                                ? "#9c27b0"
+                                : holding.asset_type === "crypto"
+                                  ? "#ff9800"
+                                  : holding.asset_type === "fixedincome"
+                                    ? "#00796b"
+                                    : holding.asset_type === "realestate"
+                                      ? "#c2185b"
+                                      : "#757575",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {holding.asset_type === "equity"
+                          ? "EQT"
+                          : holding.asset_type === "crypto"
+                            ? "CRY"
+                            : holding.asset_type === "currency"
+                              ? "CCY"
+                              : holding.asset_type === "fixedincome"
+                                ? "FI"
+                                : holding.asset_type === "realestate"
+                                  ? "RE"
+                                  : holding.asset_type.toUpperCase()}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatNumber(holding.total_quantity, 4)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatCurrency(holding.average_cost)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatCurrency(holding.cost_basis)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatCurrency(holding.market_price)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatCurrency(holding.market_value, 0)}
+                    </TableCell>
+                    <TableCell
+                      align="right"
                       sx={{
-                        display: "inline-block",
-                        px: 0.75,
-                        py: 0.25,
-                        borderRadius: 1,
-                        backgroundColor:
-                          holding.asset_type === "currency"
-                            ? "#e3f2fd"
-                            : holding.asset_type === "equity"
-                              ? "#f3e5f5"
-                              : holding.asset_type === "crypto"
-                                ? "#fff3e0"
-                                : holding.asset_type === "fixedincome"
-                                  ? "#e0f2f1"
-                                  : holding.asset_type === "realestate"
-                                    ? "#fce4ec"
-                                    : "#f5f5f5",
                         color:
-                          holding.asset_type === "currency"
-                            ? "#1976d2"
-                            : holding.asset_type === "equity"
-                              ? "#9c27b0"
-                              : holding.asset_type === "crypto"
-                                ? "#ff9800"
-                                : holding.asset_type === "fixedincome"
-                                  ? "#00796b"
-                                  : holding.asset_type === "realestate"
-                                    ? "#c2185b"
-                                    : "#757575",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
+                          holding.daily_pnl >= 0
+                            ? "success.main"
+                            : "error.main",
                       }}
                     >
-                      {holding.asset_type === "equity"
-                        ? "EQT"
-                        : holding.asset_type === "crypto"
-                          ? "CRY"
-                          : holding.asset_type === "currency"
-                            ? "CCY"
-                            : holding.asset_type === "fixedincome"
-                              ? "FI"
-                              : holding.asset_type === "realestate"
-                                ? "RE"
-                                : holding.asset_type.toUpperCase()}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatNumber(holding.total_quantity, 4)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(holding.average_cost)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(holding.cost_basis)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(holding.market_price)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(holding.market_value, 0)}
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      color:
-                        holding.daily_pnl >= 0 ? "success.main" : "error.main",
-                    }}
-                  >
-                    {formatCurrency(holding.daily_pnl || 0, 0)}
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      color:
-                        holding.unrealized_gain >= 0
-                          ? "success.main"
-                          : "error.main",
-                    }}
-                  >
-                    {formatCurrency(holding.unrealized_gain, 0)} (
-                    {formatPercent(holding.unrealized_gain_percent)})
-                  </TableCell>
-                  {/* Realized P&L column removed per request */}
-                </TableRow>
-              ))}
+                      {formatCurrency(holding.daily_pnl || 0, 0)}
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        color:
+                          holding.unrealized_gain >= 0
+                            ? "success.main"
+                            : "error.main",
+                      }}
+                    >
+                      {formatCurrency(holding.unrealized_gain, 0)} (
+                      {formatPercent(holding.unrealized_gain_percent)})
+                    </TableCell>
+                    {/* Realized P&L column removed per request */}
+                  </TableRow>
+                ))}
             </TableBody>
           </StyledTable>
         </TableContainer>
