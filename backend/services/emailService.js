@@ -28,7 +28,7 @@ class EmailService {
     return this.transporter;
   }
 
-  async sendEmail(to, subject, htmlContent, textContent, auditInfo = null) {
+  async sendEmail(to, subject, htmlContent, auditInfo = null) {
     if (!this.enabled) {
       logger.info("Email service is disabled. Skipping email send.");
       return { success: false, message: "Email service is disabled" };
@@ -47,7 +47,6 @@ class EmailService {
         }>`,
         to,
         subject,
-        text: textContent,
         html: htmlContent,
       };
 
@@ -71,7 +70,7 @@ class EmailService {
           });
         } catch (auditError) {
           logger.error(
-            `Failed to create audit log for email: ${auditError.message}`
+            `Failed to create audit log for email: ${auditError.message}`,
           );
           // Don't fail the email send if audit log fails
         }

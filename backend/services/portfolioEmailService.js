@@ -17,15 +17,13 @@ class PortfolioEmailService {
       const dashboard = AnalyticsService.getPortfolioAnalytics(userId);
 
       const htmlContent = this._generateHTML(dashboard, username, today);
-      const textContent = this._generateText(dashboard, username, today);
       return {
         subject: `Portfolio Summary - ${today}`,
         html: htmlContent,
-        text: textContent,
       };
     } catch (error) {
       logger.error(
-        `Error generating portfolio email for user ${userId}: ${error.message}`
+        `Error generating portfolio email for user ${userId}: ${error.message}`,
       );
       return null;
     }
@@ -42,14 +40,13 @@ class PortfolioEmailService {
       cash_balance,
       unrealized_gain,
       unrealized_gain_percent,
-      liquidity_percent,
+      liquidity_balance,
       mwrr,
       cagr,
       holdings,
       asset_allocation,
     } = transactions;
 
-    // Top holdings (limit to 10)
     const topHoldings = holdings
       .sort((a, b) => b.market_value - a.market_value)
       .slice(0, 10);
@@ -63,72 +60,77 @@ class PortfolioEmailService {
   <title>Portfolio Summary</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
       color: #333;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
       background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
     }
     .container {
-      background-color: #ffffff;
-      border-radius: 8px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
       padding: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
     h1 {
       color: #1976d2;
-      margin-bottom: 10px;
-      font-size: 28px;
+      font-size: 26px;
+      margin-bottom: 4px;
     }
     .date {
       color: #666;
-      font-size: 14px;
-      margin-bottom: 30px;
+      font-size: 13px;
+      margin-bottom: 24px;
     }
-    h2 {
-      color: #1976d2;
-      border-bottom: 2px solid #1976d2;
-      padding-bottom: 8px;
-      margin-top: 30px;
-      margin-bottom: 20px;
-      font-size: 20px;
+
+    /* HERO */
+    .hero {
+      margin-bottom: 24px;
     }
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 25px;
-    }
-    .metric-card {
-      background-color: #f8f9fa;
-      padding: 10px 12px;
-      border-radius: 4px;
-      border-left: 3px solid #1976d2;
-    }
-    .metric-label {
-      font-size: 11px;
-      color: #666;
+    .hero-label {
+      font-size: 12px;
       text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #666;
       margin-bottom: 4px;
     }
-    .metric-value {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
+    .hero-value {
+      font-size: 34px;
+      font-weight: 700;
+      color: #1976d2;
+      line-height: 1.2;
+      margin-bottom: 6px;
     }
-    .metric-value.positive {
-      color: #2e7d32;
+    .hero-subline {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 6px;
     }
-    .metric-value.negative {
-      color: #d32f2f;
+    .hero-meta {
+      font-size: 13px;
+      color: #555;
     }
-    .metric-subtitle {
-      font-size: 11px;
-      margin-top: 4px;
-      color: #666;
+
+    .pnl-arrow {
+      font-size: 12px;
+      margin: 0 4px 0 2px;
+      vertical-align: middle;
     }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 28px 0;
+    }
+
+    h2 {
+      color: #1976d2;
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -136,271 +138,169 @@ class PortfolioEmailService {
     }
     th {
       background-color: #1976d2;
-      color: white;
-      padding: 12px;
+      color: #fff;
+      padding: 10px;
       text-align: left;
-      font-weight: 600;
     }
     td {
-      padding: 10px 12px;
+      padding: 10px;
       border-bottom: 1px solid #e0e0e0;
+      font-size: 14px;
     }
-    tr:hover {
-      background-color: #f5f5f5;
+    .summary-table td {
+      padding: 8px 0;
     }
+    .summary-table td:last-child {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .positive { color: #2e7d32; }
+    .negative { color: #d32f2f; }
+
     .footer {
       margin-top: 40px;
       padding-top: 20px;
       border-top: 1px solid #e0e0e0;
-      text-align: center;
-      color: #666;
       font-size: 12px;
+      color: #666;
+      text-align: center;
     }
-    .positive { color: #2e7d32; }
-    .negative { color: #d32f2f; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Hello ${username}! 👋</h1>
-    <div class="date">Portfolio Summary for ${today}</div>
+    <h1>Hello ${username},</h1>
 
-    <h2>📊 Portfolio Overview</h2>
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-label">Net Asset Value (NAV)</div>
-        <div class="metric-value">${formatCurrency(nav, 0)}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Holdings Market Value</div>
-        <div class="metric-value">${formatCurrency(
-          holdings_market_value,
-          0
-        )}</div>
-        ${
-          daily_pnl !== undefined
-            ? `
-        <div class="metric-subtitle ${
-          daily_pnl >= 0 ? "positive" : "negative"
-        }">
-          Daily P&L: ${formatCurrency(daily_pnl, 0)} (${
-                daily_pnl >= 0 ? "+" : ""
-              }${formatPercent(
-                holdings_market_value > 0
-                  ? (daily_pnl / (holdings_market_value - daily_pnl)) * 100
-                  : 0,
-                2
-              )}%)
-        </div>`
-            : ""
-        }
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Cash Balance</div>
-        <div class="metric-value">${formatCurrency(cash_balance, 0)}</div>
-        <div class="metric-subtitle">Liquidity: ${formatPercent(
-          liquidity_percent,
-          1
-        )}%</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Unrealized P&L</div>
-        <div class="metric-value ${
-          unrealized_gain >= 0 ? "positive" : "negative"
-        }">
-          ${formatCurrency(unrealized_gain, 0)}
-        </div>
-        <div class="metric-subtitle ${
-          unrealized_gain >= 0 ? "positive" : "negative"
-        }">
-          ${formatPercent(unrealized_gain_percent, 2)}%
-        </div>
-      </div>
+    <!-- HERO SUMMARY -->
+    <div class="hero">
+      <div class="hero-label">Net Asset Value</div>
+      <div class="hero-value">${formatCurrency(nav, 0)}</div>
+
       ${
-        mwrr !== null
+        daily_pnl !== undefined
           ? `
-      <div class="metric-card">
-        <div class="metric-label">MWRR (IRR)</div>
-        <div class="metric-value ${mwrr >= 0 ? "positive" : "negative"}">
-          ${formatPercent(mwrr, 2)}%
-        </div>
-      </div>`
+      <div class="hero-subline ${daily_pnl >= 0 ? "positive" : "negative"}">
+        Today
+        <span class="pnl-arrow">${daily_pnl >= 0 ? "▲" : "▼"}</span>
+        ${daily_pnl >= 0 ? "+" : ""}${formatCurrency(daily_pnl, 0)}
+        (${daily_pnl >= 0 ? "+" : ""}${formatPercent(
+          holdings_market_value > 0
+            ? (daily_pnl / (holdings_market_value - daily_pnl)) * 100
+            : 0,
+          2,
+        )}%)
+      </div>
+      `
           : ""
       }
-      ${
-        cagr !== null
-          ? `
-      <div class="metric-card">
-        <div class="metric-label">CAGR</div>
-        <div class="metric-value ${cagr >= 0 ? "positive" : "negative"}">
-          ${formatPercent(cagr, 2)}%
-        </div>
-      </div>`
-          : ""
-      }
+
+      <div class="hero-meta">
+        Cash: <strong>${formatCurrency(cash_balance, 0)}</strong>
+        • Liquidity: <strong>${formatCurrency(liquidity_balance, 0)}</strong>
+      </div>
     </div>
 
-    <h2>💼 Top Holdings</h2>
+    <hr />
+
+    <!-- PERFORMANCE SNAPSHOT -->
+    <h2>Performance Snapshot</h2>
+    <table class="summary-table">
+      <tbody>
+        <tr>
+          <td>Unrealized P&amp;L</td>
+          <td class="${unrealized_gain >= 0 ? "positive" : "negative"}">
+            ${formatCurrency(unrealized_gain, 0)}
+            (${formatPercent(unrealized_gain_percent, 2)}%)
+          </td>
+        </tr>
+        ${
+          mwrr !== null
+            ? `
+        <tr>
+          <td>MWRR (IRR)</td>
+          <td class="${mwrr >= 0 ? "positive" : "negative"}">
+            ${formatPercent(mwrr, 2)}%
+          </td>
+        </tr>`
+            : ""
+        }
+        ${
+          cagr !== null
+            ? `
+        <tr>
+          <td>CAGR</td>
+          <td class="${cagr >= 0 ? "positive" : "negative"}">
+            ${formatPercent(cagr, 2)}%
+          </td>
+        </tr>`
+            : ""
+        }
+      </tbody>
+    </table>
+
+    <h2>Top Holdings</h2>
     <table>
       <thead>
         <tr>
           <th>Symbol</th>
           <th>Name</th>
-          <th style="text-align: right;">Market Value</th>
-          <th style="text-align: right;">Unrealized P&L</th>
-          <th style="text-align: right;">Return %</th>
+          <th style="text-align:right;">Market Value</th>
+          <th style="text-align:right;">Unrealized P&L</th>
+          <th style="text-align:right;">Return %</th>
         </tr>
       </thead>
       <tbody>
         ${topHoldings
           .map(
-            (holding) => `
+            (h) => `
           <tr>
-            <td><strong>${holding.symbol}</strong></td>
-            <td>${holding.name}</td>
-            <td style="text-align: right;">${formatCurrency(
-              holding.market_value,
-              0
-            )}</td>
-            <td style="text-align: right;" class="${
-              holding.unrealized_gain >= 0 ? "positive" : "negative"
-            }">
-              ${formatCurrency(holding.unrealized_gain, 0)}
+            <td><strong>${h.symbol}</strong></td>
+            <td>${h.name}</td>
+            <td style="text-align:right;">${formatCurrency(h.market_value, 0)}</td>
+            <td style="text-align:right;" class="${h.unrealized_gain >= 0 ? "positive" : "negative"}">
+              ${formatCurrency(h.unrealized_gain, 0)}
             </td>
-            <td style="text-align: right;" class="${
-              holding.unrealized_gain_percent >= 0 ? "positive" : "negative"
-            }">
-              ${formatPercent(holding.unrealized_gain_percent, 2)}%
+            <td style="text-align:right;" class="${h.unrealized_gain_percent >= 0 ? "positive" : "negative"}">
+              ${formatPercent(h.unrealized_gain_percent, 2)}%
             </td>
           </tr>
-        `
+        `,
           )
           .join("")}
       </tbody>
     </table>
 
-    <h2>🎯 Asset Allocation</h2>
+    <h2>Asset Allocation</h2>
     <table>
       <thead>
         <tr>
           <th>Asset Type</th>
-          <th style="text-align: right;">Value</th>
-          <th style="text-align: right;">% of Portfolio</th>
-          <th style="text-align: center;">Count</th>
+          <th style="text-align:right;">Value</th>
+          <th style="text-align:right;">% of Portfolio</th>
+          <th style="text-align:center;">Count</th>
         </tr>
       </thead>
       <tbody>
         ${asset_allocation
           .sort((a, b) => b.value - a.value)
           .map(
-            (allocation) => `
+            (a) => `
           <tr>
-            <td><strong>${allocation.type.toUpperCase()}</strong></td>
-            <td style="text-align: right;">${formatCurrency(
-              allocation.value,
-              0
-            )}</td>
-            <td style="text-align: right;">${formatPercent(
-              allocation.percentage,
-              1
-            )}%</td>
-            <td style="text-align: center;">${allocation.count}</td>
+            <td><strong>${a.type.toUpperCase()}</strong></td>
+            <td style="text-align:right;">${formatCurrency(a.value, 0)}</td>
+            <td style="text-align:right;">${formatPercent(a.percentage, 1)}%</td>
+            <td style="text-align:center;">${a.count}</td>
           </tr>
-        `
+        `,
           )
           .join("")}
       </tbody>
     </table>
-
-    <div class="footer">
-      <p>This is an automated portfolio summary from Finny Portfolio Manager.</p>
-      <p>To manage your email preferences, visit your account settings.</p>
-    </div>
   </div>
 </body>
 </html>
-    `;
-  }
-
-  /**
-   * Generate plain text email content
-   */
-  static _generateText(dashboard, username, today) {
-    const { nav, transactions } = dashboard;
-    const {
-      holdings_market_value,
-      daily_pnl,
-      cash_balance,
-      unrealized_gain,
-      unrealized_gain_percent,
-      mwrr,
-      cagr,
-      holdings,
-      asset_allocation,
-    } = transactions;
-
-    const topHoldings = holdings
-      .sort((a, b) => b.market_value - a.market_value)
-      .slice(0, 10);
-
-    let text = `Hello ${username}!\n\n`;
-    text += `Portfolio Summary for ${today}\n`;
-    text += `${"=".repeat(60)}\n\n`;
-
-    text += `PORTFOLIO OVERVIEW\n`;
-    text += `-----------------\n`;
-    text += `Net Asset Value (NAV): ${formatCurrency(nav, 0)}\n`;
-    text += `Holdings Market Value: ${formatCurrency(
-      holdings_market_value,
-      0
-    )}\n`;
-    if (daily_pnl !== undefined) {
-      text += `  Daily P&L: ${formatCurrency(daily_pnl, 0)} (${
-        daily_pnl >= 0 ? "+" : ""
-      }${formatPercent(
-        holdings_market_value > 0
-          ? (daily_pnl / (holdings_market_value - daily_pnl)) * 100
-          : 0,
-        2
-      )}%)\n`;
-    }
-    text += `Cash Balance: ${formatCurrency(cash_balance, 0)}\n`;
-    text += `Unrealized P&L: ${formatCurrency(
-      unrealized_gain,
-      0
-    )} (${formatPercent(unrealized_gain_percent, 2)}%)\n`;
-    if (mwrr !== null) text += `MWRR (IRR): ${formatPercent(mwrr, 2)}%\n`;
-    if (cagr !== null) text += `CAGR: ${formatPercent(cagr, 2)}%\n`;
-
-    text += `\nTOP HOLDINGS\n`;
-    text += `------------\n`;
-    topHoldings.forEach((holding) => {
-      text += `${holding.symbol} - ${holding.name}\n`;
-      text += `  Market Value: ${formatCurrency(holding.market_value, 0)}\n`;
-      text += `  Unrealized P&L: ${formatCurrency(
-        holding.unrealized_gain,
-        0
-      )} (${formatPercent(holding.unrealized_gain_percent, 2)}%)\n\n`;
-    });
-
-    text += `ASSET ALLOCATION\n`;
-    text += `----------------\n`;
-    asset_allocation
-      .sort((a, b) => b.value - a.value)
-      .forEach((allocation) => {
-        text += `${allocation.type.toUpperCase()}: ${formatCurrency(
-          allocation.value,
-          0
-        )} (${formatPercent(allocation.percentage, 1)}%) - ${
-          allocation.count
-        } holdings\n`;
-      });
-
-    text += `\n${"=".repeat(60)}\n`;
-    text += `This is an automated portfolio summary from Finny Portfolio Manager.\n`;
-    text += `To manage your email preferences, visit your account settings.\n`;
-
-    return text;
+`;
   }
 
   /**
@@ -429,7 +329,7 @@ class PortfolioEmailService {
 
       const users = stmt.all(frequency);
       logger.info(
-        `Found ${users.length} users to send ${frequency} portfolio emails`
+        `Found ${users.length} users to send ${frequency} portfolio emails`,
       );
 
       let sent = 0;
@@ -439,7 +339,7 @@ class PortfolioEmailService {
         try {
           const emailContent = this.generatePortfolioSummaryEmail(
             user.id,
-            user.username
+            user.username,
           );
 
           if (emailContent) {
@@ -452,7 +352,7 @@ class PortfolioEmailService {
                 userId: user.id,
                 username: user.username,
                 trigger: `scheduled_${frequency}_portfolio_summary`,
-              }
+              },
             );
 
             if (result.success) {
@@ -461,25 +361,25 @@ class PortfolioEmailService {
             } else {
               failed++;
               logger.error(
-                `Failed to send portfolio email to ${user.email}: ${result.message}`
+                `Failed to send portfolio email to ${user.email}: ${result.message}`,
               );
             }
           } else {
             failed++;
             logger.error(
-              `Failed to generate portfolio email for user ${user.id}`
+              `Failed to generate portfolio email for user ${user.id}`,
             );
           }
         } catch (error) {
           failed++;
           logger.error(
-            `Error sending portfolio email to ${user.email}: ${error.message}`
+            `Error sending portfolio email to ${user.email}: ${error.message}`,
           );
         }
       }
 
       logger.info(
-        `Portfolio email batch complete: ${sent} sent, ${failed} failed`
+        `Portfolio email batch complete: ${sent} sent, ${failed} failed`,
       );
       return { sent, failed };
     } catch (error) {
