@@ -241,7 +241,7 @@ export default function Holdings() {
                     {formatCurrency(holding.market_price)}
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(holding.market_value)}
+                    {formatCurrency(holding.market_value, 0)}
                   </TableCell>
                   <TableCell
                     align="right"
@@ -249,7 +249,7 @@ export default function Holdings() {
                       color: holding.daily_pnl >= 0 ? "success.main" : "error.main",
                     }}
                   >
-                    {formatCurrency(holding.daily_pnl || 0)}
+                    {formatCurrency(holding.daily_pnl || 0, 0)}
                   </TableCell>
                   <TableCell
                     align="right"
