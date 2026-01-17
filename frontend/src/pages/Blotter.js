@@ -37,6 +37,7 @@ import {
   brokerAPI,
   constantsAPI,
   settingsAPI,
+  analyticsAPI,
 } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
@@ -59,6 +60,7 @@ export default function Blotter() {
   const [userDateFormat, setUserDateFormat] = useState();
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [availableCash, setAvailableCash] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -173,6 +175,15 @@ export default function Blotter() {
     setSettingsLoading(false);
   }, []);
 
+  const loadCashBalance = useCallback(async () => {
+    try {
+      const res = await analyticsAPI.getCashBalanceDetails();
+      setAvailableCash(res.data?.summary?.current_balance ?? null);
+    } catch (error) {
+      setAvailableCash(null);
+    }
+  }, []);
+
   useEffect(() => {
     loadAssets();
     loadBrokers();
@@ -191,6 +202,8 @@ export default function Blotter() {
   }, [userTimezone]);
 
   const handleOpenDialog = (transaction = null) => {
+    // Refresh cash balance when opening the dialog
+    loadCashBalance();
     if (transaction) {
       setEditingTransaction(transaction);
       const resolvedBrokerId =
@@ -789,6 +802,13 @@ export default function Blotter() {
           {editingTransaction ? "Edit Transaction" : "Add Transaction"}
         </DialogTitle>
         <DialogContent>
+          {availableCash !== null && (
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Available cash balance: {formatCurrency(availableCash)}
+              </Typography>
+            </Box>
+          )}
           <Box
             component="form"
             id="transaction-form"
