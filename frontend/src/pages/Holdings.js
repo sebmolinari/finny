@@ -246,7 +246,8 @@ export default function Holdings() {
                   <TableCell
                     align="right"
                     sx={{
-                      color: holding.daily_pnl >= 0 ? "success.main" : "error.main",
+                      color:
+                        holding.daily_pnl >= 0 ? "success.main" : "error.main",
                     }}
                   >
                     {formatCurrency(holding.daily_pnl || 0, 0)}
@@ -260,7 +261,7 @@ export default function Holdings() {
                           : "error.main",
                     }}
                   >
-                    {formatCurrency(holding.unrealized_gain)} (
+                    {formatCurrency(holding.unrealized_gain, 0)} (
                     {formatPercent(holding.unrealized_gain_percent)})
                   </TableCell>
                   {/* Realized P&L column removed per request */}
