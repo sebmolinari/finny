@@ -247,6 +247,7 @@ class PortfolioEmailService {
           <th>Name</th>
           <th style="text-align:right;">Market Value</th>
           <th style="text-align:right;">Unrealized P&L</th>
+          <th style="text-align:right;">Daily P&L</th>
           <th style="text-align:right;">Return %</th>
         </tr>
       </thead>
@@ -260,6 +261,9 @@ class PortfolioEmailService {
             <td style="text-align:right;">${formatCurrency(h.market_value, 0)}</td>
             <td style="text-align:right;" class="${h.unrealized_gain >= 0 ? "positive" : "negative"}">
               ${formatCurrency(h.unrealized_gain, 0)}
+            </td>
+            <td style="text-align:right;" class="${(h.daily_pnl || 0) >= 0 ? "positive" : "negative"}">
+              ${(h.daily_pnl || 0) >= 0 ? '+' : ''}${formatCurrency(h.daily_pnl || 0, 0)}
             </td>
             <td style="text-align:right;" class="${h.unrealized_gain_percent >= 0 ? "positive" : "negative"}">
               ${formatPercent(h.unrealized_gain_percent, 2)}%

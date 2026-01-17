@@ -31,14 +31,14 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const MTMEvolutionChart = ({ data, title, height}) => {
+const MTMEvolutionChart = ({ data, title, height }) => {
   return (
     <Paper sx={{ p: 3, mt: 3 }}>
       <Typography variant="h6" gutterBottom>
-        {title}
+        {title || "MTM Evolution"}
       </Typography>
       <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart data={data}>
+        <ComposedChart data={data} margin={{ top: 48, right: 40, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="year" />
           <YAxis
@@ -54,7 +54,7 @@ const MTMEvolutionChart = ({ data, title, height}) => {
           />
           <RechartsTooltip content={<CustomTooltip />} />
           <Bar dataKey="mtm" fill="#1976d2" yAxisId="left" name="MTM">
-            <LabelList dataKey="mtm" position="top" formatter={(v) => formatCurrency(v, 0)} />
+            <LabelList dataKey="mtm" position="top" offset={8} formatter={(v) => formatCurrency(v, 0)} />
           </Bar>
           <Line
             type="monotone"
