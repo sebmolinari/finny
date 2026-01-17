@@ -12,6 +12,7 @@ import {
 import AssetAllocationChart from "../components/AssetAllocationChart";
 import PortfolioValueChart from "../components/PortfolioValueChart";
 import MarketValueByBrokerChart from "../components/MarketValueByBrokerChart";
+import MTMEvolutionChart from "../components/MTMEvolutionChart";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -20,12 +21,14 @@ const Dashboard = () => {
   const [dashboard, setDashboard] = useState(null);
   const [brokerSummary, setBrokerSummary] = useState([]);
   const [performanceData, setPerformanceData] = useState([]);
+  const [mtmEvolution, setMtmEvolution] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDashboard();
     loadBrokerData();
     loadPerformanceData();
+    loadReturnDetails();
   }, []);
 
   const loadDashboard = async () => {
@@ -70,6 +73,23 @@ const Dashboard = () => {
       setPerformanceData(perfData);
     } catch (error) {
       console.error("Error loading performance data:", error);
+    }
+  };
+
+  const loadReturnDetails = async () => {
+    try {
+      const response = await analyticsAPI.getReturnDetails();
+      const details = response.data;
+      if (details && Array.isArray(details.cagr_evolution)) {
+        const chartData = details.cagr_evolution.map((r) => ({
+          year: String(r.year),
+          mtm: r.mtm || 0,
+          cagr: r.cagr !== null && r.cagr !== undefined ? r.cagr : null,
+        }));
+        setMtmEvolution(chartData);
+      }
+    } catch (error) {
+      console.error("Error loading return details:", error);
     }
   };
 
@@ -300,6 +320,15 @@ const Dashboard = () => {
             data={brokerSummary}
             title="Market Value by Broker"
             height={300}
+          />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+        <Grid item xs={12}>
+          <MTMEvolutionChart
+            data={mtmEvolution.length ? mtmEvolution : undefined}
+            height={380}
           />
         </Grid>
       </Grid>
