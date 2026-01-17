@@ -68,7 +68,7 @@ export default function Holdings() {
   useEffect(() => {
     loadData();
     loadAssetTypes();
-  }, [loadData]);
+  }, [loadData, loadAssetTypes]);
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
