@@ -19,7 +19,7 @@ const question = (query) =>
 
 // Load data from JSON file
 function loadDataFile() {
-  const dataFilePath = path.join(__dirname, "init-data.json");
+  const dataFilePath = path.join(__dirname, "sample-data.json");
 
   if (!fs.existsSync(dataFilePath)) {
     console.error(`❌ Data file not found: ${dataFilePath}`);
@@ -165,6 +165,76 @@ async function initPriceData(assetIds, token, priceHistory) {
   } else {
     console.log("⚠ No price data created");
   }
+}
+
+async function initTransactions(token, transactions, assetIds, brokerIds) {
+  if (!transactions || transactions.length === 0) {
+    console.log("\n⚠ No transactions provided to create");
+    return;
+  }
+
+  console.log("\nCreating transactions...");
+  let created = 0;
+  for (const tx of transactions) {
+    try {
+      const txType = (tx.transaction_type || "").toString().toLowerCase();
+      const assetId = tx.asset_symbol
+        ? assetIds[tx.asset_symbol] || assetIds[tx.asset_symbol?.toUpperCase()]
+        : undefined;
+      const brokerId = tx.broker_name
+        ? brokerIds[tx.broker_name] || brokerIds[tx.broker_name?.toString()]
+        : undefined;
+
+      // Some transaction types (buy/sell/dividend/interest/rental/coupon) require an asset
+      const assetRequiredTypes = [
+        "buy",
+        "sell",
+        "dividend",
+        "interest",
+        "rental",
+        "coupon",
+      ];
+
+      if (assetRequiredTypes.includes(txType) && !assetId) {
+        console.warn(
+          `⚠ Asset not found for symbol ${tx.asset_symbol} (required for type ${tx.transaction_type}), skipping transaction`,
+        );
+        continue;
+      }
+
+      // Broker is only required for buy/sell (cash-only transactions like deposit/withdraw may omit broker)
+      if ((txType === "buy" || txType === "sell") && !brokerId) {
+        console.warn(
+          `⚠ Broker not found for name ${tx.broker_name} (required for ${tx.transaction_type}), skipping transaction`,
+        );
+        continue;
+      }
+
+      const payload = {
+        date: tx.date,
+        transaction_type: tx.transaction_type,
+        quantity: tx.quantity,
+        price: tx.price,
+        fee: tx.fee,
+        total_amount: tx.total_amount,
+        notes: tx.notes,
+      };
+      if (assetId) payload.asset_id = assetId;
+      if (brokerId) payload.broker_id = brokerId;
+
+      await axios.post(`${API_BASE_URL}/transactions`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      created++;
+    } catch (error) {
+      console.error(
+        `Error creating transaction ${tx.asset_symbol} on ${tx.date}:`,
+        error.response?.data?.message || error.message,
+      );
+    }
+  }
+
+  console.log(`✓ ${created} transactions created`);
 }
 
 // Delete functions
@@ -403,7 +473,7 @@ async function main() {
     }
 
     // Load data from file
-    console.log("Loading data from init-data.json...");
+    console.log("Loading data from sample-data.json...");
     const data = loadDataFile();
     console.log(
       `✓ Loaded ${data.brokers.length} brokers, ${data.assets.length} assets, ${
@@ -418,6 +488,11 @@ async function main() {
     const brokerIds = await initBrokers(token, data.brokers);
     const assetIds = await initAssets(token, data.assets);
     await initPriceData(assetIds, token, data.priceHistory);
+
+    // Create transactions if provided in init file
+    if (data.transactions && Array.isArray(data.transactions)) {
+      await initTransactions(token, data.transactions, assetIds, brokerIds);
+    }
 
     console.log("\n✓ Database initialized successfully with sample data!");
   } catch (error) {

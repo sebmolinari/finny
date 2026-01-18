@@ -1,0 +1,415 @@
+{
+  "brokers": [
+    { "name": "Broker A", "description": "Generated broker A", "active": 1 },
+    { "name": "Broker B", "description": "Generated broker B", "active": 1 },
+    { "name": "Broker C", "description": "Generated broker C", "active": 1 },
+    { "name": "Broker D", "description": "Generated broker D", "active": 1 },
+    { "name": "Broker E", "description": "Generated broker E", "active": 1 }
+  ],
+  "assets": [
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "equity",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "AAPL",
+      "active": 1
+    },
+    {
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "type": "crypto",
+      "currency": "USD",
+      "price_source": "coingecko",
+      "price_symbol": "BTC",
+      "active": 1
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corp",
+      "type": "equity",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "MSFT",
+      "active": 1
+    },
+    {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc.",
+      "type": "equity",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "GOOGL",
+      "active": 1
+    },
+    {
+      "symbol": "ETH",
+      "name": "Ethereum",
+      "type": "crypto",
+      "currency": "USD",
+      "price_source": "coingecko",
+      "price_symbol": "ETH",
+      "active": 1
+    },
+    {
+      "symbol": "SPY",
+      "name": "SPDR S&P 500 ETF Trust",
+      "type": "equity",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "SPY",
+      "active": 1
+    },
+    {
+      "symbol": "TLT",
+      "name": "iShares 20+ Year Treasury Bond ETF",
+      "type": "fixedincome",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "TLT",
+      "active": 1
+    },
+    {
+      "symbol": "GLD",
+      "name": "SPDR Gold Shares",
+      "type": "equity",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "GLD",
+      "active": 1
+    },
+    {
+      "symbol": "USD",
+      "name": "US Dollar",
+      "type": "currency",
+      "currency": "USD",
+      "price_source": "manual",
+      "active": 1
+    },
+    {
+      "symbol": "EURUSD",
+      "name": "Euro to US Dollar",
+      "type": "currency",
+      "currency": "USD",
+      "price_source": "yahoo",
+      "price_symbol": "EURUSD=X",
+      "active": 1
+    }
+  ],
+  "priceHistory": {
+    "AAPL": [
+      { "date": "2024-01-01", "price": 172.26 },
+      { "date": "2024-03-01", "price": 178.9 },
+      { "date": "2024-05-01", "price": 185.12 },
+      { "date": "2024-07-01", "price": 192.4 },
+      { "date": "2024-09-01", "price": 210.33 },
+      { "date": "2024-11-01", "price": 225.18 },
+      { "date": "2024-12-31", "price": 250.42 }
+    ],
+    "BTC": [
+      { "date": "2024-01-01", "price": 43000 },
+      { "date": "2024-03-01", "price": 48000 },
+      { "date": "2024-05-01", "price": 52000 },
+      { "date": "2024-07-01", "price": 61000 },
+      { "date": "2024-09-01", "price": 72000 },
+      { "date": "2024-11-01", "price": 82000 },
+      { "date": "2024-12-31", "price": 93400 }
+    ],
+    "MSFT": [
+      { "date": "2024-01-01", "price": 300.12 },
+      { "date": "2024-03-01", "price": 310.5 },
+      { "date": "2024-05-01", "price": 320.75 },
+      { "date": "2024-07-01", "price": 335.0 },
+      { "date": "2024-09-01", "price": 350.2 },
+      { "date": "2024-11-01", "price": 360.88 },
+      { "date": "2024-12-31", "price": 385.45 }
+    ],
+    "GOOGL": [
+      { "date": "2024-01-01", "price": 120.5 },
+      { "date": "2024-03-01", "price": 130.2 },
+      { "date": "2024-05-01", "price": 140.0 },
+      { "date": "2024-07-01", "price": 150.1 },
+      { "date": "2024-09-01", "price": 160.6 },
+      { "date": "2024-11-01", "price": 175.0 },
+      { "date": "2024-12-31", "price": 190.3 }
+    ],
+    "ETH": [
+      { "date": "2024-01-01", "price": 2300 },
+      { "date": "2024-03-01", "price": 2500 },
+      { "date": "2024-05-01", "price": 2800 },
+      { "date": "2024-07-01", "price": 3100 },
+      { "date": "2024-09-01", "price": 3600 },
+      { "date": "2024-11-01", "price": 4100 },
+      { "date": "2024-12-31", "price": 4600 }
+    ],
+    "SPY": [
+      { "date": "2024-01-01", "price": 450 },
+      { "date": "2024-03-01", "price": 455 },
+      { "date": "2024-05-01", "price": 460 },
+      { "date": "2024-07-01", "price": 470 },
+      { "date": "2024-09-01", "price": 480 },
+      { "date": "2024-11-01", "price": 490 },
+      { "date": "2024-12-31", "price": 505 }
+    ],
+    "TLT": [
+      { "date": "2024-01-01", "price": 100 },
+      { "date": "2024-03-01", "price": 101 },
+      { "date": "2024-05-01", "price": 99 },
+      { "date": "2024-07-01", "price": 98 },
+      { "date": "2024-09-01", "price": 97 },
+      { "date": "2024-11-01", "price": 96 },
+      { "date": "2024-12-31", "price": 95 }
+    ],
+    "GLD": [
+      { "date": "2024-01-01", "price": 170 },
+      { "date": "2024-03-01", "price": 175 },
+      { "date": "2024-05-01", "price": 178 },
+      { "date": "2024-07-01", "price": 182 },
+      { "date": "2024-09-01", "price": 185 },
+      { "date": "2024-11-01", "price": 190 },
+      { "date": "2024-12-31", "price": 195 }
+    ],
+    "USD": [{ "date": "2024-12-31", "price": 1 }],
+    "EURUSD": [{ "date": "2024-12-31", "price": 1.1508 }]
+  },
+  "transactions": [
+    {
+      "date": "2024-01-01",
+      "transaction_type": "deposit",
+      "total_amount": 50000.0,
+      "notes": "Initial deposit"
+    },
+    {
+      "date": "2024-01-15",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "buy",
+      "quantity": 10,
+      "price": 172.26,
+      "fee": 1.5,
+      "total_amount": 1724.1,
+      "notes": "Initial buy"
+    },
+    {
+      "date": "2024-02-10",
+      "asset_symbol": "BTC",
+      "broker_name": "Broker B",
+      "transaction_type": "buy",
+      "quantity": 0.25,
+      "price": 43000,
+      "fee": 5.0,
+      "total_amount": 10750.0,
+      "notes": "Buy crypto"
+    },
+    {
+      "date": "2024-03-05",
+      "asset_symbol": "MSFT",
+      "broker_name": "Broker A",
+      "transaction_type": "buy",
+      "quantity": 5,
+      "price": 310.5,
+      "fee": 1.0,
+      "total_amount": 1556.5,
+      "notes": "Quarterly add"
+    },
+    {
+      "date": "2024-04-20",
+      "asset_symbol": "ETH",
+      "broker_name": "Broker C",
+      "transaction_type": "buy",
+      "quantity": 1.2,
+      "price": 2500,
+      "fee": 2.5,
+      "total_amount": 3002.5,
+      "notes": "Crypto buy"
+    },
+    {
+      "date": "2024-05-02",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker D",
+      "transaction_type": "buy",
+      "quantity": 15,
+      "price": 185.12,
+      "fee": 2.0,
+      "total_amount": 2779.8,
+      "notes": "Add"
+    },
+    {
+      "date": "2024-06-17",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker A",
+      "transaction_type": "buy",
+      "quantity": 8,
+      "price": 470,
+      "fee": 1.5,
+      "total_amount": 3761.5,
+      "notes": "ETF buy"
+    },
+    {
+      "date": "2024-07-03",
+      "asset_symbol": "BTC",
+      "broker_name": "Broker B",
+      "transaction_type": "sell",
+      "quantity": 0.05,
+      "price": 61000,
+      "fee": 3.0,
+      "total_amount": 3047.0,
+      "notes": "Partial profit taking"
+    },
+    {
+      "date": "2024-08-21",
+      "asset_symbol": "GOOGL",
+      "broker_name": "Broker E",
+      "transaction_type": "buy",
+      "quantity": 12,
+      "price": 150.1,
+      "fee": 1.0,
+      "total_amount": 1802.2,
+      "notes": "Buy"
+    },
+    {
+      "date": "2024-09-12",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "sell",
+      "quantity": 5,
+      "price": 210.33,
+      "fee": 1.0,
+      "total_amount": 1056.65,
+      "notes": "Trim"
+    },
+    {
+      "date": "2024-10-01",
+      "asset_symbol": "GLD",
+      "broker_name": "Broker C",
+      "transaction_type": "buy",
+      "quantity": 20,
+      "price": 182,
+      "fee": 1.0,
+      "total_amount": 3641.0,
+      "notes": "Gold exposure"
+    },
+    {
+      "date": "2024-10-15",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker D",
+      "transaction_type": "buy",
+      "quantity": 10,
+      "price": 98,
+      "fee": 1.0,
+      "total_amount": 981.0,
+      "notes": "Bond ETF"
+    },
+    {
+      "date": "2024-11-20",
+      "asset_symbol": "ETH",
+      "broker_name": "Broker B",
+      "transaction_type": "buy",
+      "quantity": 0.5,
+      "price": 4100,
+      "fee": 2.0,
+      "total_amount": 2048.0,
+      "notes": "Profit"
+    },
+    {
+      "date": "2024-12-05",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker A",
+      "transaction_type": "sell",
+      "quantity": 2,
+      "price": 490,
+      "fee": 1.0,
+      "total_amount": 981.0,
+      "notes": "Rebalance"
+    },
+    {
+      "date": "2024-12-15",
+      "asset_symbol": "MSFT",
+      "broker_name": "Broker E",
+      "transaction_type": "buy",
+      "quantity": 3,
+      "price": 360.88,
+      "fee": 1.0,
+      "total_amount": 1082.64,
+      "notes": "Add"
+    },
+    {
+      "date": "2024-12-20",
+      "asset_symbol": "BTC",
+      "broker_name": "Broker B",
+      "transaction_type": "buy",
+      "quantity": 0.1,
+      "price": 82000,
+      "fee": 5.0,
+      "total_amount": 8205.0,
+      "notes": "Buy"
+    },
+    {
+      "date": "2025-01-10",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "buy",
+      "quantity": 8,
+      "price": 225.18,
+      "fee": 1.5,
+      "total_amount": 1802.94,
+      "notes": "New year add"
+    },
+    {
+      "date": "2025-02-14",
+      "asset_symbol": "GOOGL",
+      "broker_name": "Broker C",
+      "transaction_type": "buy",
+      "quantity": 4,
+      "price": 160.6,
+      "fee": 1.0,
+      "total_amount": 643.4,
+      "notes": "Trim"
+    },
+    {
+      "date": "2025-03-03",
+      "asset_symbol": "ETH",
+      "broker_name": "Broker D",
+      "transaction_type": "buy",
+      "quantity": 0.8,
+      "price": 3600,
+      "fee": 2.0,
+      "total_amount": 2882.0,
+      "notes": "Add"
+    },
+    {
+      "date": "2025-04-22",
+      "asset_symbol": "GLD",
+      "broker_name": "Broker E",
+      "transaction_type": "buy",
+      "quantity": 5,
+      "price": 185,
+      "fee": 1.0,
+      "total_amount": 924.0,
+      "notes": "Partial sell"
+    },
+    {
+      "date": "2025-05-18",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker A",
+      "transaction_type": "buy",
+      "quantity": 6,
+      "price": 460,
+      "fee": 1.0,
+      "total_amount": 2761.0,
+      "notes": "Add"
+    },
+    {
+      "date": "2025-06-30",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker D",
+      "transaction_type": "sell",
+      "quantity": 3,
+      "price": 97,
+      "fee": 1.0,
+      "total_amount": 290.0,
+      "notes": "Sell"
+    }
+  ]
+}

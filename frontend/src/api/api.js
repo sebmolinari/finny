@@ -138,12 +138,6 @@ export const transactionAPI = {
 
   bulkImport: (transactions) =>
     api.post("/transactions/bulk", { transactions }),
-
-  exportTransactions: (params = {}) =>
-    api.get("/transactions/export", {
-      params,
-      responseType: "blob",
-    }),
 };
 
 export const analyticsAPI = {

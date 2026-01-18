@@ -4,11 +4,6 @@ import {
   Box,
   Paper,
   Typography,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Button,
   Switch,
   Select,
@@ -21,12 +16,11 @@ import {
   DialogContentText,
   DialogActions,
   Chip,
-  TablePagination,
 } from "@mui/material";
 import { userAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../context/AuthContext";
-import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const Users = () => {
@@ -72,18 +66,6 @@ const Users = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
-
-  const handlePageChange = (event, newPage) => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
-  };
-
-  const handleRowsPerPageChange = (event) => {
-    setPagination((prev) => ({
-      ...prev,
-      limit: parseInt(event.target.value, 10),
-      page: 0,
-    }));
-  };
 
   const handleStatusToggle = async (userId, currentStatus) => {
     try {
@@ -159,86 +141,100 @@ const Users = () => {
           </Alert>
         )}
 
-        <TableContainer component={Paper}>
-          <StyledTable>
-            <TableHead>
-              <TableRow>
-                <StyledHeaderCell sx={{ width: 60 }}>ID</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 150 }}>
-                  Username
-                </StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 200 }}>Email</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 120 }}>Role</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 120 }}>Status</StyledHeaderCell>
-                <StyledHeaderCell align="center" sx={{ width: 100 }}>
-                  Actions
-                </StyledHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.id}</TableCell>
-                  <TableCell>
-                    {user.username}
-                    {user.id === currentUser?.id && (
+        <Paper>
+          <StyledDataGrid
+            rows={users}
+            columns={[
+              {
+                field: "username",
+                headerName: "Username",
+                flex: 1,
+                renderCell: (params) => (
+                  <>
+                    <span>{params.value}</span>
+                    {params.row.id === currentUser?.id && (
                       <Chip label="You" size="small" sx={{ ml: 1 }} />
                     )}
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <FormControl
-                      size="small"
-                      disabled={user.id === currentUser?.id}
-                    >
-                      <Select
-                        value={user.role}
-                        onChange={(e) =>
-                          handleRoleChange(user.id, e.target.value)
-                        }
-                      >
-                        <MenuItem value="user">User</MenuItem>
-                        <MenuItem value="admin">Admin</MenuItem>
-                        <MenuItem value="superuser">Superuser</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={user.active === 1}
-                      onChange={() =>
-                        handleStatusToggle(user.id, user.active === 1)
+                  </>
+                ),
+              },
+              { field: "email", headerName: "Email", flex: 1 },
+              {
+                field: "role",
+                headerName: "Role",
+                flex: 1,
+                renderCell: (params) => (
+                  <FormControl
+                    size="small"
+                    disabled={params.row.id === currentUser?.id}
+                  >
+                    <Select
+                      value={params.value}
+                      onChange={(e) =>
+                        handleRoleChange(params.row.id, e.target.value)
                       }
-                      disabled={user.id === currentUser?.id}
-                      color={user.active === 1 ? "success" : "default"}
-                    />
-                    {user.active === 1 ? "Active" : "Disabled"}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Button
-                      variant="outlined"
-                      color="error"
                       size="small"
-                      onClick={() => handleDeleteClick(user.id, user.username)}
-                      disabled={user.id === currentUser?.id}
                     >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </StyledTable>
-          <TablePagination
-            component="div"
-            count={pagination.total}
+                      <MenuItem value="user">User</MenuItem>
+                      <MenuItem value="admin">Admin</MenuItem>
+                      <MenuItem value="superuser">Superuser</MenuItem>
+                    </Select>
+                  </FormControl>
+                ),
+              },
+              {
+                field: "active",
+                headerName: "Status",
+                flex: 1,
+                renderCell: (params) => (
+                  <>
+                    <Switch
+                      checked={params.value === 1}
+                      onChange={() =>
+                        handleStatusToggle(params.row.id, params.value === 1)
+                      }
+                      disabled={params.row.id === currentUser?.id}
+                      color={params.value === 1 ? "success" : "default"}
+                      size="small"
+                    />
+                    {params.value === 1 ? "Active" : "Disabled"}
+                  </>
+                ),
+              },
+              {
+                field: "actions",
+                headerName: "Actions",
+                flex: 1,
+                sortable: false,
+                filterable: false,
+                renderCell: (params) => (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() =>
+                      handleDeleteClick(params.row.id, params.row.username)
+                    }
+                    disabled={params.row.id === currentUser?.id}
+                  >
+                    Delete
+                  </Button>
+                ),
+              },
+            ]}
+            getRowId={(row) => row.id}
+            paginationMode="server"
             page={pagination.page}
-            onPageChange={handlePageChange}
-            rowsPerPage={pagination.limit}
-            onRowsPerPageChange={handleRowsPerPageChange}
-            rowsPerPageOptions={[5, 10, 25, 50]}
+            pageSize={pagination.limit}
+            rowCount={pagination.total}
+            onPageChange={(newPage) =>
+              setPagination((p) => ({ ...p, page: newPage }))
+            }
+            onPageSizeChange={(newPageSize) =>
+              setPagination((p) => ({ ...p, limit: newPageSize, page: 0 }))
+            }
           />
-        </TableContainer>
+        </Paper>
       </Box>
 
       <Dialog open={deleteDialog.open} onClose={handleDeleteCancel}>

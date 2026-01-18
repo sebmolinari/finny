@@ -140,7 +140,7 @@ const Layout = () => {
         <ShowChartIcon
           sx={{
             fontSize: 32,
-            color: "primary.main",
+            color: theme.palette.primary.main,
             transform: "rotate(-10deg)",
           }}
         />

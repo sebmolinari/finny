@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Box, Typography, Grid, Tooltip } from "@mui/material";
 import { MetricCard } from "../components/StyledCard";
+import { useTheme } from "@mui/material/styles";
 import {
   AccountBalance as AccountBalanceIcon,
   TrendingUp as TrendingUpIcon,
@@ -18,6 +19,7 @@ import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const Dashboard = () => {
+  const theme = useTheme();
   const [dashboard, setDashboard] = useState(null);
   const [brokerSummary, setBrokerSummary] = useState([]);
   const [performanceData, setPerformanceData] = useState([]);
@@ -116,6 +118,7 @@ const Dashboard = () => {
                 value={formatCurrency(dashboard?.nav || 0, 0)}
                 icon={<AccountBalanceIcon color="primary" />}
                 sx={{ height: "100%" }}
+                valueColor={theme.palette.primary.main}
               />
             </Box>
           </Tooltip>
@@ -133,6 +136,7 @@ const Dashboard = () => {
                   dashboard?.transactions?.holdings_market_value || 0,
                   0,
                 )}
+                valueColor="primary"
                 subtitle={
                   dashboard?.transactions?.daily_pnl !== undefined ? (
                     <Typography
@@ -140,8 +144,8 @@ const Dashboard = () => {
                       sx={{
                         color:
                           dashboard.transactions.daily_pnl >= 0
-                            ? "success.main"
-                            : "error.main",
+                            ? theme.palette.success.main
+                            : theme.palette.error.main,
                         display: "block",
                       }}
                     >
@@ -161,7 +165,7 @@ const Dashboard = () => {
                     </Typography>
                   ) : undefined
                 }
-                icon={<TrendingUpIcon color="success" />}
+                icon={<TrendingUpIcon color="primary" />}
                 sx={{ height: "100%" }}
               />
             </Box>
@@ -182,8 +186,8 @@ const Dashboard = () => {
                 )}
                 valueColor={
                   (dashboard?.transactions?.unrealized_gain || 0) >= 0
-                    ? "success.main"
-                    : "error.main"
+                    ? theme.palette.success.main
+                    : theme.palette.error.main
                 }
                 icon={<ShowChartIcon color="primary" />}
                 sx={{ height: "100%" }}
@@ -205,10 +209,10 @@ const Dashboard = () => {
                 )}
                 valueColor={
                   (dashboard?.transactions?.unrealized_gain_percent || 0) >= 0
-                    ? "success.main"
-                    : "error.main"
+                    ? theme.palette.success.main
+                    : theme.palette.error.main
                 }
-                icon={<PercentIcon color="success" />}
+                icon={<PercentIcon color="primary" />}
                 sx={{ height: "100%" }}
               />
             </Box>
@@ -230,7 +234,8 @@ const Dashboard = () => {
                   dashboard?.transactions?.net_contributions || 0,
                   0,
                 )}
-                icon={<AttachMoneyIcon color="secondary" />}
+                valueColor={theme.palette.primary.main}
+                icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
           </Tooltip>
@@ -248,7 +253,8 @@ const Dashboard = () => {
                   dashboard?.transactions?.net_invested || 0,
                   0,
                 )}
-                icon={<AttachMoneyIcon color="success" />}
+                valueColor={theme.palette.primary.main}
+                icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
           </Tooltip>
@@ -265,10 +271,10 @@ const Dashboard = () => {
                 value={formatPercent(dashboard?.transactions?.mwrr || 0)}
                 valueColor={
                   (dashboard?.transactions?.mwrr || 0) >= 0
-                    ? "success.main"
-                    : "error.main"
+                    ? theme.palette.success.main
+                    : theme.palette.error.main
                 }
-                icon={<TrendingUpIcon color="success" />}
+                icon={<TrendingUpIcon color="primary" />}
               />
             </Box>
           </Tooltip>
@@ -285,10 +291,10 @@ const Dashboard = () => {
                 value={formatPercent(dashboard?.transactions?.cagr || 0)}
                 valueColor={
                   (dashboard?.transactions?.cagr || 0) >= 0
-                    ? "success.main"
-                    : "error.main"
+                    ? theme.palette.success.main
+                    : theme.palette.error.main
                 }
-                icon={<TrendingUpIcon color="success" />}
+                icon={<TrendingUpIcon color="primary" />}
               />
             </Box>
           </Tooltip>

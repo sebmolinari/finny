@@ -5,11 +5,7 @@ import {
   Typography,
   Button,
   Box,
-  TableBody,
-  TableCell,
   TableContainer,
-  TableHead,
-  TableRow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -19,12 +15,7 @@ import {
   FormControlLabel,
   Switch,
 } from "@mui/material";
-import {
-  StyledTable,
-  StyledHeaderCell,
-  TruncatedCell,
-  ActionsCell,
-} from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import {
   Add as AddIcon,
@@ -150,6 +141,94 @@ export default function Brokers() {
     }
   };
 
+  const columns = [
+    {
+      field: "name",
+      headerName: "Name",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => (
+        <strong title={params.value}>{params.value}</strong>
+      ),
+    },
+    {
+      field: "website",
+      headerName: "Website",
+      flex: 1,
+      minWidth: 200,
+      renderCell: (params) =>
+        params.value ? (
+          <a href={params.value} target="_blank" rel="noopener noreferrer">
+            {params.value}
+          </a>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      field: "description",
+      headerName: "Description",
+      flex: 1,
+      minWidth: 250,
+      renderCell: (params) => (
+        <div
+          title={params.value || ""}
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            width: "100%",
+          }}
+        >
+          {params.value || "—"}
+        </div>
+      ),
+    },
+    {
+      field: "active",
+      headerName: "Active",
+      flex: 100,
+      sortable: false,
+      renderCell: (params) => (
+        <Switch
+          checked={!!params.value}
+          onChange={() => handleToggleActive(params.row)}
+          color={params.value ? "success" : "default"}
+          size="small"
+        />
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 120,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <IconButton
+            size="small"
+            onClick={() => handleOpenDialog(params.row)}
+            color="primary"
+            title="Edit"
+            sx={{ padding: "4px" }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDelete(params.row.id)}
+            color="error"
+            title="Delete"
+            sx={{ padding: "4px" }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
+
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
@@ -181,88 +260,15 @@ export default function Brokers() {
       </Box>
 
       <TableContainer component={Paper}>
-        <StyledTable>
-          <TableHead>
-            <TableRow>
-              <StyledHeaderCell sx={{ width: 150 }}>Name</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 200 }}>Website</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 250 }}>
-                Description
-              </StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 80 }}>Active</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 100 }}>Actions</StyledHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {brokers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">
-                    No brokers yet. Add your first broker to get started.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              brokers.map((broker) => (
-                <TableRow key={broker.id}>
-                  <TruncatedCell maxWidth={150} title={broker.name}>
-                    <strong>{broker.name}</strong>
-                  </TruncatedCell>
-                  <TruncatedCell maxWidth={200} title={broker.website}>
-                    {broker.website ? (
-                      <a
-                        href={broker.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={broker.website}
-                      >
-                        {broker.website}
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </TruncatedCell>
-                  <TruncatedCell
-                    maxWidth={250}
-                    title={broker.description || ""}
-                  >
-                    {broker.description || "—"}
-                  </TruncatedCell>
-                  <TableCell>
-                    <Switch
-                      checked={!!broker.active}
-                      onChange={() => handleToggleActive(broker)}
-                      color={broker.active ? "success" : "default"}
-                      size="small"
-                    />
-                  </TableCell>
-                  <ActionsCell>
-                    <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenDialog(broker)}
-                        color="primary"
-                        title="Edit"
-                        sx={{ padding: "4px" }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(broker.id)}
-                        color="error"
-                        title="Delete"
-                        sx={{ padding: "4px" }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </ActionsCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </StyledTable>
+        <StyledDataGrid
+          rows={brokers}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableSelectionOnClick
+          pageSize={25}
+          rowsPerPageOptions={[10, 25, 50]}
+          autoHeight
+        />
       </TableContainer>
 
       <Dialog

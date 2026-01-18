@@ -5,11 +5,7 @@ import {
   Typography,
   Button,
   Box,
-  TableBody,
-  TableCell,
   TableContainer,
-  TableHead,
-  TableRow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -21,15 +17,12 @@ import {
   InputLabel,
   IconButton,
   FormHelperText,
-  Pagination,
-  Grid,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Upload as UploadIcon,
-  Download as DownloadIcon,
 } from "@mui/icons-material";
 import {
   transactionAPI,
@@ -39,22 +32,19 @@ import {
   settingsAPI,
   analyticsAPI,
 } from "../api/api";
+import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
-import {
-  StyledTable,
-  StyledHeaderCell,
-  ActionsCell,
-} from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Blotter() {
+  const theme = useTheme();
   const [transactions, setTransactions] = useState([]);
   const [assets, setAssets] = useState([]); // Active only - for dialog
   const [brokers, setBrokers] = useState([]); // Active only - for dialog
-  const [filterAssets, setFilterAssets] = useState([]); // All - for filters
   const [validTransactionTypes, setValidTransactionTypes] = useState([]);
   const [userTimezone, setUserTimezone] = useState(null);
   const [userDateFormat, setUserDateFormat] = useState();
@@ -84,34 +74,11 @@ export default function Blotter() {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(50);
 
-  // Filter state (edit and applied)
-  const [filters, setFilters] = useState({
-    asset_id: "",
-    transaction_type: "",
-    start_date: "",
-    end_date: "",
-  });
-  const [pendingFilters, setPendingFilters] = useState({
-    asset_id: "",
-    transaction_type: "",
-    start_date: "",
-    end_date: "",
-  });
-
   // Load transactions when page/filters change
   const loadTransactions = useCallback(async () => {
     try {
       setTransactionsLoading(true);
-      const params = {
-        page,
-        limit,
-        ...(filters.asset_id && { assetId: filters.asset_id }),
-        ...(filters.transaction_type && {
-          transactionType: filters.transaction_type,
-        }),
-        ...(filters.start_date && { startDate: filters.start_date }),
-        ...(filters.end_date && { endDate: filters.end_date }),
-      };
+      const params = { page, limit };
       const response = await transactionAPI.getAll(params);
       setTransactions(response.data.data);
       setTotalPages(response.data.pagination.pages || 1);
@@ -120,14 +87,7 @@ export default function Blotter() {
     } finally {
       setTransactionsLoading(false);
     }
-  }, [
-    page,
-    limit,
-    filters.asset_id,
-    filters.transaction_type,
-    filters.start_date,
-    filters.end_date,
-  ]);
+  }, [page, limit]);
 
   useEffect(() => {
     loadTransactions();
@@ -138,9 +98,6 @@ export default function Blotter() {
       // Load active only for dialog
       const response = await assetAPI.getAll();
       setAssets(response.data);
-      // Load all (including inactive) for filters
-      const filterResponse = await assetAPI.getAll({ includeInactive: true });
-      setFilterAssets(filterResponse.data);
     } catch (error) {
       console.error("Error loading assets:", error);
     }
@@ -372,33 +329,6 @@ export default function Blotter() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const exportParams = {
-        ...(filters.asset_id && { assetId: filters.asset_id }),
-        ...(filters.transaction_type && {
-          transactionType: filters.transaction_type,
-        }),
-        ...(filters.start_date && { startDate: filters.start_date }),
-        ...(filters.end_date && { endDate: filters.end_date }),
-      };
-      const response = await transactionAPI.exportTransactions(exportParams);
-      const blob = new Blob([response.data], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `transactions_${getTodayInTimezone(userTimezone)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Transactions exported successfully");
-    } catch (error) {
-      console.error("Error exporting transactions:", error);
-      toast.error("Failed to export transactions");
-    }
-  };
-
   const handleOpenImportDialog = () => {
     setOpenImportDialog(true);
     setImportText("");
@@ -491,7 +421,7 @@ export default function Blotter() {
     } catch (error) {
       console.error("Error importing transactions:", error);
       toast.error(
-        error.response?.data?.message || "Failed to import transactions"
+        error.response?.data?.message || "Failed to import transactions",
       );
     } finally {
       setImporting(false);
@@ -548,42 +478,6 @@ export default function Blotter() {
     calculateAmount,
   ]);
 
-  const handlePageChange = (event, value) => {
-    setPage(value);
-  };
-
-  // Only update pendingFilters on change, not filters
-  const handleFilterChange = (field, value) => {
-    setPendingFilters((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Apply filters when button is clicked
-  const applyFilters = () => {
-    setFilters({ ...pendingFilters });
-    setPage(1);
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      asset_id: "",
-      transaction_type: "",
-      start_date: "",
-      end_date: "",
-    });
-    setPendingFilters({
-      asset_id: "",
-      transaction_type: "",
-      start_date: "",
-      end_date: "",
-    });
-    setPage(1);
-  };
-
-  const LABELS = {
-    realestate: "Real Estate",
-    fixedincome: "Fixed Income",
-  };
-
   if (transactionsLoading || settingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
@@ -600,13 +494,7 @@ export default function Blotter() {
           >
             Import
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={handleExport}
-          >
-            Export
-          </Button>
+
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -617,178 +505,96 @@ export default function Blotter() {
         </Box>
       </Box>
 
-      {/* Filters Section */}
-
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Filters
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Asset</InputLabel>
-              <Select
-                value={pendingFilters.asset_id}
-                onChange={(e) => handleFilterChange("asset_id", e.target.value)}
-                label="Asset"
-              >
-                <MenuItem value="">All Assets</MenuItem>
-                {filterAssets.map((asset) => (
-                  <MenuItem key={asset.id} value={asset.id}>
-                    {asset.symbol} - {asset.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={pendingFilters.transaction_type}
-                onChange={(e) =>
-                  handleFilterChange("transaction_type", e.target.value)
-                }
-                label="Type"
-              >
-                <MenuItem value="">All Types</MenuItem>
-                {validTransactionTypes.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {LABELS[type] ??
-                      type.charAt(0).toUpperCase() +
-                        type.slice(1).replace(/([A-Z])/g, " $1")}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.5}>
-            <TextField
-              label="Start Date"
-              type="date"
-              value={pendingFilters.start_date}
-              onChange={(e) => handleFilterChange("start_date", e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              size="small"
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.5}>
-            <TextField
-              label="End Date"
-              type="date"
-              value={pendingFilters.end_date}
-              onChange={(e) => handleFilterChange("end_date", e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              size="small"
-            />
-          </Grid>
-          <Grid item xs={6} sm={6} md={1.5}>
-            <Button
-              variant="contained"
-              onClick={applyFilters}
-              fullWidth
-              size="medium"
-              sx={{ mb: { xs: 1, md: 0 } }}
-            >
-              Apply
-            </Button>
-          </Grid>
-          <Grid item xs={6} sm={6} md={1.5}>
-            <Button
-              variant="outlined"
-              onClick={clearFilters}
-              fullWidth
-              size="medium"
-            >
-              Clear
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Transactions Table */}
+      {/* Transactions Grid */}
       <Paper>
         <TableContainer>
-          <StyledTable>
-            <TableHead>
-              <TableRow>
-                <StyledHeaderCell sx={{ width: 100 }}>Date</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 100 }}>Asset</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 100 }}>Type</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 120 }}>Broker</StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 100 }}>
-                  Quantity
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 100 }}>
-                  Price
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 80 }}>
-                  Fee
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 100 }}>
-                  Total
-                </StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 100 }}>Actions</StyledHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {transactions.map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell>{formatDate(tx.date, userDateFormat)}</TableCell>
-                  <TableCell>{tx.symbol || "-"}</TableCell>
-                  <TableCell>{tx.transaction_type}</TableCell>
-                  <TableCell>{tx.broker_name || "-"}</TableCell>
-                  <TableCell align="right">
-                    {tx.quantity ? formatNumber(tx.quantity, 4) : "-"}
-                  </TableCell>
-                  <TableCell align="right">
-                    {tx.price ? formatCurrency(tx.price) : "-"}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(tx.fee || 0)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(tx.total_amount)}
-                  </TableCell>
-                  <ActionsCell>
-                    <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenDialog(tx)}
-                        color="primary"
-                        title="Edit"
-                        sx={{ padding: "4px" }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(tx.id)}
-                        color="error"
-                        title="Delete"
-                        sx={{ padding: "4px" }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </ActionsCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </StyledTable>
-        </TableContainer>
-
-        {/* Pagination */}
-        <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
+          <StyledDataGrid
+            rows={transactions}
+            columns={[
+              {
+                field: "date",
+                headerName: "Date",
+                minWidth: 120,
+                renderCell: (params) =>
+                  formatDate(params.value, userDateFormat),
+              },
+              { field: "symbol", headerName: "Asset", minWidth: 140 },
+              { field: "transaction_type", headerName: "Type", minWidth: 120 },
+              { field: "broker_name", headerName: "Broker", minWidth: 140 },
+              {
+                field: "quantity",
+                headerName: "Quantity",
+                minWidth: 120,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) =>
+                  params.value ? formatNumber(params.value, 4) : "-",
+              },
+              {
+                field: "price",
+                headerName: "Price",
+                minWidth: 120,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) =>
+                  params.value ? formatCurrency(params.value) : "-",
+              },
+              {
+                field: "fee",
+                headerName: "Fee",
+                minWidth: 100,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) => formatCurrency(params.value || 0),
+              },
+              {
+                field: "total_amount",
+                headerName: "Total",
+                minWidth: 120,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) => formatCurrency(params.value),
+              },
+              {
+                field: "actions",
+                headerName: "Actions",
+                minWidth: 120,
+                sortable: false,
+                filterable: false,
+                renderCell: (params) => (
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenDialog(params.row)}
+                      color="primary"
+                      title="Edit"
+                      sx={{ padding: "4px" }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(params.row.id)}
+                      color="error"
+                      title="Delete"
+                      sx={{ padding: "4px" }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ),
+              },
+            ]}
+            getRowId={(row) => row.id}
+            paginationMode="server"
+            page={page - 1}
+            onPageChange={(newPage) => setPage(newPage + 1)}
+            pageSize={limit}
+            rowsPerPageOptions={[25, 50, 100]}
+            rowCount={totalPages * limit}
+            disableSelectionOnClick
           />
-        </Box>
+        </TableContainer>
       </Paper>
 
       {/* Transaction Dialog */}
@@ -1002,13 +808,21 @@ export default function Blotter() {
                 <Typography variant="subtitle2" gutterBottom>
                   Import Results:
                 </Typography>
-                <Typography variant="body2" color="success.main" gutterBottom>
+                <Typography
+                  variant="body2"
+                  color={theme.palette.success.main}
+                  gutterBottom
+                >
                   ✓ {importResults.success.length} transactions imported
                   successfully
                 </Typography>
                 {importResults.errors.length > 0 && (
                   <Box>
-                    <Typography variant="body2" color="error.main" gutterBottom>
+                    <Typography
+                      variant="body2"
+                      color={theme.palette.error.main}
+                      gutterBottom
+                    >
                       ✗ {importResults.errors.length} transactions failed:
                     </Typography>
                     <Box

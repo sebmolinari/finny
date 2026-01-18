@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented below.
 
+## [0.1.0] – 2026-01-20
+
+### Added
+
+- Migrated table-based UIs to MUI DataGrid
+
 ## [0.0.4] – 2026-01-17
 
 ### Added

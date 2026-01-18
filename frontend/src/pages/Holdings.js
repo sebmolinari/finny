@@ -4,29 +4,18 @@ import {
   Paper,
   Typography,
   Box,
-  TableBody,
-  TableCell,
   TableContainer,
-  TableHead,
-  TableRow,
   FormControlLabel,
   Switch,
   Grid,
   Tooltip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { AttachMoney as AttachMoneyIcon } from "@mui/icons-material";
 import { MetricCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
-import {
-  StyledTable,
-  StyledHeaderCell,
-  TruncatedCell,
-} from "../components/StyledTable";
-import { analyticsAPI, assetAPI } from "../api/api";
+import StyledDataGrid from "../components/StyledDataGrid";
+import { analyticsAPI } from "../api/api";
 import {
   formatNumber,
   formatCurrency,
@@ -37,9 +26,10 @@ export default function Holdings() {
   const [portfolio, setPortfolio] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [hideZeroQuantity, setHideZeroQuantity] = useState(true);
-  const [assetTypes, setAssetTypes] = useState([]);
-  const [selectedAssetType, setSelectedAssetType] = useState("All");
+
   const [loading, setLoading] = useState(true);
+
+  const theme = useTheme();
 
   const loadData = useCallback(async () => {
     try {
@@ -55,24 +45,158 @@ export default function Holdings() {
     }
   }, []);
 
-  const loadAssetTypes = useCallback(async () => {
-    try {
-      const res = await assetAPI.getAll();
-      const types = [...new Set(res.data.map((a) => a.asset_type))];
-      setAssetTypes(types);
-    } catch (err) {
-      console.error("Error loading asset types:", err);
-    }
-  }, []);
-
   useEffect(() => {
     loadData();
-    loadAssetTypes();
-  }, [loadData, loadAssetTypes]);
+  }, [loadData]);
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
+
+  const filteredRows = (portfolio || []).filter((holding) => {
+    if (
+      hideZeroQuantity &&
+      (!holding.total_quantity || holding.total_quantity === 0)
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const rows = filteredRows.map((h) => ({ ...h }));
+
+  const columns = [
+    {
+      field: "symbol",
+      headerName: "Symbol",
+      flex: 1,
+      renderCell: (params) => <span title={params.value}>{params.value}</span>,
+    },
+    {
+      field: "broker_name",
+      headerName: "Broker",
+      flex: 1,
+      renderCell: (params) => <span title={params.value}>{params.value}</span>,
+    },
+    {
+      field: "asset_type",
+      headerName: "Type",
+      flex: 1,
+      renderCell: (params) => {
+        const t = params.value || "";
+        const colorMap = {
+          currency: ["#e3f2fd", "#1976d2"],
+          equity: ["#f3e5f5", "#9c27b0"],
+          crypto: ["#fff3e0", "#ff9800"],
+          fixedincome: ["#e0f2f1", "#00796b"],
+          realestate: ["#fce4ec", "#c2185b"],
+        };
+        const [bg, fg] = colorMap[t] || ["#f5f5f5", "#757575"];
+        const label =
+          t === "equity"
+            ? "EQT"
+            : t === "crypto"
+              ? "CRY"
+              : t === "currency"
+                ? "CCY"
+                : t === "fixedincome"
+                  ? "FI"
+                  : t === "realestate"
+                    ? "RE"
+                    : t.toUpperCase();
+        return (
+          <Box
+            sx={{
+              display: "inline-block",
+              px: 0.75,
+              py: 0.25,
+              borderRadius: 1,
+              backgroundColor: bg,
+              color: fg,
+              fontSize: "0.75rem",
+              fontWeight: 600,
+            }}
+            title={t}
+          >
+            {label}
+          </Box>
+        );
+      },
+    },
+    {
+      field: "total_quantity",
+      headerName: "Quantity",
+      flex: 1,
+      type: "number",
+      headerAlign: "right",
+      align: "right",
+      valueGetter: (params) => params.row.total_quantity,
+      renderCell: (params) => formatNumber(params.value, 4),
+    },
+    {
+      field: "average_cost",
+      headerName: "Avg Cost",
+      flex: 1,
+      headerAlign: "right",
+      align: "right",
+      renderCell: (params) => formatCurrency(params.value),
+    },
+    {
+      field: "cost_basis",
+      headerName: "Cost Basis",
+      flex: 1,
+      headerAlign: "right",
+      align: "right",
+      renderCell: (params) => formatCurrency(params.value),
+    },
+    {
+      field: "market_price",
+      headerName: "Current Price",
+      flex: 1,
+      headerAlign: "right",
+      align: "right",
+      renderCell: (params) => formatCurrency(params.value),
+    },
+    {
+      field: "market_value",
+      headerName: "Market Value",
+      flex: 1,
+      headerAlign: "right",
+      align: "right",
+      renderCell: (params) => formatCurrency(params.value, 0),
+    },
+    {
+      field: "daily_pnl",
+      headerName: "Daily P&L",
+      flex: 1,
+      headerAlign: "right",
+      align: "right",
+      renderCell: (params) => {
+        const val = params.value || 0;
+        const color =
+          val >= 0 ? theme.palette.success.main : theme.palette.error.main;
+        return <span style={{ color }}>{formatCurrency(val, 0)}</span>;
+      },
+    },
+    {
+      field: "unrealized_gain",
+      headerName: "Unrealized P&L",
+      flex: 1,
+      headerAlign: "right",
+      align: "right",
+      renderCell: (params) => {
+        const val = params.value || 0;
+        const color =
+          val >= 0 ? theme.palette.success.main : theme.palette.error.main;
+        const percent = formatPercent(params.row.unrealized_gain_percent);
+        return (
+          <span style={{ color }}>
+            {formatCurrency(val, 0)} {percent ? `(${percent})` : ""}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -94,6 +218,7 @@ export default function Holdings() {
                   analytics?.transactions?.cash_balance || 0,
                   0,
                 )}
+                valueColor="primary"
                 icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
@@ -112,7 +237,8 @@ export default function Holdings() {
                   analytics?.transactions?.liquidity_balance || 0,
                   0,
                 )}
-                icon={<AttachMoneyIcon color="info" />}
+                valueColor="primary"
+                icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
           </Tooltip>
@@ -129,7 +255,8 @@ export default function Holdings() {
                 value={formatPercent(
                   analytics?.transactions?.liquidity_percent || 0,
                 )}
-                icon={<AttachMoneyIcon color="info" />}
+                valueColor="primary"
+                icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
           </Tooltip>
@@ -158,169 +285,18 @@ export default function Holdings() {
               }
               label="Hide Zero Quantity"
             />
-
-            <FormControl sx={{ minWidth: 180 }} size="small">
-              <InputLabel id="asset-type-label">Asset Type</InputLabel>
-              <Select
-                labelId="asset-type-label"
-                value={selectedAssetType}
-                label="Asset Type"
-                onChange={(e) => setSelectedAssetType(e.target.value)}
-                sx={{ minWidth: 160 }}
-              >
-                <MenuItem value="All">All Types</MenuItem>
-                {assetTypes.map((t) => (
-                  <MenuItem key={t} value={t}>
-                    {t}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Box>
         </Box>
         <TableContainer>
-          <StyledTable>
-            <TableHead>
-              <TableRow>
-                <StyledHeaderCell sx={{ width: 100 }}>Symbol</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 120 }}>Broker</StyledHeaderCell>
-                <StyledHeaderCell sx={{ width: 60 }}>Type</StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 100 }}>
-                  Quantity
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 100 }}>
-                  Avg Cost
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 120 }}>
-                  Cost Basis
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 120 }}>
-                  Current Price
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 120 }}>
-                  Market Value
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 120 }}>
-                  Daily P&L
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right" sx={{ width: 140 }}>
-                  Unrealized P&L
-                </StyledHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(portfolio || [])
-                .filter((holding) => {
-                  if (
-                    hideZeroQuantity &&
-                    (!holding.total_quantity || holding.total_quantity === 0)
-                  ) {
-                    return false;
-                  }
-                  if (selectedAssetType && selectedAssetType !== "All") {
-                    return holding.asset_type === selectedAssetType;
-                  }
-                  return true;
-                })
-                .map((holding) => (
-                  <TableRow key={`${holding.asset_id}-${holding.broker_id}`}>
-                    <TruncatedCell maxWidth={100} title={holding.symbol}>
-                      {holding.symbol}
-                    </TruncatedCell>
-                    <TruncatedCell maxWidth={120} title={holding.broker_name}>
-                      {holding.broker_name}
-                    </TruncatedCell>
-                    <TableCell>
-                      <Box
-                        sx={{
-                          display: "inline-block",
-                          px: 0.75,
-                          py: 0.25,
-                          borderRadius: 1,
-                          backgroundColor:
-                            holding.asset_type === "currency"
-                              ? "#e3f2fd"
-                              : holding.asset_type === "equity"
-                                ? "#f3e5f5"
-                                : holding.asset_type === "crypto"
-                                  ? "#fff3e0"
-                                  : holding.asset_type === "fixedincome"
-                                    ? "#e0f2f1"
-                                    : holding.asset_type === "realestate"
-                                      ? "#fce4ec"
-                                      : "#f5f5f5",
-                          color:
-                            holding.asset_type === "currency"
-                              ? "#1976d2"
-                              : holding.asset_type === "equity"
-                                ? "#9c27b0"
-                                : holding.asset_type === "crypto"
-                                  ? "#ff9800"
-                                  : holding.asset_type === "fixedincome"
-                                    ? "#00796b"
-                                    : holding.asset_type === "realestate"
-                                      ? "#c2185b"
-                                      : "#757575",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {holding.asset_type === "equity"
-                          ? "EQT"
-                          : holding.asset_type === "crypto"
-                            ? "CRY"
-                            : holding.asset_type === "currency"
-                              ? "CCY"
-                              : holding.asset_type === "fixedincome"
-                                ? "FI"
-                                : holding.asset_type === "realestate"
-                                  ? "RE"
-                                  : holding.asset_type.toUpperCase()}
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatNumber(holding.total_quantity, 4)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(holding.average_cost)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(holding.cost_basis)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(holding.market_price)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(holding.market_value, 0)}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{
-                        color:
-                          holding.daily_pnl >= 0
-                            ? "success.main"
-                            : "error.main",
-                      }}
-                    >
-                      {formatCurrency(holding.daily_pnl || 0, 0)}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{
-                        color:
-                          holding.unrealized_gain >= 0
-                            ? "success.main"
-                            : "error.main",
-                      }}
-                    >
-                      {formatCurrency(holding.unrealized_gain, 0)} (
-                      {formatPercent(holding.unrealized_gain_percent)})
-                    </TableCell>
-                    {/* Realized P&L column removed per request */}
-                  </TableRow>
-                ))}
-            </TableBody>
-          </StyledTable>
+          <StyledDataGrid
+            rows={rows}
+            columns={columns}
+            getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
+            pageSize={25}
+            rowsPerPageOptions={[10, 25, 50]}
+            disableSelectionOnClick
+            autoHeight
+          />
         </TableContainer>
       </Paper>
     </Container>

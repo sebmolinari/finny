@@ -5,22 +5,19 @@ import {
   Paper,
   Box,
   Grid,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Divider,
 } from "@mui/material";
 import { analyticsAPI } from "../api/api";
 import { settingsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
-import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
+import { useTheme } from "@mui/material/styles";
 import { StatCard } from "../components/StyledCard";
 import { formatDate } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function ReturnsDetails() {
+  const theme = useTheme();
   const [details, setDetails] = useState(null);
   const [userSettings, setUserSettings] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
@@ -85,15 +82,21 @@ export default function ReturnsDetails() {
           <StatCard
             label="Holdings Market Value"
             value={formatCurrency(holdings_market_value)}
+            valueColor={theme.palette.primary.main}
           />
         </Grid>
         <Grid item xs={12} md={4}>
-          <StatCard label="Cash Balance" value={formatCurrency(cash_balance)} />
+          <StatCard
+            label="Cash Balance"
+            value={formatCurrency(cash_balance)}
+            valueColor={theme.palette.primary.main}
+          />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
             label="NAV (Net Asset Value)"
             value={formatCurrency(current_total_value)}
+            valueColor={theme.palette.primary.main}
           />
         </Grid>
       </Grid>
@@ -116,6 +119,9 @@ export default function ReturnsDetails() {
             label="MWRR"
             value={`${formatNumber(mwrr, 2)}%`}
             sx={{ flex: 1, minWidth: 280 }}
+            valueColor={
+              mwrr >= 0 ? theme.palette.success.main : theme.palette.error.main
+            }
           />
           <StatCard
             label="Cash Flows Count"
@@ -133,67 +139,104 @@ export default function ReturnsDetails() {
         <Typography variant="subtitle1" sx={{ mb: 1 }}>
           Cash Flows Used
         </Typography>
-        <TableContainer>
-          <StyledTable>
-            <TableHead>
-              <TableRow>
-                <StyledHeaderCell>Date</StyledHeaderCell>
-                <StyledHeaderCell>Type</StyledHeaderCell>
-                <StyledHeaderCell align="right">Amount</StyledHeaderCell>
-                <StyledHeaderCell align="right">Years Since</StyledHeaderCell>
-                <StyledHeaderCell align="right">Signed Amount</StyledHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {mwrr_cash_flows.map((cf, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    {formatDate(cf.date, userSettings.date_format)}
-                  </TableCell>
-                  <TableCell>{cf.type}</TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(cf.amount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatNumber(cf.yearsSinceStart, 4)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(cf.signedAmount)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </StyledTable>
-        </TableContainer>
+        <Paper sx={{ width: "100%", mb: 2 }}>
+          <div style={{ width: "100%" }}>
+            <StyledDataGrid
+              rows={mwrr_cash_flows.map((r, i) => ({
+                ...r,
+                id: r.id ?? `${r.date}-${r.type}-${i}`,
+              }))}
+              columns={[
+                {
+                  field: "date",
+                  headerName: "Date",
+                  flex: 1,
+                  renderCell: (params) =>
+                    formatDate(params.row.date, userSettings.date_format),
+                },
+                { field: "type", headerName: "Type", width: 120 },
+                {
+                  field: "amount",
+                  headerName: "Amount",
+                  flex: 1,
+                  headerAlign: "right",
+                  align: "right",
+                  renderCell: (params) => formatCurrency(params.row.amount),
+                },
+                {
+                  field: "yearsSinceStart",
+                  headerName: "Years Since",
+                  flex: 1,
+                  headerAlign: "right",
+                  align: "right",
+                  renderCell: (params) =>
+                    formatNumber(params.row.yearsSinceStart, 4),
+                },
+                {
+                  field: "signedAmount",
+                  headerName: "Signed Amount",
+                  flex: 1,
+                  headerAlign: "right",
+                  align: "right",
+                  renderCell: (params) => {
+                    const val = params.row.signedAmount;
+                    const color =
+                      val >= 0
+                        ? theme.palette.success.main
+                        : theme.palette.error.main;
+                    return <span style={{ color }}>{formatCurrency(val)}</span>;
+                  },
+                },
+              ]}
+              autoHeight
+              pageSize={25}
+              rowsPerPageOptions={[25, 50]}
+              disableSelectionOnClick
+            />
+          </div>
+        </Paper>
 
         <Divider sx={{ my: 2 }} />
         <Typography variant="subtitle1" sx={{ mb: 1 }}>
           Newton-Raphson Iterations
         </Typography>
-        <TableContainer>
-          <StyledTable>
-            <TableHead>
-              <TableRow>
-                <StyledHeaderCell>Iteration</StyledHeaderCell>
-                <StyledHeaderCell align="right">
-                  Rate (decimal)
-                </StyledHeaderCell>
-                <StyledHeaderCell align="right">NPV</StyledHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {mwrr_iterations.map((it) => (
-                <TableRow key={it.iteration}>
-                  <TableCell>{it.iteration}</TableCell>
-                  <TableCell align="right">
-                    {formatNumber(it.rate, 6)}
-                  </TableCell>
-                  <TableCell align="right">{formatCurrency(it.npv)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </StyledTable>
-        </TableContainer>
+        <Paper sx={{ width: "100%" }}>
+          <StyledDataGrid
+            rows={mwrr_iterations}
+            columns={[
+              { field: "iteration", headerName: "Iteration", flex: 1 },
+              {
+                field: "rate",
+                headerName: "Rate (decimal)",
+                flex: 1,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) => formatNumber(params.row.rate, 6),
+              },
+              {
+                field: "npv",
+                headerName: "NPV",
+                flex: 1,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) => {
+                  const val = params.row.npv;
+                  const color =
+                    val >= 0
+                      ? theme.palette.success.main
+                      : theme.palette.error.main;
+                  return <span style={{ color }}>{formatCurrency(val)}</span>;
+                },
+              },
+            ]}
+            getRowId={(row) => row.iteration}
+            autoHeight
+            pageSize={25}
+            rowsPerPageOptions={[25, 50]}
+            disableSelectionOnClick
+            disableToolbar
+          />
+        </Paper>
       </Paper>
 
       {/* CAGR Details */}
@@ -212,7 +255,15 @@ export default function ReturnsDetails() {
 
         <Grid container spacing={3}>
           <Grid item xs={12} md={3}>
-            <StatCard label="CAGR" value={`${formatNumber(cagr, 2)}%`} />
+            <StatCard
+              label="CAGR"
+              value={`${formatNumber(cagr, 2)}%`}
+              valueColor={
+                cagr >= 0
+                  ? theme.palette.success.main
+                  : theme.palette.error.main
+              }
+            />
           </Grid>
           <Grid item xs={12} md={3}>
             <StatCard
@@ -230,12 +281,14 @@ export default function ReturnsDetails() {
             <StatCard
               label="Net Deposits"
               value={formatCurrency(cagr_details.netDeposits)}
+              valueColor={theme.palette.primary.main}
             />
           </Grid>
           <Grid item xs={12} md={3}>
             <StatCard
               label="Ending Value"
               value={formatCurrency(cagr_details.endingValue)}
+              valueColor={theme.palette.primary.main}
             />
           </Grid>
         </Grid>
@@ -260,36 +313,43 @@ export default function ReturnsDetails() {
             data.
           </Typography>
 
-          <TableContainer>
-            <StyledTable>
-              <TableHead>
-                <TableRow>
-                  <StyledHeaderCell>Year</StyledHeaderCell>
-                  <StyledHeaderCell align="right">
-                    MTM (Mark-to-Market)
-                  </StyledHeaderCell>
-                  <StyledHeaderCell align="right">
-                    CAGR from Year 1
-                  </StyledHeaderCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {cagr_evolution.map((row) => (
-                  <TableRow key={row.year}>
-                    <TableCell>{row.year}</TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(row.mtm)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {row.cagr !== null
-                        ? formatNumber(row.cagr, 2) + "%"
-                        : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </StyledTable>
-          </TableContainer>
+          <StyledDataGrid
+            rows={cagr_evolution}
+            columns={[
+              { field: "year", headerName: "Year", flex: 1 },
+              {
+                field: "mtm",
+                headerName: "MTM (Mark-to-Market)",
+                flex: 1,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) => {
+                  const val = params.row.mtm;
+                  const color =
+                    val >= 0
+                      ? theme.palette.success.main
+                      : theme.palette.error.main;
+                  return <span style={{ color }}>{formatCurrency(val)}</span>;
+                },
+              },
+              {
+                field: "cagr",
+                headerName: "CAGR from Year 1",
+                flex: 1,
+                headerAlign: "right",
+                align: "right",
+                renderCell: (params) =>
+                  params.row.cagr !== null
+                    ? formatNumber(params.row.cagr, 2) + "%"
+                    : "—",
+              },
+            ]}
+            getRowId={(row) => row.year}
+            autoHeight
+            pageSize={25}
+            rowsPerPageOptions={[25, 50]}
+            disableSelectionOnClick
+          />
         </Paper>
       )}
     </Container>

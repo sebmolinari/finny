@@ -6,11 +6,6 @@ import {
   Box,
   TextField,
   Button,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Alert,
   CircularProgress,
   FormControl,
@@ -27,11 +22,7 @@ import { formatDate } from "../utils/dateUtils";
 
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
-import {
-  StyledTable,
-  StyledHeaderCell,
-  TruncatedCell,
-} from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -241,92 +232,106 @@ export default function TaxReport() {
               </Typography>
             </Box>
 
-            <TableContainer>
-              <StyledTable>
-                <TableHead>
-                  <TableRow>
-                    <StyledHeaderCell sx={{ width: 100 }}>
-                      Asset
-                    </StyledHeaderCell>
-                    <StyledHeaderCell sx={{ width: 150 }}>
-                      Name
-                    </StyledHeaderCell>
-                    <StyledHeaderCell sx={{ width: 80 }}>Type</StyledHeaderCell>
-                    <StyledHeaderCell sx={{ width: 120 }}>
-                      Broker
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="right" sx={{ width: 100 }}>
-                      Quantity
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="right" sx={{ width: 110 }}>
-                      Price (USD)
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="right" sx={{ width: 140 }}>
-                      Market Value (USD)
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="right" sx={{ width: 90 }}>
-                      FX Rate
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="right" sx={{ width: 110 }}>
-                      Price (CCY)
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="right" sx={{ width: 140 }}>
-                      Market Value (CCY)
-                    </StyledHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {reportData.holdings.map((holding, index) => (
-                    <TableRow key={index}>
-                      <TruncatedCell maxWidth={100} title={holding.asset}>
-                        {holding.asset}
-                      </TruncatedCell>
-                      <TruncatedCell maxWidth={150} title={holding.asset_name}>
-                        {holding.asset_name}
-                      </TruncatedCell>
-                      <TableCell>{holding.asset_type}</TableCell>
-                      <TruncatedCell
-                        maxWidth={120}
-                        title={holding.broker || "N/A"}
-                      >
-                        {holding.broker || "N/A"}
-                      </TruncatedCell>
-                      <TableCell align="right">
-                        {holding.quantity.toFixed(4)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(holding.price)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(holding.market_value)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {holding.usdars_bna.toFixed(2)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(holding.price_in_ccy)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(holding.market_value_in_ccy)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow sx={{ backgroundColor: "action.hover" }}>
-                    <TableCell colSpan={6} sx={{ fontWeight: "bold" }}>
-                      Total
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                      {formatCurrency(reportData.total_market_value)}
-                    </TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                      {formatCurrency(reportData.total_market_value_in_ccy)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </StyledTable>
-            </TableContainer>
+            <Paper sx={{ width: "100%", mb: 2 }}>
+              <div style={{ width: "100%" }}>
+                <StyledDataGrid
+                  rows={reportData.holdings.map((h, i) => ({
+                    ...h,
+                    id: h.id ?? `${h.asset}-${h.broker || "nobroker"}-${i}`,
+                  }))}
+                  columns={[
+                    {
+                      field: "asset",
+                      headerName: "Asset",
+                      flex: 1,
+                      renderCell: (p) => <strong>{p.value}</strong>,
+                    },
+                    {
+                      field: "asset_name",
+                      headerName: "Name",
+                      flex: 1,
+                    },
+                    { field: "asset_type", headerName: "Type", flex: 1 },
+                    { field: "broker", headerName: "Broker", flex: 1 },
+                    {
+                      field: "quantity",
+                      headerName: "Quantity",
+                      flex: 1,
+                      headerAlign: "right",
+                      align: "right",
+                      renderCell: (p) => Number(p.row.quantity).toFixed(4),
+                    },
+                    {
+                      field: "price",
+                      headerName: "Price (USD)",
+                      flex: 1,
+                      headerAlign: "right",
+                      align: "right",
+                      renderCell: (p) => formatCurrency(p.row.price),
+                    },
+                    {
+                      field: "market_value",
+                      headerName: "Market Value (USD)",
+                      minWidth: 150,
+                      flex: 1,
+                      headerAlign: "right",
+                      align: "right",
+                      renderCell: (p) => formatCurrency(p.row.market_value),
+                    },
+                    {
+                      field: "usdars_bna",
+                      headerName: "FX Rate",
+                      flex: 1,
+                      headerAlign: "right",
+                      align: "right",
+                      renderCell: (p) => Number(p.row.usdars_bna).toFixed(2),
+                    },
+                    {
+                      field: "price_in_ccy",
+                      headerName: "Price (CCY)",
+                      flex: 1,
+                      headerAlign: "right",
+                      align: "right",
+                      renderCell: (p) => formatCurrency(p.row.price_in_ccy),
+                    },
+                    {
+                      field: "market_value_in_ccy",
+                      headerName: "Market Value (CCY)",
+                      minWidth: 150,
+                      flex: 1,
+                      headerAlign: "right",
+                      align: "right",
+                      renderCell: (p) =>
+                        formatCurrency(p.row.market_value_in_ccy),
+                    },
+                  ]}
+                  getRowId={(row) => row.id}
+                  autoHeight
+                  disableSelectionOnClick
+                />
+              </div>
+            </Paper>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 3,
+                mt: 1,
+              }}
+            >
+              <Typography variant="subtitle2">
+                Total Market Value (USD):
+              </Typography>
+              <Typography variant="subtitle2" fontWeight="bold">
+                {formatCurrency(reportData.total_market_value)}
+              </Typography>
+              <Typography variant="subtitle2" sx={{ ml: 3 }}>
+                Total Market Value (Local CCY):
+              </Typography>
+              <Typography variant="subtitle2" fontWeight="bold">
+                {formatCurrency(reportData.total_market_value_in_ccy)}
+              </Typography>
+            </Box>
 
             {reportData.holdings.length === 0 && (
               <Alert severity="info" sx={{ mt: 2 }}>

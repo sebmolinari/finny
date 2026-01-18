@@ -16,6 +16,7 @@ export const StyledHeaderCell = ({ children, sx = {}, ...props }) => {
     <TableCell
       sx={{
         backgroundColor: "#f5f5f5",
+        fontWeight: "bold",
         ...sx,
       }}
       {...props}

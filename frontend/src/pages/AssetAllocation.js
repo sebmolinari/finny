@@ -30,12 +30,15 @@ import {
   Add as AddIcon,
 } from "@mui/icons-material";
 import { allocationAPI, constantsAPI, assetAPI } from "../api/api";
+import { useTheme } from "@mui/material/styles";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import { MetricCard } from "../components/StyledCard";
 import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function AssetAllocation() {
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [targets, setTargets] = useState([]);
@@ -173,25 +176,37 @@ export default function AssetAllocation() {
     }
   }, [loadRebalancing, includedAssetTypes]);
 
+  // Load data once on mount. Avoid reloading automatically whenever
+  // `includedAssetTypes` changes because adding a type client-side
+  // should not trigger a full data reload (which shows the global
+  // loading spinner). Use explicit `Refresh` / `Save` to re-sync.
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleTargetChange = (assetType, field, value) => {
-    setTargets((prev) =>
-      prev.map((t) =>
-        t.asset_type === assetType ? { ...t, [field]: value } : t,
-      ),
-    );
-
-    // Recalculate total (only type-level targets count toward 100%)
-    const newTotal = targets.reduce((sum, t) => {
-      if (t.asset_type === assetType) {
-        return sum + parseFloat(value || 0);
-      }
-      return sum + parseFloat(t.target_percentage || 0);
-    }, 0);
-    setTotalAllocated(newTotal);
+    // Only recalculate totals when the target percentage changes.
+    // For non-percentage fields (like notes) just update the target.
+    if (field === "target_percentage") {
+      setTargets((prev) => {
+        const updated = prev.map((t) =>
+          t.asset_type === assetType ? { ...t, [field]: value } : t,
+        );
+        const newTotal = updated.reduce(
+          (sum, t) => sum + parseFloat(t.target_percentage || 0),
+          0,
+        );
+        setTotalAllocated(newTotal);
+        return updated;
+      });
+    } else {
+      setTargets((prev) =>
+        prev.map((t) =>
+          t.asset_type === assetType ? { ...t, [field]: value } : t,
+        ),
+      );
+    }
   };
 
   const handleAssetTargetChange = (assetId, field, value) => {
@@ -330,6 +345,239 @@ export default function AssetAllocation() {
   const remaining = 100 - totalAllocated;
   const isValid = totalAllocated <= 100;
 
+  // Prepare rebalancing data for DataGrid displays
+  const typeRecs = (rebalancing?.recommendations || []).filter(
+    (r) => r.level === "type",
+  );
+  const assetRecs = (rebalancing?.recommendations || []).filter(
+    (r) => r.level === "asset",
+  );
+
+  const typeRows = typeRecs.map((r, idx) => ({
+    id: r.asset_type || idx,
+    ...r,
+  }));
+  const assetRows = assetRecs.map((r, idx) => ({
+    id: r.symbol ? `${r.symbol}-${idx}` : idx,
+    ...r,
+  }));
+
+  const typeColumns = [
+    {
+      field: "asset_type",
+      headerName: "Asset Type",
+      flex: 1,
+      renderCell: (params) => (
+        <Typography variant="body1" fontWeight="medium">
+          {params.value}
+        </Typography>
+      ),
+    },
+    {
+      field: "current",
+      headerName: "Current",
+      flex: 1,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Box>
+          <Typography variant="body2">
+            {formatPercent(p.row.current_percentage)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formatCurrency(p.row.current_value)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "target",
+      headerName: "Target",
+      flex: 1,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Box>
+          <Typography variant="body2">
+            {formatPercent(p.row.target_percentage)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formatCurrency(p.row.target_value)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "difference_percentage",
+      headerName: "Difference",
+      flex: 1,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Typography
+          variant="body2"
+          color={
+            p.row.difference_percentage > 0
+              ? theme.palette.success.main
+              : p.row.difference_percentage < 0
+                ? theme.palette.error.main
+                : theme.palette.text.primary
+          }
+        >
+          {p.row.difference_percentage > 0 ? "+" : ""}
+          {formatPercent(p.row.difference_percentage)}
+        </Typography>
+      ),
+    },
+    {
+      field: "action",
+      headerName: "Action",
+      width: 110,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (p) => (
+        <Chip
+          icon={getActionIcon(p.row.action)}
+          label={p.row.action}
+          color={getActionColor(p.row.action)}
+          size="small"
+        />
+      ),
+    },
+    {
+      field: "difference",
+      headerName: "Amount",
+      width: 140,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Typography
+          variant="body2"
+          fontWeight="medium"
+          color={
+            p.row.difference > 0
+              ? theme.palette.success.main
+              : p.row.difference < 0
+                ? theme.palette.error.main
+                : theme.palette.text.primary
+          }
+        >
+          {p.row.difference > 0 ? "+" : ""}
+          {formatCurrency(Math.abs(p.row.difference || 0))}
+        </Typography>
+      ),
+    },
+  ];
+
+  const assetColumns = [
+    { field: "symbol", headerName: "Symbol", flex: 1 },
+    { field: "asset_name", headerName: "Name", flex: 1 },
+    {
+      field: "asset_type",
+      headerName: "Type",
+      flex: 1,
+      renderCell: (p) => <Chip label={p.value} size="small" />,
+    },
+    {
+      field: "current",
+      headerName: "Current",
+      flex: 1,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Box>
+          <Typography variant="body2">
+            {p.row.current_percentage_within_type !== undefined
+              ? formatPercent(p.row.current_percentage_within_type)
+              : formatPercent(p.row.current_percentage)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formatCurrency(p.row.current_value)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "target",
+      headerName: "Target",
+      flex: 1,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Box>
+          <Typography variant="body2">
+            {p.row.target_percentage_within_type !== undefined
+              ? formatPercent(p.row.target_percentage_within_type)
+              : formatPercent(p.row.target_percentage)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formatCurrency(p.row.target_value)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "difference_percentage",
+      headerName: "Difference",
+      flex: 1,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Typography
+          variant="body2"
+          color={
+            p.row.difference_percentage > 0
+              ? theme.palette.success.main
+              : p.row.difference_percentage < 0
+                ? theme.palette.error.main
+                : theme.palette.text.primary
+          }
+        >
+          {p.row.difference_percentage > 0 ? "+" : ""}
+          {formatPercent(p.row.difference_percentage)}
+        </Typography>
+      ),
+    },
+    {
+      field: "action",
+      headerName: "Action",
+      width: 110,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (p) => (
+        <Chip
+          icon={getActionIcon(p.row.action)}
+          label={p.row.action}
+          color={getActionColor(p.row.action)}
+          size="small"
+        />
+      ),
+    },
+    {
+      field: "difference",
+      headerName: "Amount",
+      width: 140,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (p) => (
+        <Typography
+          variant="body2"
+          fontWeight="medium"
+          color={
+            p.row.difference > 0
+              ? theme.palette.success.main
+              : p.row.difference < 0
+                ? theme.palette.error.main
+                : theme.palette.text.primary
+          }
+        >
+          {p.row.difference > 0 ? "+" : ""}
+          {formatCurrency(Math.abs(p.row.difference || 0))}
+        </Typography>
+      ),
+    },
+  ];
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
@@ -351,7 +599,9 @@ export default function AssetAllocation() {
             title="Total Allocated"
             value={formatPercent(totalAllocated)}
             subtitle={isValid ? "Within limits" : "Exceeds 100%"}
-            color={isValid ? "success" : "error"}
+            valueColor={
+              isValid ? theme.palette.primary.main : theme.palette.error.main
+            }
           />
         </Grid>
         <Grid item xs={12} md={4}>
@@ -360,6 +610,13 @@ export default function AssetAllocation() {
             value={formatPercent(remaining)}
             subtitle={
               remaining >= 0 ? "Available to allocate" : "Over allocated"
+            }
+            valueColor={
+              remaining > 0
+                ? theme.palette.success.main
+                : remaining < 0
+                  ? theme.palette.error.main
+                  : theme.palette.primary.main
             }
           />
         </Grid>
@@ -374,7 +631,11 @@ export default function AssetAllocation() {
                   )}`
                 : "No targets set"
             }
-            color={rebalancing?.is_balanced ? "success" : "warning"}
+            valueColor={
+              rebalancing?.is_balanced
+                ? theme.palette.success.main
+                : theme.palette.warning.main
+            }
           />
         </Grid>
       </Grid>
@@ -710,10 +971,10 @@ export default function AssetAllocation() {
                                     fontWeight="bold"
                                     color={
                                       total > 100
-                                        ? "error"
+                                        ? theme.palette.error.main
                                         : total === 100
-                                          ? "success.main"
-                                          : "warning.main"
+                                          ? theme.palette.success.main
+                                          : theme.palette.warning.main
                                     }
                                   >
                                     {total.toFixed(1)}%{" "}
@@ -780,107 +1041,25 @@ export default function AssetAllocation() {
               </Alert>
             )}
 
-            <TableContainer>
-              <StyledTable>
-                <TableHead>
-                  <TableRow>
-                    <StyledHeaderCell>Asset Type</StyledHeaderCell>
-                    <StyledHeaderCell align="right">Current</StyledHeaderCell>
-                    <StyledHeaderCell align="right">Target</StyledHeaderCell>
-                    <StyledHeaderCell align="right">
-                      Difference
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="center">Action</StyledHeaderCell>
-                    <StyledHeaderCell align="right">Amount</StyledHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rebalancing.recommendations
-                    .filter((rec) => rec.level === "type")
-                    .map((rec, idx) => (
-                      <TableRow
-                        key={idx}
-                        sx={{
-                          backgroundColor: rec.is_balanced
-                            ? "inherit"
-                            : "rgba(255, 0, 0, 0.05)",
-                        }}
-                      >
-                        <TableCell>
-                          <Typography variant="body1" fontWeight="medium">
-                            {rec.asset_type}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Box>
-                            <Typography variant="body2">
-                              {formatPercent(rec.current_percentage)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {formatCurrency(rec.current_value)}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Box>
-                            <Typography variant="body2">
-                              {formatPercent(rec.target_percentage)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {formatCurrency(rec.target_value)}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            color={
-                              rec.difference_percentage > 0
-                                ? "success.main"
-                                : rec.difference_percentage < 0
-                                  ? "error.main"
-                                  : "text.primary"
-                            }
-                          >
-                            {rec.difference_percentage > 0 ? "+" : ""}
-                            {formatPercent(rec.difference_percentage)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            icon={getActionIcon(rec.action)}
-                            label={rec.action}
-                            color={getActionColor(rec.action)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            fontWeight="medium"
-                            color={
-                              rec.difference > 0
-                                ? "success.main"
-                                : rec.difference < 0
-                                  ? "error.main"
-                                  : "text.primary"
-                            }
-                          >
-                            {rec.difference > 0 ? "+" : ""}
-                            {formatCurrency(Math.abs(rec.difference))}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </StyledTable>
-            </TableContainer>
+            <StyledDataGrid
+              autoHeight
+              rows={typeRows}
+              columns={typeColumns}
+              disableSelectionOnClick
+              disableToolbar
+              rowHeight={70}
+              getRowClassName={(params) =>
+                params.row.is_balanced ? "" : "needs-rebalance"
+              }
+              sx={{
+                "& .MuiDataGrid-row": {
+                  maxHeight: "70px !important",
+                },
+                "& .MuiDataGrid-row.needs-rebalance": {
+                  backgroundColor: "rgba(255, 0, 0, 0.05) !important",
+                },
+              }}
+            />
           </Paper>
         )}
 
@@ -892,129 +1071,25 @@ export default function AssetAllocation() {
               Rebalancing Recommendations - Individual Asset Level
             </Typography>
 
-            <TableContainer>
-              <StyledTable>
-                <TableHead>
-                  <TableRow>
-                    <StyledHeaderCell>Symbol</StyledHeaderCell>
-                    <StyledHeaderCell>Name</StyledHeaderCell>
-                    <StyledHeaderCell align="right">Current</StyledHeaderCell>
-                    <StyledHeaderCell align="right">Target</StyledHeaderCell>
-                    <StyledHeaderCell align="right">
-                      Difference
-                    </StyledHeaderCell>
-                    <StyledHeaderCell align="center">Action</StyledHeaderCell>
-                    <StyledHeaderCell align="right">Amount</StyledHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rebalancing.recommendations
-                    .filter((rec) => rec.level === "asset")
-                    .map((rec, idx) => (
-                      <TableRow
-                        key={idx}
-                        sx={{
-                          backgroundColor: rec.is_balanced
-                            ? "inherit"
-                            : "rgba(255, 0, 0, 0.05)",
-                        }}
-                      >
-                        <TableCell>
-                          <Typography variant="body1" fontWeight="medium">
-                            {rec.symbol}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2">
-                              {rec.asset_name}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {rec.asset_type}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Box>
-                            <Typography variant="body2">
-                              {rec.current_percentage_within_type !== undefined
-                                ? formatPercent(
-                                    rec.current_percentage_within_type,
-                                  )
-                                : formatPercent(rec.current_percentage)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {formatCurrency(rec.current_value)}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Box>
-                            <Typography variant="body2">
-                              {rec.target_percentage_within_type !== undefined
-                                ? formatPercent(
-                                    rec.target_percentage_within_type,
-                                  )
-                                : formatPercent(rec.target_percentage)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {formatCurrency(rec.target_value)}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            color={
-                              rec.difference_percentage > 0
-                                ? "success.main"
-                                : rec.difference_percentage < 0
-                                  ? "error.main"
-                                  : "text.primary"
-                            }
-                          >
-                            {rec.difference_percentage > 0 ? "+" : ""}
-                            {formatPercent(rec.difference_percentage)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            icon={getActionIcon(rec.action)}
-                            label={rec.action}
-                            color={getActionColor(rec.action)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            fontWeight="medium"
-                            color={
-                              rec.difference > 0
-                                ? "success.main"
-                                : rec.difference < 0
-                                  ? "error.main"
-                                  : "text.primary"
-                            }
-                          >
-                            {rec.difference > 0 ? "+" : ""}
-                            {formatCurrency(Math.abs(rec.difference))}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </StyledTable>
-            </TableContainer>
+            <StyledDataGrid
+              autoHeight
+              rows={assetRows}
+              columns={assetColumns}
+              disableSelectionOnClick
+              disableToolbar
+              rowHeight={70}
+              getRowClassName={(params) =>
+                params.row.is_balanced ? "" : "needs-rebalance"
+              }
+              sx={{
+                "& .MuiDataGrid-row": {
+                  maxHeight: "70px !important",
+                },
+                "& .MuiDataGrid-row.needs-rebalance": {
+                  backgroundColor: "rgba(255, 0, 0, 0.05) !important",
+                },
+              }}
+            />
           </Paper>
         )}
 

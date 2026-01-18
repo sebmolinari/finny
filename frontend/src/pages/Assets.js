@@ -5,11 +5,6 @@ import {
   Typography,
   Button,
   Box,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -23,12 +18,7 @@ import {
   FormControlLabel,
   Switch,
 } from "@mui/material";
-import {
-  StyledTable,
-  StyledHeaderCell,
-  TruncatedCell,
-  ActionsCell,
-} from "../components/StyledTable";
+import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import {
   Add as AddIcon,
@@ -38,6 +28,7 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { assetAPI, settingsAPI, constantsAPI } from "../api/api";
+import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
@@ -50,6 +41,7 @@ import { useAuth } from "../context/AuthContext";
 import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 
 export default function Assets() {
+  const theme = useTheme();
   const { user } = useAuth();
   const isAdminOrSuperuser = user && ["admin", "superuser"].includes(user.role);
   const [assets, setAssets] = useState([]);
@@ -382,6 +374,165 @@ export default function Assets() {
     fixedincome: "Fixed Income",
   };
 
+  const columns = [
+    {
+      field: "symbol",
+      headerName: "Symbol",
+      flex: 1,
+      renderCell: (params) => <strong>{params.value}</strong>,
+    },
+    { field: "name", headerName: "Name", flex: 1 },
+    {
+      field: "asset_type",
+      headerName: "Type",
+      flex: 1,
+      renderCell: (params) => {
+        const asset_type = params.value || "";
+        const bg =
+          asset_type === "currency"
+            ? "#e3f2fd"
+            : asset_type === "equity"
+              ? "#f3e5f5"
+              : asset_type === "crypto"
+                ? "#fff3e0"
+                : asset_type === "fixedincome"
+                  ? "#e0f2f1"
+                  : asset_type === "realestate"
+                    ? "#fce4ec"
+                    : "#f5f5f5";
+        const color =
+          asset_type === "currency"
+            ? "#1976d2"
+            : asset_type === "equity"
+              ? "#9c27b0"
+              : asset_type === "crypto"
+                ? "#ff9800"
+                : asset_type === "fixedincome"
+                  ? "#00796b"
+                  : asset_type === "realestate"
+                    ? "#c2185b"
+                    : "#757575";
+        return (
+          <Box
+            sx={{
+              display: "inline-block",
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              backgroundColor: bg,
+              color,
+              fontSize: "0.875rem",
+            }}
+          >
+            {String(asset_type).toUpperCase()}
+          </Box>
+        );
+      },
+    },
+    { field: "currency", headerName: "Currency", flex: 1 },
+    {
+      field: "active",
+      headerName: "Active",
+      width: 100,
+      renderCell: (params) => {
+        const asset = params.row;
+        return isAdminOrSuperuser ? (
+          <Switch
+            checked={!!asset.active}
+            onChange={() => handleToggleActive(asset)}
+            color={asset.active ? "success" : "default"}
+            inputProps={{ "aria-label": "Toggle active" }}
+            size="small"
+          />
+        ) : asset.active ? (
+          <Typography color={theme.palette.success.main} variant="body2">
+            Active
+          </Typography>
+        ) : (
+          <Typography color="text.secondary" variant="body2">
+            Inactive
+          </Typography>
+        );
+      },
+    },
+    { field: "price_source", headerName: "Source", flex: 1 },
+    {
+      field: "currentPrice",
+      headerName: "Price",
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? formatCurrency(parseFloat(params.value), 4) : "—",
+    },
+    {
+      field: "price_updated_at",
+      headerName: "Updated",
+      flex: 1,
+      renderCell: (params) =>
+        params.value || params.row.price_created_at
+          ? formatDatetimeInTimezone(
+              params.value || params.row.price_created_at,
+              userDateFormat,
+              userTimezone,
+            )
+          : "—",
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 160,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        const asset = params.row;
+        return (
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            <IconButton
+              size="small"
+              onClick={() => handleRefreshAssetPrice(asset.id)}
+              title="Refresh Price"
+              color="primary"
+              disabled={!asset.active || asset.price_source === "manual"}
+              sx={{ padding: "4px" }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+            {isAdminOrSuperuser && (
+              <>
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpenPriceDialog(asset)}
+                  title="Manage Prices"
+                  color="success"
+                  sx={{ padding: "4px" }}
+                >
+                  <ShowChartIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpenDialog(asset)}
+                  title="Edit"
+                  color="primary"
+                  sx={{ padding: "4px" }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => handleDelete(asset.id)}
+                  title="Delete"
+                  color="error"
+                  sx={{ padding: "4px" }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </>
+            )}
+          </Box>
+        );
+      },
+    },
+  ];
+
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
@@ -428,153 +579,17 @@ export default function Assets() {
         </Box>
       </Box>
 
-      <TableContainer component={Paper}>
-        <StyledTable>
-          <TableHead>
-            <TableRow>
-              <StyledHeaderCell sx={{ width: 80 }}>Symbol</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 150 }}>Name</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 80 }}>Type</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 60 }}>Currency</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 70 }}>Active</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 80 }}>Source</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 80 }}>Price</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 90 }}>Updated</StyledHeaderCell>
-              <StyledHeaderCell sx={{ width: 140 }}>Actions</StyledHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {assets.map((asset) => (
-              <TableRow key={asset.id}>
-                <TruncatedCell maxWidth={80} title={asset.symbol}>
-                  <strong>{asset.symbol}</strong>
-                </TruncatedCell>
-                <TruncatedCell maxWidth={150} title={asset.name}>
-                  {asset.name}
-                </TruncatedCell>
-                <TableCell>
-                  <Box
-                    sx={{
-                      display: "inline-block",
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 1,
-                      backgroundColor:
-                        asset.asset_type === "currency"
-                          ? "#e3f2fd"
-                          : asset.asset_type === "equity"
-                            ? "#f3e5f5"
-                            : asset.asset_type === "crypto"
-                              ? "#fff3e0"
-                              : asset.asset_type === "fixedincome"
-                                ? "#e0f2f1"
-                                : asset.asset_type === "realestate"
-                                  ? "#fce4ec"
-                                  : "#f5f5f5",
-                      color:
-                        asset.asset_type === "currency"
-                          ? "#1976d2"
-                          : asset.asset_type === "equity"
-                            ? "#9c27b0"
-                            : asset.asset_type === "crypto"
-                              ? "#ff9800"
-                              : asset.asset_type === "fixedincome"
-                                ? "#00796b"
-                                : asset.asset_type === "realestate"
-                                  ? "#c2185b"
-                                  : "#757575",
-                      fontSize: "0.875rem",
-                    }}
-                  >
-                    {asset.asset_type.toUpperCase()}
-                  </Box>
-                </TableCell>
-                <TableCell>{asset.currency || "—"}</TableCell>
-                <TableCell>
-                  {isAdminOrSuperuser ? (
-                    <Switch
-                      checked={!!asset.active}
-                      onChange={() => handleToggleActive(asset)}
-                      color={asset.active ? "success" : "default"}
-                      inputProps={{ "aria-label": "Toggle active" }}
-                    />
-                  ) : asset.active ? (
-                    <Typography color="success.main" variant="body2">
-                      Active
-                    </Typography>
-                  ) : (
-                    <Typography color="text.secondary" variant="body2">
-                      Inactive
-                    </Typography>
-                  )}
-                </TableCell>
-                <TableCell>{asset.price_source || "—"}</TableCell>
-                <TableCell>
-                  {asset.currentPrice
-                    ? formatCurrency(parseFloat(asset.currentPrice), 4)
-                    : "—"}
-                </TableCell>
-                <TableCell sx={{ whiteSpace: "nowrap" }}>
-                  {asset.price_updated_at || asset.price_created_at
-                    ? formatDatetimeInTimezone(
-                        asset.price_updated_at || asset.price_created_at,
-                        userDateFormat,
-                        userTimezone,
-                      )
-                    : "—"}
-                </TableCell>
-                <ActionsCell>
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRefreshAssetPrice(asset.id)}
-                      title="Refresh Price"
-                      color="primary"
-                      disabled={
-                        !asset.active || asset.price_source === "manual"
-                      }
-                      sx={{ padding: "4px" }}
-                    >
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
-                    {isAdminOrSuperuser && (
-                      <>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenPriceDialog(asset)}
-                          title="Manage Prices"
-                          color="success"
-                          sx={{ padding: "4px" }}
-                        >
-                          <ShowChartIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenDialog(asset)}
-                          title="Edit"
-                          color="primary"
-                          sx={{ padding: "4px" }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(asset.id)}
-                          title="Delete"
-                          color="error"
-                          sx={{ padding: "4px" }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    )}
-                  </Box>
-                </ActionsCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </StyledTable>
-      </TableContainer>
+      <Paper>
+        <StyledDataGrid
+          rows={assets}
+          columns={columns}
+          autoHeight
+          getRowId={(row) => row.id}
+          pageSize={100}
+          rowsPerPageOptions={[25, 50, 100]}
+          loading={loading}
+        />
+      </Paper>
 
       <Dialog
         open={openDialog}
@@ -794,70 +809,78 @@ export default function Assets() {
             <Typography variant="h6" gutterBottom>
               Price History
             </Typography>
-            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-              <StyledTable stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <StyledHeaderCell>Date</StyledHeaderCell>
-                    <StyledHeaderCell>Last Updated</StyledHeaderCell>
-                    <StyledHeaderCell>Price</StyledHeaderCell>
-                    <StyledHeaderCell>Actions</StyledHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {priceData.map((price) => (
-                    <TableRow key={price.id}>
-                      <TableCell>
-                        {formatDate(price.date, userDateFormat)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDatetimeInTimezone(
-                          price.updated_at || price.created_at,
+            <Paper sx={{ width: "100%" }}>
+              <div style={{ height: 400, width: "100%" }}>
+                <StyledDataGrid
+                  rows={priceData}
+                  columns={[
+                    {
+                      field: "date",
+                      headerName: "Date",
+                      flex: 1,
+                      renderCell: (params) =>
+                        formatDate(params.row.date, userDateFormat),
+                    },
+                    {
+                      field: "updated_at",
+                      headerName: "Last Updated",
+                      flex: 1,
+                      renderCell: (params) =>
+                        formatDatetimeInTimezone(
+                          params.row.updated_at || params.row.created_at,
                           userDateFormat,
                           userTimezone,
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(parseFloat(price.price), 4)}
-                      </TableCell>
-                      <TableCell>
-                        {isAdminOrSuperuser ? (
-                          <>
+                        ),
+                    },
+                    {
+                      field: "price",
+                      headerName: "Price",
+                      flex: 1,
+                      renderCell: (params) =>
+                        formatCurrency(parseFloat(params.row.price), 4),
+                    },
+                    {
+                      field: "actions",
+                      headerName: "Actions",
+                      width: 140,
+                      sortable: false,
+                      filterable: false,
+                      renderCell: (params) =>
+                        isAdminOrSuperuser ? (
+                          <Box sx={{ display: "flex", gap: 0.5 }}>
                             <IconButton
                               size="small"
-                              onClick={() => handleEditPrice(price)}
+                              onClick={() => handleEditPrice(params.row)}
                               title="Edit"
                               color="primary"
+                              sx={{ padding: "4px" }}
                             >
-                              <EditIcon />
+                              <EditIcon fontSize="small" />
                             </IconButton>
                             <IconButton
                               size="small"
-                              onClick={() => handleDeletePrice(price.id)}
+                              onClick={() => handleDeletePrice(params.row.id)}
                               title="Delete"
                               color="error"
+                              sx={{ padding: "4px" }}
                             >
-                              <DeleteIcon />
+                              <DeleteIcon fontSize="small" />
                             </IconButton>
-                          </>
+                          </Box>
                         ) : (
                           <Typography variant="body2" color="text.secondary">
                             —
                           </Typography>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {priceData.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        No price data available
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </StyledTable>
-            </TableContainer>
+                        ),
+                    },
+                  ]}
+                  getRowId={(row) => row.id}
+                  pageSize={25}
+                  rowsPerPageOptions={[10, 25, 50]}
+                  disableSelectionOnClick
+                />
+              </div>
+            </Paper>
           </Box>
         </DialogContent>
         <DialogActions>
