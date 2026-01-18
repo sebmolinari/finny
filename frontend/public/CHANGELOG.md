@@ -6,7 +6,7 @@ All notable changes to this project are documented below.
 
 ### Added
 
-- Migrated table-based UIs to MUI DataGrid
+- Migrate table-based UIs to MUI DataGrid
 
 ## [0.0.4] – 2026-01-17
 
