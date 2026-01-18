@@ -8,6 +8,16 @@ All notable changes to this project are documented below.
 
 - Migrate table-based UIs to MUI DataGrid
 
+### Changed
+
+- Upgrade backed componets:
+  - bcryptjs: "2.4.3" -> "3.0.3"
+  - better-sqlite3-multiple-ciphers: "12.5.0" -> 12.6.0
+  - dotenv: "16.6.1" -> "17.2.3"
+  - express: "4.18.2" -> "5.2.1"
+  - jsonwebtoken: "9.0.2" -> "9.0.3"
+  - nodemailer: "6.9.7" -> "7.0.12"
+
 ## [0.0.4] – 2026-01-17
 
 ### Added
@@ -16,10 +26,10 @@ All notable changes to this project are documented below.
 - Market Trends: Improved mini line chart sensitivity to show small price changes
 - Add MTM Evolution chart to Dashboard
 - Refactored email service and portfolio summary email generation for improved reliability and formatting
-
-### Fixed
-
 - Add explicit "Apply" filter button to Blotter and prevent auto-submission when changing dates
+
+### Changed
+
 - Minor UI/UX improvements to filter and chart displays
 
 ## [0.0.3] – 2026-01-15

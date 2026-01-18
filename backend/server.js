@@ -44,10 +44,10 @@ if (!process.env.CORS_ORIGIN) {
 }
 if (!process.env.RATE_LIMIT_WINDOW_MS || !process.env.RATE_LIMIT_MAX_REQUESTS) {
   logger.error(
-    "FATAL: RATE_LIMIT_WINDOW_MS or RATE_LIMIT_MAX_REQUESTS is not set"
+    "FATAL: RATE_LIMIT_WINDOW_MS or RATE_LIMIT_MAX_REQUESTS is not set",
   );
   logger.error(
-    "Please set RATE_LIMIT_WINDOW_MS and RATE_LIMIT_MAX_REQUESTS in .env file"
+    "Please set RATE_LIMIT_WINDOW_MS and RATE_LIMIT_MAX_REQUESTS in .env file",
   );
   process.exit(1);
 }
@@ -74,13 +74,13 @@ app.use(
     hsts: false,
     crossOriginOpenerPolicy: false,
     crossOriginEmbedderPolicy: false,
-  })
+  }),
 );
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,
-  })
+  }),
 );
 
 // Rate limiting for all routes
@@ -110,7 +110,13 @@ app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`);
 
   // Log request body for non-GET requests (excluding password)
-  if (req.method !== "GET" && Object.keys(req.body).length > 0) {
+  // Guard against undefined/null req.body (some requests may not set a body)
+  if (
+    req.method !== "GET" &&
+    req.body &&
+    typeof req.body === "object" &&
+    Object.keys(req.body).length > 0
+  ) {
     const sanitizedBody = { ...req.body };
     if (sanitizedBody.password) sanitizedBody.password = "***";
     logger.info(`  Body:`, sanitizedBody);
