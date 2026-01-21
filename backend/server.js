@@ -171,7 +171,7 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(frontendBuildPath));
 
   // Handle React routing - return index.html for all non-API routes
-  app.get("*", (req, res) => {
+  app.use((req, res) => {
     res.sendFile(path.join(frontendBuildPath, "index.html"));
   });
 }
