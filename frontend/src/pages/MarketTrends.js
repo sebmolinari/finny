@@ -83,7 +83,7 @@ export default function MarketTrends() {
       field: "symbol",
       headerName: "Symbol",
       headerAlign: "center",
-      width: 50,
+      width: 80,
     },
     {
       field: "name",
@@ -96,7 +96,7 @@ export default function MarketTrends() {
       field: "asset_type",
       headerName: "Type",
       headerAlign: "center",
-      width: 150,
+      width: 120,
       renderCell: (params) => {
         const asset_type = params.value || "";
         const bg =
@@ -197,7 +197,7 @@ export default function MarketTrends() {
     {
       field: "trend_30d",
       headerName: "30D Trend",
-      flex: 1,
+      width: 150,
       headerAlign: "center",
       sortable: false,
       filterable: false,
@@ -256,7 +256,7 @@ export default function MarketTrends() {
     {
       field: "trend_ytd",
       headerName: "YTD Trend",
-      flex: 1,
+      width: 150,
       headerAlign: "center",
       sortable: false,
       filterable: false,
