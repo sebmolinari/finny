@@ -83,13 +83,13 @@ export default function MarketTrends() {
       field: "symbol",
       headerName: "Symbol",
       headerAlign: "center",
-      width: 15,
+      width: 50,
     },
     {
       field: "name",
       headerName: "Name",
       headerAlign: "center",
-      width: 250,
+      width: 150,
       renderCell: (params) => <span title={params.value}>{params.value}</span>,
     },
     {
@@ -141,7 +141,7 @@ export default function MarketTrends() {
       field: "currency",
       headerName: "Currency",
       headerAlign: "center",
-      width: 150,
+      width: 100,
     },
     {
       field: "current_price",
