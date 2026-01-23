@@ -152,6 +152,34 @@ export default function MarketTrends() {
       renderCell: (params) => formatCurrency(params.value),
     },
     {
+      field: "change",
+      headerName: "Change",
+      flex: 1,
+      headerAlign: "center",
+      align: "right",
+      renderCell: (params) => {
+        const history = params.row.price_history_30d || [];
+        if (history.length < 2) return "—";
+        const latest = history[history.length - 1].price;
+        const prev = history[history.length - 2].price;
+        if (prev === 0 || prev === undefined || latest === undefined)
+          return "—";
+        const change = ((latest - prev) / prev) * 100;
+        const color =
+          change > 0
+            ? theme.palette.success.main
+            : change < 0
+              ? theme.palette.error.main
+              : undefined;
+        return (
+          <span style={{ color, fontWeight: 600 }}>
+            {change > 0 ? "+" : ""}
+            {change.toFixed(2)}%
+          </span>
+        );
+      },
+    },
+    {
       field: "price_change_percent_30d",
       headerName: "30D Change",
       flex: 1,
