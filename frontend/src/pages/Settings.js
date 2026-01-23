@@ -101,7 +101,11 @@ export default function Settings() {
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <TextField
                 fullWidth
                 select
@@ -116,7 +120,11 @@ export default function Settings() {
               </TextField>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <TextField
                 fullWidth
                 select
@@ -130,7 +138,11 @@ export default function Settings() {
               </TextField>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <TextField
                 fullWidth
                 select
@@ -146,7 +158,11 @@ export default function Settings() {
               </TextField>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <TextField
                 fullWidth
                 select
@@ -160,7 +176,11 @@ export default function Settings() {
               </TextField>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <FormControl fullWidth required>
                 <InputLabel>Liquidity Asset</InputLabel>
                 <Select
@@ -179,7 +199,11 @@ export default function Settings() {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <FormControl fullWidth>
                 <InputLabel>FX Rate Asset</InputLabel>
                 <Select
@@ -197,7 +221,11 @@ export default function Settings() {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <TextField
                 fullWidth
                 type="number"
@@ -210,7 +238,11 @@ export default function Settings() {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -239,7 +271,11 @@ export default function Settings() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -268,7 +304,7 @@ export default function Settings() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Divider sx={{ my: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                   <EmailIcon
@@ -279,7 +315,11 @@ export default function Settings() {
               </Divider>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -308,7 +348,11 @@ export default function Settings() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6
+              }}>
               <TextField
                 fullWidth
                 select
@@ -324,7 +368,7 @@ export default function Settings() {
               </TextField>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                 <Button
                   type="submit"

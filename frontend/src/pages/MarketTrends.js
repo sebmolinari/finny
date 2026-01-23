@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Paper, Typography, TableContainer } from "@mui/material";
+import { Container, Paper, Typography, Chip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { analyticsAPI } from "../api/api";
@@ -37,26 +37,72 @@ export default function MarketTrends() {
     {
       field: "symbol",
       headerName: "Symbol",
-      flex: 1,
-      renderCell: (params) => (
-        <Typography variant="body1" fontWeight="bold" title={params.value}>
-          {params.value}
-        </Typography>
-      ),
+      headerAlign: "center",
+      width: 15,
     },
     {
       field: "name",
       headerName: "Name",
-      flex: 1,
+      headerAlign: "center",
+      width: 250,
       renderCell: (params) => <span title={params.value}>{params.value}</span>,
     },
-    { field: "asset_type", headerName: "Type", flex: 1 },
-    { field: "currency", headerName: "Currency", flex: 1 },
+    {
+      field: "asset_type",
+      headerName: "Type",
+      headerAlign: "center",
+      width: 150,
+      renderCell: (params) => {
+        const asset_type = params.value || "";
+        const bg =
+          asset_type === "currency"
+            ? "#e3f2fd"
+            : asset_type === "equity"
+              ? "#f3e5f5"
+              : asset_type === "crypto"
+                ? "#fff3e0"
+                : asset_type === "fixedincome"
+                  ? "#e0f2f1"
+                  : asset_type === "realestate"
+                    ? "#fce4ec"
+                    : "#f5f5f5";
+        const color =
+          asset_type === "currency"
+            ? "#1976d2"
+            : asset_type === "equity"
+              ? "#9c27b0"
+              : asset_type === "crypto"
+                ? "#ff9800"
+                : asset_type === "fixedincome"
+                  ? "#00796b"
+                  : asset_type === "realestate"
+                    ? "#c2185b"
+                    : "#757575";
+        return (
+          <Chip
+            label={asset_type.toUpperCase()}
+            size="small"
+            sx={{
+              backgroundColor: bg,
+              color: color,
+              fontWeight: 600,
+              fontSize: "0.75rem",
+            }}
+          />
+        );
+      },
+    },
+    {
+      field: "currency",
+      headerName: "Currency",
+      headerAlign: "center",
+      width: 150,
+    },
     {
       field: "current_price",
       headerName: "Current Price",
       flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
       renderCell: (params) => formatCurrency(params.value),
     },
@@ -64,7 +110,7 @@ export default function MarketTrends() {
       field: "price_change_percent",
       headerName: "30D Change",
       flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
       renderCell: (params) => {
         const val = params.value || 0;
@@ -79,6 +125,7 @@ export default function MarketTrends() {
       field: "trend",
       headerName: "30D Trend",
       flex: 1,
+      headerAlign: "center",
       sortable: false,
       filterable: false,
       renderCell: (params) => {
@@ -121,22 +168,16 @@ export default function MarketTrends() {
   ];
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Market Trends
-      </Typography>
-
-      <TableContainer component={Paper}>
+    <Container maxWidth="ml" sx={{ mt: 4, mb: 4 }}>
+      <Paper>
         <StyledDataGrid
+          label="Market Trends"
           rows={rows}
           columns={columns}
+          loading={loading}
           getRowId={(r) => r.asset_id}
-          pageSize={25}
-          rowsPerPageOptions={[10, 25, 50]}
-          disableSelectionOnClick
-          autoHeight
         />
-      </TableContainer>
+      </Paper>
     </Container>
   );
 }

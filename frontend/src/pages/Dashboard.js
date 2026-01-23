@@ -56,7 +56,6 @@ const Dashboard = () => {
           }))
           .filter((broker) => broker.value > 10) // Filter out brokers with negligible values
           .sort((a, b) => b.value - a.value);
-        console.log("Broker Chart Data:", chartData);
         setBrokerSummary(chartData);
       }
     } catch (error) {
@@ -100,14 +99,18 @@ const Dashboard = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Portfolio Dashboard
-      </Typography>
-
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      {/* <Typography variant="h4" gutterBottom>
+        Dashboard
+      </Typography> */}
       {/* Row 1: Portfolio Value Metrics */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="Net Asset Value (NAV): Total market value of portfolio holdings plus available cash. The comprehensive value of all portfolio assets. Calculation: Holdings Market Value + Cash Balance."
             arrow
@@ -124,7 +127,12 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="Holdings Market Value: Current fair market value of all investment positions based on latest market prices. Excludes cash. Calculation: Sum of (quantity × market price) for all holdings."
             arrow
@@ -172,7 +180,12 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="Unrealized P&L: Profit or loss on open positions that have not yet been closed. Calculation: Holdings Market Value - Cost Basis."
             arrow
@@ -196,7 +209,12 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="Return on Investment (ROI): Percentage return on invested capital in current holdings. Calculation: Unrealized P&L / Cost Basis × 100."
             arrow
@@ -219,10 +237,14 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
       </Grid>
-
       {/* Row 2: Performance & Funding Metrics */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="Net Contributions: The total cash flow into your account, calculated as all deposits minus withdrawals. Includes both invested and uninvested cash. Calculation: Deposits - Withdrawals."
             arrow
@@ -241,7 +263,12 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="Net Invested: Net capital currently allocated to holdings after accounting for purchases and sales. Calculation: Buy transactions - Sell transactions."
             arrow
@@ -260,7 +287,12 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="MWRR (IRR): Money-Weighted Rate of Return, also known as Internal Rate of Return. Reflects the annualized return considering the timing and size of cash flows in/out. Calculation: IRR of all portfolio cash flows."
             arrow
@@ -280,7 +312,12 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <Tooltip
             title="CAGR: Compound Annual Growth Rate. Shows the mean annual growth rate of the portfolio over time. Calculation: (Ending Value / Beginning Value)^(1/years) - 1."
             arrow
@@ -300,7 +337,6 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
       </Grid>
-
       {/* Portfolio Performance Chart */}
       {performanceData.length > 0 && (
         <PortfolioValueChart
@@ -309,9 +345,8 @@ const Dashboard = () => {
           height={300}
         />
       )}
-
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12}>
+        <Grid size={12}>
           <AssetAllocationChart
             data={dashboard.transactions.asset_allocation}
             title="Asset Allocation"
@@ -319,9 +354,8 @@ const Dashboard = () => {
           />
         </Grid>
       </Grid>
-
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12}>
+        <Grid size={12}>
           <MarketValueByBrokerChart
             data={brokerSummary}
             title="Market Value by Broker"
@@ -329,9 +363,8 @@ const Dashboard = () => {
           />
         </Grid>
       </Grid>
-
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12}>
+        <Grid size={12}>
           <MTMEvolutionChart
             data={mtmEvolution.length ? mtmEvolution : undefined}
             height={380}

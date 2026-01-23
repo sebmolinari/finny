@@ -60,6 +60,117 @@ export default function CashDetails() {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
+  const columns = [
+    {
+      field: "date",
+      headerName: "Date",
+      headerAlign: "center",
+      width: 100,
+      renderCell: (params) =>
+        formatDate(params.row.date, userSettings.date_format),
+    },
+    {
+      field: "type",
+      headerName: "Type",
+      headerAlign: "center",
+      width: 100,
+      renderCell: (params) => (
+        <Chip
+          label={params.value}
+          color={getTypeColor(params.value)}
+          size="small"
+        />
+      ),
+    },
+    {
+      field: "symbol",
+      headerName: "Asset",
+      headerAlign: "center",
+      width: 100,
+      renderCell: (params) =>
+        params.row.symbol ? (
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {params.row.symbol}
+            </Typography>
+          </Box>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      field: "broker_name",
+      headerName: "Broker",
+      headerAlign: "center",
+      width: 150,
+    },
+    {
+      field: "quantity",
+      headerName: "Quantity",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? formatNumber(params.value, 4) : "—",
+    },
+    {
+      field: "price",
+      headerName: "Price",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? formatCurrency(params.value) : "—",
+    },
+    {
+      field: "amount",
+      headerName: "Amount",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => formatCurrency(params.row.amount),
+    },
+    {
+      field: "cash_effect",
+      headerName: "Cash Effect",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span
+          style={{
+            color:
+              params.row.cash_effect >= 0
+                ? theme.palette.success.main
+                : theme.palette.error.main,
+          }}
+        >
+          {params.row.cash_effect >= 0 ? "+" : ""}
+          {formatCurrency(params.row.cash_effect)}
+        </span>
+      ),
+    },
+    {
+      field: "running_balance",
+      headerName: "Running Balance",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span
+          style={{
+            color:
+              params.row.running_balance >= 0
+                ? theme.palette.success.main
+                : theme.palette.error.main,
+          }}
+        >
+          {formatCurrency(params.row.running_balance)}
+        </span>
+      ),
+    },
+  ];
+
   const { summary, cash_flows, transaction_count } = details;
 
   const getTypeColor = (type) => {
@@ -86,31 +197,44 @@ export default function CashDetails() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
         Cash Balance Details
       </Typography>
-
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         This page shows a detailed breakdown of your cash balance, including all
         transactions that affect cash: deposits add cash, withdrawals remove
         cash, buys consume cash, sells generate cash, and dividends add cash.
         The running balance shows your cash position after each transaction.
       </Typography>
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <StatCard
             label="Current Cash Balance"
             value={formatCurrency(summary.current_balance)}
             valueColor={theme.palette.primary.main}
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <StatCard label="Total Transactions" value={transaction_count} />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <MetricCard
             label="Net Inflow"
             value={formatCurrency(summary.net_inflow)}
@@ -122,7 +246,12 @@ export default function CashDetails() {
             }
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 3,
+          }}
+        >
           <MetricCard
             label="Net Trading"
             value={formatCurrency(summary.net_trading)}
@@ -135,14 +264,18 @@ export default function CashDetails() {
           />
         </Grid>
       </Grid>
-
       {/* Breakdown by Category */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Cash Flow Breakdown
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 4,
+            }}
+          >
             <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Inflows
@@ -152,7 +285,10 @@ export default function CashDetails() {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body2">Deposits:</Typography>
-                <Typography variant="body2" color={theme.palette.success.main}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: theme.palette.success.main }}
+                >
                   +{formatCurrency(summary.total_deposits)}
                 </Typography>
               </Box>
@@ -160,7 +296,10 @@ export default function CashDetails() {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body2">Sales:</Typography>
-                <Typography variant="body2" color={theme.palette.info.main}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: theme.palette.info.main }}
+                >
                   +{formatCurrency(summary.total_sell)}
                 </Typography>
               </Box>
@@ -228,7 +367,12 @@ export default function CashDetails() {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 4,
+            }}
+          >
             <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Outflows
@@ -238,7 +382,10 @@ export default function CashDetails() {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body2">Withdrawals:</Typography>
-                <Typography variant="body2" color={theme.palette.error.main}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: theme.palette.error.main }}
+                >
                   -{formatCurrency(summary.total_withdrawals)}
                 </Typography>
               </Box>
@@ -246,7 +393,10 @@ export default function CashDetails() {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body2">Purchases:</Typography>
-                <Typography variant="body2" color={theme.palette.warning.main}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: theme.palette.error.main }}
+                >
                   -{formatCurrency(summary.total_buy)}
                 </Typography>
               </Box>
@@ -255,7 +405,7 @@ export default function CashDetails() {
                 <Typography variant="subtitle2">Total Outflows:</Typography>
                 <Typography
                   variant="subtitle2"
-                  color={theme.palette.error.main}
+                  sx={{ color: theme.palette.error.main }}
                 >
                   -
                   {formatCurrency(
@@ -265,7 +415,12 @@ export default function CashDetails() {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 4,
+            }}
+          >
             <Box sx={{ p: 2, backgroundColor: "#e3f2fd", borderRadius: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Net Cash Position
@@ -315,7 +470,6 @@ export default function CashDetails() {
           </Grid>
         </Grid>
       </Paper>
-
       {/* Transaction History */}
       <Paper sx={{ p: 2 }}>
         <Box
@@ -335,117 +489,16 @@ export default function CashDetails() {
           negative effects reduce it.
         </Typography>
 
-        <div style={{ height: 600, width: "100%" }}>
+        <Paper>
           <StyledDataGrid
             rows={cash_flows}
-            columns={[
-              {
-                field: "date",
-                headerName: "Date",
-                flex: 1,
-                renderCell: (params) =>
-                  formatDate(params.row.date, userSettings.date_format),
-              },
-              {
-                field: "type",
-                headerName: "Type",
-                flex: 1,
-                renderCell: (params) => (
-                  <Chip
-                    label={params.value}
-                    color={getTypeColor(params.value)}
-                    size="small"
-                  />
-                ),
-              },
-              {
-                field: "symbol",
-                headerName: "Asset",
-                flex: 1,
-                renderCell: (params) =>
-                  params.row.symbol ? (
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">
-                        {params.row.symbol}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    "—"
-                  ),
-              },
-              { field: "broker_name", headerName: "Broker", flex: 1 },
-              {
-                field: "quantity",
-                headerName: "Quantity",
-                flex: 1,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) =>
-                  params.value ? formatNumber(params.value, 4) : "—",
-              },
-              {
-                field: "price",
-                headerName: "Price",
-                flex: 1,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) =>
-                  params.value ? formatCurrency(params.value) : "—",
-              },
-              {
-                field: "amount",
-                headerName: "Amount",
-                flex: 1,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) => formatCurrency(params.row.amount),
-              },
-              {
-                field: "cash_effect",
-                headerName: "Cash Effect",
-                flex: 1,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) => (
-                  <span
-                    style={{
-                      color:
-                        params.row.cash_effect >= 0
-                          ? theme.palette.success.main
-                          : theme.palette.error.main,
-                    }}
-                  >
-                    {params.row.cash_effect >= 0 ? "+" : ""}
-                    {formatCurrency(params.row.cash_effect)}
-                  </span>
-                ),
-              },
-              {
-                field: "running_balance",
-                headerName: "Running Balance",
-                flex: 1,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) => (
-                  <span
-                    style={{
-                      color:
-                        params.row.running_balance >= 0
-                          ? theme.palette.success.main
-                          : theme.palette.error.main,
-                    }}
-                  >
-                    {formatCurrency(params.row.running_balance)}
-                  </span>
-                ),
-              },
-            ]}
+            columns={columns}
+            loading={detailsLoading}
             getRowId={(row) => row.id}
             pageSize={100}
             rowsPerPageOptions={[25, 50, 100]}
-            disableSelectionOnClick
           />
-        </div>
+        </Paper>
       </Paper>
     </Container>
   );

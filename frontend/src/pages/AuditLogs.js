@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Box,
   Typography,
   Paper,
   Chip,
   Grid,
-  IconButton,
   Button,
   Container,
+  Tooltip,
 } from "@mui/material";
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import api from "../api/api";
 import StyledDataGrid from "../components/StyledDataGrid";
+import { ToolbarButton } from "@mui/x-data-grid";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -28,8 +28,6 @@ const AuditLogs = () => {
 
   const [selectedLog, setSelectedLog] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-
-  // Filtering handled by DataGrid toolbar; no client-side filter UI.
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -51,8 +49,6 @@ const AuditLogs = () => {
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
-
-  // No-op: filters moved to DataGrid toolbar
 
   const getActionColor = (actionType) => {
     switch (actionType) {
@@ -105,105 +101,120 @@ const AuditLogs = () => {
     setDetailsOpen(false);
   };
 
+  const columns = [
+    {
+      field: "created_at",
+      headerName: "Timestamp",
+      headerAlign: "center",
+      flex: 1,
+      renderCell: (params) => formatDate(params.value),
+    },
+    { field: "username", headerName: "User", headerAlign: "center", flex: 1 },
+    {
+      field: "action_type",
+      headerName: "Action",
+      headerAlign: "center",
+      flex: 1,
+      renderCell: (params) => (
+        <Chip
+          label={params.value}
+          color={getActionColor(params.value)}
+          size="small"
+        />
+      ),
+    },
+    {
+      field: "table_name",
+      headerName: "Table",
+      headerAlign: "center",
+      flex: 1,
+    },
+    {
+      field: "record_id",
+      headerName: "Record ID",
+      headerAlign: "center",
+      flex: 1,
+    },
+    {
+      field: "success",
+      headerName: "Status",
+      headerAlign: "center",
+      flex: 1,
+      renderCell: (params) => (
+        <Chip
+          label={params.value ? "Success" : "Failed"}
+          color={params.value ? "success" : "error"}
+          size="small"
+          variant="outlined"
+        />
+      ),
+    },
+    { field: "ip_address", headerName: "IP", headerAlign: "center", flex: 1 },
+    {
+      field: "details",
+      headerName: "Details",
+      headerAlign: "center",
+      flex: 1,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Button size="small" onClick={() => openDetails(params.row)}>
+          Details
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Typography variant="h4">Audit Logs</Typography>
-        <IconButton onClick={fetchLogs} color="primary">
-          <RefreshIcon />
-        </IconButton>
-      </Box>
-
-      {/* Filters removed; DataGrid toolbar provides filtering */}
-
       <Paper>
         <StyledDataGrid
+          label="Events"
           rows={logs}
-          columns={[
-            {
-              field: "created_at",
-              headerName: "Timestamp",
-              flex: 1,
-              renderCell: (params) => formatDate(params.value),
-            },
-            { field: "username", headerName: "User", flex: 1 },
-            {
-              field: "action_type",
-              headerName: "Action",
-              flex: 1,
-              renderCell: (params) => (
-                <Chip
-                  label={params.value}
-                  color={getActionColor(params.value)}
-                  size="small"
-                />
-              ),
-            },
-            { field: "table_name", headerName: "Table", flex: 1 },
-            { field: "record_id", headerName: "Record ID", flex: 1 },
-            {
-              field: "success",
-              headerName: "Status",
-              flex: 1,
-              renderCell: (params) => (
-                <Chip
-                  label={params.value ? "Success" : "Failed"}
-                  color={params.value ? "success" : "error"}
-                  size="small"
-                  variant="outlined"
-                />
-              ),
-            },
-            { field: "ip_address", headerName: "IP", flex: 1 },
-            {
-              field: "details",
-              headerName: "Details",
-              flex: 1,
-              sortable: false,
-              filterable: false,
-              renderCell: (params) => (
-                <Button size="small" onClick={() => openDetails(params.row)}>
-                  Details
-                </Button>
-              ),
-            },
-          ]}
+          columns={columns}
+          loading={loadingAudit}
           getRowId={(row) => row.id}
           pageSize={100}
           rowsPerPageOptions={[25, 50, 100]}
-          autoHeight
-          disableSelectionOnClick
+          slotProps={{
+            toolbar: {
+              actions: (
+                <Tooltip title="Refresh">
+                  <ToolbarButton color="primary" onClick={() => fetchLogs()}>
+                    <RefreshIcon fontSize="small" />
+                  </ToolbarButton>
+                </Tooltip>
+              ),
+            },
+          }}
         />
       </Paper>
-
       <Dialog open={detailsOpen} onClose={closeDetails} maxWidth="md" fullWidth>
         <DialogTitle>Details</DialogTitle>
         <DialogContent>
           {selectedLog && (
             <Grid container spacing={2}>
               {selectedLog.user_agent && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2">
                     <strong>User Agent:</strong> {selectedLog.user_agent}
                   </Typography>
                 </Grid>
               )}
               {selectedLog.error_message && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="error">
                     <strong>Error:</strong> {selectedLog.error_message}
                   </Typography>
                 </Grid>
               )}
               {selectedLog.old_values && (
-                <Grid item xs={12} md={6}>
+                <Grid
+                  size={{
+                    xs: 12,
+                    md: 6,
+                  }}
+                >
                   <Typography variant="body2">
                     <strong>Old Values:</strong>
                   </Typography>
@@ -218,7 +229,12 @@ const AuditLogs = () => {
                 </Grid>
               )}
               {selectedLog.new_values && (
-                <Grid item xs={12} md={6}>
+                <Grid
+                  size={{
+                    xs: 12,
+                    md: 6,
+                  }}
+                >
                   <Typography variant="body2">
                     <strong>New Values:</strong>
                   </Typography>

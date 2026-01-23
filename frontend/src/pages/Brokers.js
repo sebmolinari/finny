@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Paper,
-  Typography,
   Button,
   Box,
-  TableContainer,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -14,8 +12,10 @@ import {
   IconButton,
   FormControlLabel,
   Switch,
+  Tooltip,
 } from "@mui/material";
 import StyledDataGrid from "../components/StyledDataGrid";
+import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import {
   Add as AddIcon,
@@ -31,7 +31,6 @@ import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 export default function Brokers() {
   const { user } = useAuth();
   const [brokers, setBrokers] = useState([]);
-  const [showInactiveBrokers, setShowInactiveBrokers] = useState(false);
   const [userTimezone, setUserTimezone] = useState(null);
   const [userDateFormat, setUserDateFormat] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +47,7 @@ export default function Brokers() {
     try {
       setLoading(true);
       const response = await brokerAPI.getAll({
-        includeInactive: showInactiveBrokers,
+        includeInactive: true,
       });
       setBrokers(response.data);
     } catch (error) {
@@ -57,14 +56,14 @@ export default function Brokers() {
     } finally {
       setLoading(false);
     }
-  }, [showInactiveBrokers]);
+  }, []);
 
   useEffect(() => {
     loadBrokers();
     if (user?.id) {
       loadUserSettings();
     }
-  }, [user, showInactiveBrokers, loadBrokers]);
+  }, [user, loadBrokers]);
 
   const loadUserSettings = async () => {
     const response = await settingsAPI.get();
@@ -73,6 +72,7 @@ export default function Brokers() {
   };
 
   const handleOpenDialog = (broker = null) => {
+    console.log("handleOpenDialog", broker);
     if (broker) {
       setEditingBroker(broker);
       setFormData({
@@ -145,15 +145,14 @@ export default function Brokers() {
     {
       field: "name",
       headerName: "Name",
+      headerAlign: "center",
       flex: 1,
       minWidth: 150,
-      renderCell: (params) => (
-        <strong title={params.value}>{params.value}</strong>
-      ),
     },
     {
       field: "website",
       headerName: "Website",
+      headerAlign: "center",
       flex: 1,
       minWidth: 200,
       renderCell: (params) =>
@@ -168,6 +167,7 @@ export default function Brokers() {
     {
       field: "description",
       headerName: "Description",
+      headerAlign: "center",
       flex: 1,
       minWidth: 250,
       renderCell: (params) => (
@@ -187,7 +187,10 @@ export default function Brokers() {
     {
       field: "active",
       headerName: "Active",
-      flex: 100,
+      headerAlign: "center",
+      align: "center",
+      width: 100,
+      type: "number",
       sortable: false,
       renderCell: (params) => (
         <Switch
@@ -201,7 +204,9 @@ export default function Brokers() {
     {
       field: "actions",
       headerName: "Actions",
-      width: 120,
+      headerAlign: "center",
+      align: "center",
+      width: 100,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -234,42 +239,45 @@ export default function Brokers() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Typography variant="h4">Brokers</Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={showInactiveBrokers}
-                onChange={(e) => setShowInactiveBrokers(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Show Inactive"
-            sx={{ ml: 2 }}
-          />
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Broker
-        </Button>
-      </Box>
-
-      <TableContainer component={Paper}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Paper>
         <StyledDataGrid
+          label="Brokers"
           rows={brokers}
           columns={columns}
+          loading={loading}
           getRowId={(row) => row.id}
-          disableSelectionOnClick
           pageSize={25}
           rowsPerPageOptions={[10, 25, 50]}
-          autoHeight
+          initialState={{
+            filter: {
+              filterModel: {
+                items: [
+                  {
+                    field: "active",
+                    operator: "=",
+                    value: 1,
+                  },
+                ],
+              },
+            },
+          }}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <Tooltip title="Add broker">
+                  <ToolbarButton
+                    color="primary"
+                    onClick={() => handleOpenDialog()}
+                  >
+                    <AddIcon fontSize="small" />
+                  </ToolbarButton>
+                </Tooltip>
+              ),
+            },
+          }}
         />
-      </TableContainer>
+      </Paper>
 
       <Dialog
         open={openDialog}
