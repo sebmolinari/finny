@@ -35,7 +35,8 @@ export default function Settings() {
     validate_cash_balance: true,
     validate_sell_balance: true,
   });
-  const [loading, setLoading] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [loadingAssets, setLoadingAssets] = useState(true);
   const [assets, setAssets] = useState([]);
 
   useEffect(() => {
@@ -53,6 +54,8 @@ export default function Settings() {
       setAssets(currencyAssets);
     } catch (error) {
       console.error("Error loading assets:", error);
+    } finally {
+      setLoadingAssets(false);
     }
   };
 
@@ -63,7 +66,7 @@ export default function Settings() {
     } catch (error) {
       handleApiError(error, "Failed to load settings");
     } finally {
-      setLoading(false);
+      setLoadingSettings(false);
     }
   };
 
@@ -85,7 +88,7 @@ export default function Settings() {
     }
   };
 
-  if (loading) {
+  if (loadingSettings || loadingAssets) {
     return <LoadingSpinner maxWidth="md" />;
   }
 
@@ -104,8 +107,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 select
@@ -123,8 +127,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 select
@@ -141,8 +146,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 select
@@ -161,8 +167,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 select
@@ -179,8 +186,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <FormControl fullWidth required>
                 <InputLabel>Liquidity Asset</InputLabel>
                 <Select
@@ -202,8 +210,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <FormControl fullWidth>
                 <InputLabel>FX Rate Asset</InputLabel>
                 <Select
@@ -224,8 +233,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 type="number"
@@ -233,7 +243,7 @@ export default function Settings() {
                 name="rebalancing_tolerance"
                 value={settings.rebalancing_tolerance}
                 onChange={handleChange}
-                inputProps={{ min: 0, max: 100, step: 1 }}
+                slotProps={{ min: 0, max: 100, step: 1 }}
                 helperText="Portfolio rebalancing tolerance in percentage points (default: 5%)"
               />
             </Grid>
@@ -241,8 +251,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <FormControlLabel
                 control={
                   <Switch
@@ -274,8 +285,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <FormControlLabel
                 control={
                   <Switch
@@ -318,8 +330,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <FormControlLabel
                 control={
                   <Switch
@@ -351,8 +364,9 @@ export default function Settings() {
             <Grid
               size={{
                 xs: 12,
-                md: 6
-              }}>
+                md: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 select

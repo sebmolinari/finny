@@ -780,7 +780,7 @@ export default function AssetAllocation() {
                               parseFloat(e.target.value) || 0,
                             )
                           }
-                          inputProps={{ min: 0, max: 100, step: 0.1 }}
+                          slotProps={{ min: 0, max: 100, step: 0.1 }}
                           sx={{ width: 100 }}
                         />
                       </TableCell>
@@ -915,7 +915,7 @@ export default function AssetAllocation() {
                                   parseFloat(e.target.value) || 0,
                                 )
                               }
-                              inputProps={{ min: 0, max: 100, step: 0.1 }}
+                              slotProps={{ min: 0, max: 100, step: 0.1 }}
                               sx={{ width: 100 }}
                             />
                           </TableCell>

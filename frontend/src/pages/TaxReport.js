@@ -209,7 +209,7 @@ export default function TaxReport() {
             label="Year"
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            inputProps={{ min: 2000, max: 2100 }}
+            slotProps={{ min: 2000, max: 2100 }}
             sx={{ width: 150 }}
           />
 

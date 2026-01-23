@@ -491,7 +491,7 @@ export default function Assets() {
             checked={!!asset.active}
             onChange={() => handleToggleActive(asset)}
             color={asset.active ? "success" : "default"}
-            inputProps={{ "aria-label": "Toggle active" }}
+            slotProps={{ "aria-label": "Toggle active" }}
             size="small"
           />
         ) : asset.active ? (
@@ -795,7 +795,7 @@ export default function Assets() {
                 })
               }
               fullWidth
-              inputProps={{ step: "0.01", min: "0" }}
+              slotProps={{ step: "0.01", min: "0" }}
               helperText="Factor to divide the fetched price by"
             />
             {isAdminOrSuperuser && (
@@ -876,7 +876,7 @@ export default function Assets() {
                         price: e.target.value,
                       })
                     }
-                    inputProps={{ step: "0.01", min: "0" }}
+                    slotProps={{ step: "0.01", min: "0" }}
                     required
                   />
                   <Button type="submit" variant="contained" form="price-form">
