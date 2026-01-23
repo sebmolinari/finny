@@ -1,71 +1,60 @@
 import React from "react";
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
+import { StyledDataGridToolbar } from "./StyledDataGridToolbar";
 
 export default function StyledDataGrid(props) {
-  const { disableToolbar = false } = props;
+  const { disableToolbar = false, label } = props;
 
   const defaultSx = {
-    border: "none",
     fontSize: 13,
 
     /* Header */
-    "& .MuiDataGrid-columnHeaders": {
-      backgroundColor: "#f5f5f5",
-      borderBottom: "1px solid rgba(0,0,0,0.08)",
+    "& .MuiDataGrid-columnHeader": {
+      backgroundColor: "action.hover",
     },
     "& .MuiDataGrid-columnHeaderTitle": {
-      fontWeight: 600,
+      fontWeight: "bold",
     },
-
     /* Cells */
     "& .MuiDataGrid-cell": {
+      display: "flex",
+      alignItems: "center",
       whiteSpace: "nowrap",
       overflow: "hidden",
       textOverflow: "ellipsis",
       padding: "6px 8px",
-      borderRight: "none", // ⬅ remove vertical lines
-    },
-
-    /* 🔥 REMOVE ALL VERTICAL COLUMN LINES */
-    "& .MuiDataGrid-columnSeparator": {
-      display: "none",
-    },
-    "& .MuiDataGrid-columnHeader--withRightBorder": {
-      borderRight: "none",
-    },
-    "& .MuiDataGrid-cell--withRightBorder": {
-      borderRight: "none",
-    },
-
-    /* Rows */
-    "& .MuiDataGrid-row": {
-      maxHeight: 40,
     },
     "& .MuiDataGrid-row:hover": {
       backgroundColor: "rgba(0,0,0,0.02)",
     },
   };
-
   const gridProps = {
-    density: "compact",
-    headerHeight: 40,
+    columnHeaderHeight: 40,
     rowHeight: 40,
-
-    showColumnVerticalBorder: false, // ⬅ IMPORTANT
+    autoHeight: true,
+    disableRowSelectionOnClick: true,
 
     ...props,
+
+    initialState: {
+      density: "compact", //compact, standard, comfortable
+      ...(props.initialState || {}),
+    },
     sx: [defaultSx, props.sx],
   };
 
   if (!disableToolbar) {
-    gridProps.slots = { toolbar: GridToolbar, ...(props.slots || {}) };
+    gridProps.showToolbar = true;
+    gridProps.slots = {
+      toolbar: StyledDataGridToolbar,
+      ...(props.slots || {}),
+    };
     gridProps.slotProps = {
+      ...(props.slotProps || {}),
       toolbar: {
-        showQuickFilter: true,
-        quickFilterProps: { debounceMs: 300 },
+        label,
         ...(props.slotProps?.toolbar || {}),
       },
-      ...(props.slotProps || {}),
     };
   }
 

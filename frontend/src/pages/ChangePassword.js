@@ -106,7 +106,7 @@ const ChangePassword = () => {
           )}
 
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Current Password"
@@ -118,7 +118,7 @@ const ChangePassword = () => {
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="New Password"
@@ -131,7 +131,7 @@ const ChangePassword = () => {
                 helperText="At least 8 characters with uppercase, lowercase, and a number"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Confirm New Password"
@@ -143,7 +143,7 @@ const ChangePassword = () => {
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ display: "flex", gap: 2 }}>
                 <Button
                   type="submit"

@@ -111,12 +111,89 @@ export default function TaxReport() {
     }
   };
 
+  const columns = [
+    {
+      field: "asset",
+      headerName: "Asset",
+      headerAlign: "center",
+      width: 80,
+    },
+    {
+      field: "asset_name",
+      headerName: "Name",
+      headerAlign: "center",
+      width: 150,
+    },
+    {
+      field: "asset_type",
+      headerName: "Type",
+      headerAlign: "center",
+      width: 100,
+    },
+    {
+      field: "broker",
+      headerName: "Broker",
+      headerAlign: "center",
+      width: 100,
+    },
+    {
+      field: "quantity",
+      headerName: "Quantity",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (p) => Number(p.row.quantity).toFixed(4),
+    },
+    {
+      field: "price",
+      headerName: "Price (USD)",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (p) => formatCurrency(p.row.price),
+    },
+    {
+      field: "market_value",
+      headerName: "Market Value (USD)",
+      headerAlign: "center",
+      align: "right",
+      minWidth: 150,
+      flex: 1,
+      renderCell: (p) => formatCurrency(p.row.market_value),
+    },
+    {
+      field: "usdars_bna",
+      headerName: "FX Rate",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (p) => Number(p.row.usdars_bna).toFixed(2),
+    },
+    {
+      field: "price_in_ccy",
+      headerName: "Price (CCY)",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (p) => formatCurrency(p.row.price_in_ccy),
+    },
+    {
+      field: "market_value_in_ccy",
+      headerName: "Market Value (CCY)",
+      headerAlign: "center",
+      align: "right",
+      minWidth: 150,
+      flex: 1,
+      renderCell: (p) => formatCurrency(p.row.market_value_in_ccy),
+    },
+  ];
+
   if (loadingReport || userSettingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
         Tax Report
       </Typography>
@@ -235,79 +312,14 @@ export default function TaxReport() {
             <Paper sx={{ width: "100%", mb: 2 }}>
               <div style={{ width: "100%" }}>
                 <StyledDataGrid
+                  label="Holdings"
                   rows={reportData.holdings.map((h, i) => ({
                     ...h,
                     id: h.id ?? `${h.asset}-${h.broker || "nobroker"}-${i}`,
                   }))}
-                  columns={[
-                    {
-                      field: "asset",
-                      headerName: "Asset",
-                      flex: 1,
-                      renderCell: (p) => <strong>{p.value}</strong>,
-                    },
-                    {
-                      field: "asset_name",
-                      headerName: "Name",
-                      flex: 1,
-                    },
-                    { field: "asset_type", headerName: "Type", flex: 1 },
-                    { field: "broker", headerName: "Broker", flex: 1 },
-                    {
-                      field: "quantity",
-                      headerName: "Quantity",
-                      flex: 1,
-                      headerAlign: "right",
-                      align: "right",
-                      renderCell: (p) => Number(p.row.quantity).toFixed(4),
-                    },
-                    {
-                      field: "price",
-                      headerName: "Price (USD)",
-                      flex: 1,
-                      headerAlign: "right",
-                      align: "right",
-                      renderCell: (p) => formatCurrency(p.row.price),
-                    },
-                    {
-                      field: "market_value",
-                      headerName: "Market Value (USD)",
-                      minWidth: 150,
-                      flex: 1,
-                      headerAlign: "right",
-                      align: "right",
-                      renderCell: (p) => formatCurrency(p.row.market_value),
-                    },
-                    {
-                      field: "usdars_bna",
-                      headerName: "FX Rate",
-                      flex: 1,
-                      headerAlign: "right",
-                      align: "right",
-                      renderCell: (p) => Number(p.row.usdars_bna).toFixed(2),
-                    },
-                    {
-                      field: "price_in_ccy",
-                      headerName: "Price (CCY)",
-                      flex: 1,
-                      headerAlign: "right",
-                      align: "right",
-                      renderCell: (p) => formatCurrency(p.row.price_in_ccy),
-                    },
-                    {
-                      field: "market_value_in_ccy",
-                      headerName: "Market Value (CCY)",
-                      minWidth: 150,
-                      flex: 1,
-                      headerAlign: "right",
-                      align: "right",
-                      renderCell: (p) =>
-                        formatCurrency(p.row.market_value_in_ccy),
-                    },
-                  ]}
+                  columns={columns}
+                  loading={loadingReport}
                   getRowId={(row) => row.id}
-                  autoHeight
-                  disableSelectionOnClick
                 />
               </div>
             </Paper>

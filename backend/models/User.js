@@ -13,14 +13,14 @@ class User {
     }
     const hashedPassword = bcrypt.hashSync(password, 10);
     const stmt = db.prepare(
-      "INSERT INTO users (username, email, password, role, active, created_by) VALUES (?, ?, ?, ?, 1, ?)"
+      "INSERT INTO users (username, email, password, role, active, created_by) VALUES (?, ?, ?, ?, 1, ?)",
     );
     const result = stmt.run(
       username,
       email,
       hashedPassword,
       finalRole,
-      createdBy
+      createdBy,
     );
     const userId = result.lastInsertRowid;
 
@@ -38,7 +38,7 @@ class User {
       "daily",
       1,
       1,
-      userId
+      userId,
     );
 
     return userId;
@@ -46,14 +46,14 @@ class User {
 
   static updateStatus(id, active, updatedBy) {
     const stmt = db.prepare(
-      "UPDATE users SET active = ?, updated_by = ? WHERE id = ?"
+      "UPDATE users SET active = ?, updated_by = ? WHERE id = ?",
     );
     return stmt.run(active, updatedBy, id);
   }
 
   static updateRole(id, role, updatedBy) {
     const stmt = db.prepare(
-      "UPDATE users SET role = ?, updated_by = ? WHERE id = ?"
+      "UPDATE users SET role = ?, updated_by = ? WHERE id = ?",
     );
     return stmt.run(role, updatedBy, id);
   }
@@ -68,7 +68,7 @@ class User {
   static changePassword(id, newPassword) {
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
     const stmt = db.prepare(
-      "UPDATE users SET password = ?, updated_by = ? WHERE id = ?"
+      "UPDATE users SET password = ?, updated_by = ? WHERE id = ?",
     );
     return stmt.run(hashedPassword, id, id);
   }

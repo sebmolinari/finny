@@ -366,21 +366,17 @@ export default function AssetAllocation() {
     {
       field: "asset_type",
       headerName: "Asset Type",
-      flex: 1,
-      renderCell: (params) => (
-        <Typography variant="body1" fontWeight="medium">
-          {params.value}
-        </Typography>
-      ),
+      headerAlign: "center",
+      width: 150,
     },
     {
       field: "current",
       headerName: "Current",
-      flex: 1,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
-        <Box>
+        <Box sx={{ lineHeight: 1.2 }}>
           <Typography variant="body2">
             {formatPercent(p.row.current_percentage)}
           </Typography>
@@ -393,11 +389,11 @@ export default function AssetAllocation() {
     {
       field: "target",
       headerName: "Target",
-      flex: 1,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
-        <Box>
+        <Box sx={{ lineHeight: 1.2 }}>
           <Typography variant="body2">
             {formatPercent(p.row.target_percentage)}
           </Typography>
@@ -410,9 +406,9 @@ export default function AssetAllocation() {
     {
       field: "difference_percentage",
       headerName: "Difference",
-      flex: 1,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
         <Typography
           variant="body2"
@@ -432,9 +428,9 @@ export default function AssetAllocation() {
     {
       field: "action",
       headerName: "Action",
-      width: 110,
-      align: "center",
       headerAlign: "center",
+      align: "right",
+      width: 110,
       renderCell: (p) => (
         <Chip
           icon={getActionIcon(p.row.action)}
@@ -447,9 +443,9 @@ export default function AssetAllocation() {
     {
       field: "difference",
       headerName: "Amount",
-      width: 140,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
         <Typography
           variant="body2"
@@ -470,22 +466,33 @@ export default function AssetAllocation() {
   ];
 
   const assetColumns = [
-    { field: "symbol", headerName: "Symbol", flex: 1 },
-    { field: "asset_name", headerName: "Name", flex: 1 },
+    {
+      field: "symbol",
+      headerName: "Symbol",
+      headerAlign: "center",
+      width: 100,
+    },
+    {
+      field: "asset_name",
+      headerName: "Name",
+      headerAlign: "center",
+      width: 150,
+    },
     {
       field: "asset_type",
       headerName: "Type",
-      flex: 1,
+      headerAlign: "center",
+      width: 100,
       renderCell: (p) => <Chip label={p.value} size="small" />,
     },
     {
       field: "current",
       headerName: "Current",
-      flex: 1,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
-        <Box>
+        <Box sx={{ lineHeight: 1.2 }}>
           <Typography variant="body2">
             {p.row.current_percentage_within_type !== undefined
               ? formatPercent(p.row.current_percentage_within_type)
@@ -500,11 +507,11 @@ export default function AssetAllocation() {
     {
       field: "target",
       headerName: "Target",
-      flex: 1,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
-        <Box>
+        <Box sx={{ lineHeight: 1.2 }}>
           <Typography variant="body2">
             {p.row.target_percentage_within_type !== undefined
               ? formatPercent(p.row.target_percentage_within_type)
@@ -519,9 +526,9 @@ export default function AssetAllocation() {
     {
       field: "difference_percentage",
       headerName: "Difference",
-      flex: 1,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
         <Typography
           variant="body2"
@@ -556,9 +563,9 @@ export default function AssetAllocation() {
     {
       field: "difference",
       headerName: "Amount",
-      width: 140,
+      headerAlign: "center",
       align: "right",
-      headerAlign: "right",
+      flex: 1,
       renderCell: (p) => (
         <Typography
           variant="body2"
@@ -579,22 +586,24 @@ export default function AssetAllocation() {
   ];
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
         Asset Allocation & Rebalancing
       </Typography>
-
       {/* selection moved into Asset Type tab */}
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
-
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+          }}
+        >
           <MetricCard
             title="Total Allocated"
             value={formatPercent(totalAllocated)}
@@ -604,7 +613,12 @@ export default function AssetAllocation() {
             }
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+          }}
+        >
           <MetricCard
             title="Remaining"
             value={formatPercent(remaining)}
@@ -620,7 +634,12 @@ export default function AssetAllocation() {
             }
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+          }}
+        >
           <MetricCard
             title="Portfolio Status"
             value={rebalancing?.is_balanced ? "Balanced" : "Needs Rebalancing"}
@@ -639,7 +658,6 @@ export default function AssetAllocation() {
           />
         </Grid>
       </Grid>
-
       {/* Target Allocation Form */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box
@@ -679,7 +697,7 @@ export default function AssetAllocation() {
 
         {tabValue === 0 && (
           <>
-            <Box display="flex" gap={2} mb={2} alignItems="center">
+            <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
               <Autocomplete
                 value={selectedAssetType}
                 onChange={(event, newValue) => setSelectedAssetType(newValue)}
@@ -820,7 +838,7 @@ export default function AssetAllocation() {
               <strong>within their asset type</strong>. Asset percentages should
               sum to 100% within each asset type.
             </Alert>
-            <Box display="flex" gap={2} mb={2} alignItems="center">
+            <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
               <Autocomplete
                 value={selectedAsset}
                 onChange={(event, newValue) => setSelectedAsset(newValue)}
@@ -1019,7 +1037,6 @@ export default function AssetAllocation() {
           </Alert>
         )}
       </Paper>
-
       {/* Rebalancing Recommendations - Asset Type Level (Strategic) */}
       {rebalancing?.has_targets &&
         rebalancing.recommendations.some((r) => r.level === "type") && (
@@ -1042,10 +1059,9 @@ export default function AssetAllocation() {
             )}
 
             <StyledDataGrid
-              autoHeight
               rows={typeRows}
+              loading={loading}
               columns={typeColumns}
-              disableSelectionOnClick
               disableToolbar
               rowHeight={70}
               getRowClassName={(params) =>
@@ -1053,7 +1069,7 @@ export default function AssetAllocation() {
               }
               sx={{
                 "& .MuiDataGrid-row": {
-                  maxHeight: "70px !important",
+                  height: "70px !important",
                 },
                 "& .MuiDataGrid-row.needs-rebalance": {
                   backgroundColor: "rgba(255, 0, 0, 0.05) !important",
@@ -1062,7 +1078,6 @@ export default function AssetAllocation() {
             />
           </Paper>
         )}
-
       {/* Rebalancing Recommendations - Asset Level (Tactical) */}
       {rebalancing?.has_targets &&
         rebalancing.recommendations.some((r) => r.level === "asset") && (
@@ -1072,10 +1087,9 @@ export default function AssetAllocation() {
             </Typography>
 
             <StyledDataGrid
-              autoHeight
               rows={assetRows}
+              loading={loading}
               columns={assetColumns}
-              disableSelectionOnClick
               disableToolbar
               rowHeight={70}
               getRowClassName={(params) =>
@@ -1092,7 +1106,6 @@ export default function AssetAllocation() {
             />
           </Paper>
         )}
-
       {!rebalancing?.has_targets && (
         <Alert severity="info">
           Set target allocations above to see rebalancing recommendations.

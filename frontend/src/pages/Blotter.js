@@ -5,7 +5,6 @@ import {
   Typography,
   Button,
   Box,
-  TableContainer,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -17,6 +16,7 @@ import {
   InputLabel,
   IconButton,
   FormHelperText,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -38,6 +38,7 @@ import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
 import StyledDataGrid from "../components/StyledDataGrid";
+import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Blotter() {
@@ -478,123 +479,152 @@ export default function Blotter() {
     calculateAmount,
   ]);
 
+  const columns = [
+    {
+      field: "date",
+      headerName: "Date",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) => formatDate(params.value, userDateFormat),
+    },
+    {
+      field: "symbol",
+      headerName: "Asset",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 140,
+    },
+    {
+      field: "transaction_type",
+      headerName: "Type",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 120,
+    },
+    {
+      field: "broker_name",
+      headerName: "Broker",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 140,
+    },
+    {
+      field: "quantity",
+      headerName: "Quantity",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) =>
+        params.value ? formatNumber(params.value, 4) : "-",
+    },
+    {
+      field: "price",
+      headerName: "Price",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) =>
+        params.value ? formatCurrency(params.value) : "-",
+    },
+    {
+      field: "fee",
+      headerName: "Fee",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      minWidth: 100,
+      renderCell: (params) => formatCurrency(params.value || 0),
+    },
+    {
+      field: "total_amount",
+      headerName: "Total",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) => formatCurrency(params.value),
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      headerAlign: "center",
+      align: "center",
+      width: 100,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <IconButton
+            size="small"
+            onClick={() => handleOpenDialog(params.row)}
+            color="primary"
+            title="Edit"
+            sx={{ padding: "4px" }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDelete(params.row.id)}
+            color="error"
+            title="Delete"
+            sx={{ padding: "4px" }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
+
   if (transactionsLoading || settingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-        <Typography variant="h4">Blotter</Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<UploadIcon />}
-            onClick={handleOpenImportDialog}
-          >
-            Import
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add Transaction
-          </Button>
-        </Box>
-      </Box>
-
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Transactions Grid */}
       <Paper>
-        <TableContainer>
-          <StyledDataGrid
-            rows={transactions}
-            columns={[
-              {
-                field: "date",
-                headerName: "Date",
-                minWidth: 120,
-                renderCell: (params) =>
-                  formatDate(params.value, userDateFormat),
-              },
-              { field: "symbol", headerName: "Asset", minWidth: 140 },
-              { field: "transaction_type", headerName: "Type", minWidth: 120 },
-              { field: "broker_name", headerName: "Broker", minWidth: 140 },
-              {
-                field: "quantity",
-                headerName: "Quantity",
-                minWidth: 120,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) =>
-                  params.value ? formatNumber(params.value, 4) : "-",
-              },
-              {
-                field: "price",
-                headerName: "Price",
-                minWidth: 120,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) =>
-                  params.value ? formatCurrency(params.value) : "-",
-              },
-              {
-                field: "fee",
-                headerName: "Fee",
-                minWidth: 100,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) => formatCurrency(params.value || 0),
-              },
-              {
-                field: "total_amount",
-                headerName: "Total",
-                minWidth: 120,
-                headerAlign: "right",
-                align: "right",
-                renderCell: (params) => formatCurrency(params.value),
-              },
-              {
-                field: "actions",
-                headerName: "Actions",
-                minWidth: 120,
-                sortable: false,
-                filterable: false,
-                renderCell: (params) => (
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenDialog(params.row)}
+        <StyledDataGrid
+          label="Blotter"
+          rows={transactions}
+          columns={columns}
+          loading={transactionsLoading}
+          getRowId={(row) => row.id}
+          paginationMode="server"
+          page={page - 1}
+          onPageChange={(newPage) => setPage(newPage + 1)}
+          pageSize={limit}
+          rowsPerPageOptions={[25, 50, 100]}
+          rowCount={totalPages * limit}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <>
+                  <Tooltip title="Add transaction">
+                    <ToolbarButton
                       color="primary"
-                      title="Edit"
-                      sx={{ padding: "4px" }}
+                      onClick={() => handleOpenDialog()}
                     >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(params.row.id)}
-                      color="error"
-                      title="Delete"
-                      sx={{ padding: "4px" }}
+                      <AddIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                  <Tooltip title="Import">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenImportDialog()}
                     >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ),
-              },
-            ]}
-            getRowId={(row) => row.id}
-            paginationMode="server"
-            page={page - 1}
-            onPageChange={(newPage) => setPage(newPage + 1)}
-            pageSize={limit}
-            rowsPerPageOptions={[25, 50, 100]}
-            rowCount={totalPages * limit}
-            disableSelectionOnClick
-          />
-        </TableContainer>
+                      <UploadIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                </>
+              ),
+            },
+          }}
+        />
       </Paper>
 
       {/* Transaction Dialog */}

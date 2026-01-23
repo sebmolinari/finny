@@ -17,8 +17,11 @@ import {
   IconButton,
   FormControlLabel,
   Switch,
+  Chip,
+  Tooltip,
 } from "@mui/material";
 import StyledDataGrid from "../components/StyledDataGrid";
+import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import {
   Add as AddIcon,
@@ -45,7 +48,6 @@ export default function Assets() {
   const { user } = useAuth();
   const isAdminOrSuperuser = user && ["admin", "superuser"].includes(user.role);
   const [assets, setAssets] = useState([]);
-  const [showInactiveAssets, setShowInactiveAssets] = useState(false);
   const [userTimezone, setUserTimezone] = useState();
   const [userDateFormat, setUserDateFormat] = useState();
   const [validAssetTypes, setValidAssetTypes] = useState([]);
@@ -68,7 +70,7 @@ export default function Assets() {
     try {
       setLoading(true);
       const response = await assetAPI.getAll({
-        includeInactive: showInactiveAssets,
+        includeInactive: true,
       });
       const assetsWithPrices = await Promise.all(
         response.data.map(async (asset) => {
@@ -86,14 +88,14 @@ export default function Assets() {
     } finally {
       setLoading(false);
     }
-  }, [showInactiveAssets]);
+  }, []);
 
   useEffect(() => {
     loadAssets();
     loadValidAssetTypes();
     loadValidPriceSources();
     loadUserSettings();
-  }, [user, showInactiveAssets, loadAssets]);
+  }, [user, loadAssets]);
 
   const loadValidAssetTypes = async () => {
     try {
@@ -378,14 +380,23 @@ export default function Assets() {
     {
       field: "symbol",
       headerName: "Symbol",
+      headerAlign: "center",
       flex: 1,
-      renderCell: (params) => <strong>{params.value}</strong>,
+      minWidth: 50,
     },
-    { field: "name", headerName: "Name", flex: 1 },
+    {
+      field: "name",
+      headerName: "Name",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 150,
+    },
     {
       field: "asset_type",
       headerName: "Type",
+      headerAlign: "center",
       flex: 1,
+      minWidth: 100,
       renderCell: (params) => {
         const asset_type = params.value || "";
         const bg =
@@ -413,27 +424,66 @@ export default function Assets() {
                     ? "#c2185b"
                     : "#757575";
         return (
-          <Box
+          <Chip
+            label={asset_type.toUpperCase()}
+            size="small"
             sx={{
-              display: "inline-block",
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
               backgroundColor: bg,
-              color,
-              fontSize: "0.875rem",
+              color: color,
+              fontWeight: 600,
+              fontSize: "0.75rem",
             }}
-          >
-            {String(asset_type).toUpperCase()}
-          </Box>
+          />
         );
       },
     },
-    { field: "currency", headerName: "Currency", flex: 1 },
+    {
+      field: "currency",
+      headerName: "Currency",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 50,
+    },
+    {
+      field: "price_source",
+      headerName: "Source",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 150,
+    },
+    {
+      field: "currentPrice",
+      headerName: "Price",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) =>
+        params.value ? formatCurrency(parseFloat(params.value), 4) : "—",
+    },
+    {
+      field: "price_updated_at",
+      headerName: "Updated",
+      headerAlign: "center",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) =>
+        params.value || params.row.price_created_at
+          ? formatDatetimeInTimezone(
+              params.value || params.row.price_created_at,
+              userDateFormat,
+              userTimezone,
+            )
+          : "—",
+    },
     {
       field: "active",
       headerName: "Active",
+      headerAlign: "center",
+      align: "center",
       width: 100,
+      type: "number",
+      sortable: false,
       renderCell: (params) => {
         const asset = params.row;
         return isAdminOrSuperuser ? (
@@ -455,31 +505,12 @@ export default function Assets() {
         );
       },
     },
-    { field: "price_source", headerName: "Source", flex: 1 },
-    {
-      field: "currentPrice",
-      headerName: "Price",
-      flex: 1,
-      renderCell: (params) =>
-        params.value ? formatCurrency(parseFloat(params.value), 4) : "—",
-    },
-    {
-      field: "price_updated_at",
-      headerName: "Updated",
-      flex: 1,
-      renderCell: (params) =>
-        params.value || params.row.price_created_at
-          ? formatDatetimeInTimezone(
-              params.value || params.row.price_created_at,
-              userDateFormat,
-              userTimezone,
-            )
-          : "—",
-    },
     {
       field: "actions",
       headerName: "Actions",
-      width: 160,
+      headerAlign: "center",
+      align: "center",
+      width: 150,
       sortable: false,
       filterable: false,
       renderCell: (params) => {
@@ -533,64 +564,126 @@ export default function Assets() {
     },
   ];
 
+  const columnsPriceData = [
+    {
+      field: "date",
+      headerName: "Date",
+      headerAlign: "center",
+      flex: 1,
+      renderCell: (params) => formatDate(params.row.date, userDateFormat),
+    },
+    {
+      field: "updated_at",
+      headerName: "Last Updated",
+      headerAlign: "center",
+      flex: 1,
+      renderCell: (params) =>
+        formatDatetimeInTimezone(
+          params.row.updated_at || params.row.created_at,
+          userDateFormat,
+          userTimezone,
+        ),
+    },
+    {
+      field: "price",
+      headerName: "Price",
+      headerAlign: "center",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => formatCurrency(parseFloat(params.row.price), 4),
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      headerAlign: "center",
+      align: "center",
+      width: 100,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) =>
+        isAdminOrSuperuser ? (
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            <IconButton
+              size="small"
+              onClick={() => handleEditPrice(params.row)}
+              title="Edit"
+              color="primary"
+              sx={{ padding: "4px" }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => handleDeletePrice(params.row.id)}
+              title="Delete"
+              color="error"
+              sx={{ padding: "4px" }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            —
+          </Typography>
+        ),
+    },
+  ];
+
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Typography variant="h4">Assets</Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={showInactiveAssets}
-                onChange={(e) => setShowInactiveAssets(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Show Inactive"
-            sx={{ ml: 2 }}
-          />
-        </Box>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={handleRefreshAllPrices}
-          >
-            Refresh All Prices
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add Asset
-          </Button>
-        </Box>
-      </Box>
-
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Paper>
         <StyledDataGrid
+          label="Assets"
           rows={assets}
           columns={columns}
-          autoHeight
-          getRowId={(row) => row.id}
-          pageSize={100}
-          rowsPerPageOptions={[25, 50, 100]}
           loading={loading}
+          getRowId={(row) => row.id}
+          pageSize={25}
+          rowsPerPageOptions={[25, 50, 100]}
+          initialState={{
+            filter: {
+              filterModel: {
+                items: [
+                  {
+                    field: "active",
+                    operator: "=",
+                    value: 1,
+                  },
+                ],
+              },
+            },
+          }}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <>
+                  <Tooltip title="Add asset">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenDialog()}
+                    >
+                      <AddIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                  <Tooltip title="Refresh all prices">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleRefreshAllPrices()}
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                </>
+              ),
+            },
+          }}
         />
       </Paper>
-
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
@@ -735,7 +828,6 @@ export default function Assets() {
           </Button>
         </DialogActions>
       </Dialog>
-
       <Dialog
         open={openPriceDialog}
         onClose={handleClosePriceDialog}
@@ -806,78 +898,18 @@ export default function Assets() {
               </>
             )}
 
-            <Typography variant="h6" gutterBottom>
-              Price History
-            </Typography>
             <Paper sx={{ width: "100%" }}>
               <div style={{ height: 400, width: "100%" }}>
                 <StyledDataGrid
+                  label="Price History"
                   rows={priceData}
-                  columns={[
-                    {
-                      field: "date",
-                      headerName: "Date",
-                      flex: 1,
-                      renderCell: (params) =>
-                        formatDate(params.row.date, userDateFormat),
-                    },
-                    {
-                      field: "updated_at",
-                      headerName: "Last Updated",
-                      flex: 1,
-                      renderCell: (params) =>
-                        formatDatetimeInTimezone(
-                          params.row.updated_at || params.row.created_at,
-                          userDateFormat,
-                          userTimezone,
-                        ),
-                    },
-                    {
-                      field: "price",
-                      headerName: "Price",
-                      flex: 1,
-                      renderCell: (params) =>
-                        formatCurrency(parseFloat(params.row.price), 4),
-                    },
-                    {
-                      field: "actions",
-                      headerName: "Actions",
-                      width: 140,
-                      sortable: false,
-                      filterable: false,
-                      renderCell: (params) =>
-                        isAdminOrSuperuser ? (
-                          <Box sx={{ display: "flex", gap: 0.5 }}>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditPrice(params.row)}
-                              title="Edit"
-                              color="primary"
-                              sx={{ padding: "4px" }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeletePrice(params.row.id)}
-                              title="Delete"
-                              color="error"
-                              sx={{ padding: "4px" }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            —
-                          </Typography>
-                        ),
-                    },
-                  ]}
+                  columns={columnsPriceData}
+                  loading={loading}
+                  autoHeight
+                  disableRowSelectionOnClick
                   getRowId={(row) => row.id}
                   pageSize={25}
                   rowsPerPageOptions={[10, 25, 50]}
-                  disableSelectionOnClick
                 />
               </div>
             </Paper>

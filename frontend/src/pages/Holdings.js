@@ -1,15 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Container,
-  Paper,
-  Typography,
-  Box,
-  TableContainer,
-  FormControlLabel,
-  Switch,
-  Grid,
-  Tooltip,
-} from "@mui/material";
+import { Container, Paper, Box, Grid, Tooltip, Chip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { AttachMoney as AttachMoneyIcon } from "@mui/icons-material";
 import { MetricCard } from "../components/StyledCard";
@@ -23,9 +13,8 @@ import {
 } from "../utils/formatNumber";
 
 export default function Holdings() {
-  const [portfolio, setPortfolio] = useState(null);
+  const [holdings, setHoldings] = useState(null);
   const [analytics, setAnalytics] = useState(null);
-  const [hideZeroQuantity, setHideZeroQuantity] = useState(true);
 
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +26,7 @@ export default function Holdings() {
       const response = await analyticsAPI.getPortfolioAnalytics();
       setAnalytics(response.data);
       // Portfolio holdings are in response.data.transactions.holdings
-      setPortfolio(response.data.transactions.holdings);
+      setHoldings(response.data.transactions.holdings);
       setLoading(false);
     } catch (error) {
       console.error("Error loading holdings and analytics:", error);
@@ -53,35 +42,26 @@ export default function Holdings() {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
-  const filteredRows = (portfolio || []).filter((holding) => {
-    if (
-      hideZeroQuantity &&
-      (!holding.total_quantity || holding.total_quantity === 0)
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  const rows = filteredRows.map((h) => ({ ...h }));
-
   const columns = [
     {
       field: "symbol",
       headerName: "Symbol",
-      flex: 1,
+      headerAlign: "center",
+      width: 80,
       renderCell: (params) => <span title={params.value}>{params.value}</span>,
     },
     {
       field: "broker_name",
       headerName: "Broker",
-      flex: 1,
+      headerAlign: "center",
+      width: 120,
       renderCell: (params) => <span title={params.value}>{params.value}</span>,
     },
     {
       field: "asset_type",
       headerName: "Type",
-      flex: 1,
+      headerAlign: "center",
+      width: 80,
       renderCell: (params) => {
         const t = params.value || "";
         const colorMap = {
@@ -105,72 +85,66 @@ export default function Holdings() {
                     ? "RE"
                     : t.toUpperCase();
         return (
-          <Box
+          <Chip
+            label={label}
+            size="small"
             sx={{
-              display: "inline-block",
-              px: 0.75,
-              py: 0.25,
-              borderRadius: 1,
               backgroundColor: bg,
               color: fg,
-              fontSize: "0.75rem",
               fontWeight: 600,
+              fontSize: "0.75rem",
             }}
-            title={t}
-          >
-            {label}
-          </Box>
+          />
         );
       },
     },
     {
       field: "total_quantity",
       headerName: "Quantity",
+      headerAlign: "center",
+      align: "right",
       flex: 1,
       type: "number",
-      headerAlign: "right",
-      align: "right",
-      valueGetter: (params) => params.row.total_quantity,
       renderCell: (params) => formatNumber(params.value, 4),
     },
     {
       field: "average_cost",
       headerName: "Avg Cost",
-      flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
+      flex: 1,
       renderCell: (params) => formatCurrency(params.value),
     },
     {
       field: "cost_basis",
       headerName: "Cost Basis",
-      flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
+      flex: 1,
       renderCell: (params) => formatCurrency(params.value),
     },
     {
       field: "market_price",
       headerName: "Current Price",
-      flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
+      flex: 1,
       renderCell: (params) => formatCurrency(params.value),
     },
     {
       field: "market_value",
       headerName: "Market Value",
-      flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
+      flex: 1,
       renderCell: (params) => formatCurrency(params.value, 0),
     },
     {
       field: "daily_pnl",
       headerName: "Daily P&L",
-      flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
+      flex: 1,
       renderCell: (params) => {
         const val = params.value || 0;
         const color =
@@ -181,9 +155,9 @@ export default function Holdings() {
     {
       field: "unrealized_gain",
       headerName: "Unrealized P&L",
-      flex: 1,
-      headerAlign: "right",
+      headerAlign: "center",
       align: "right",
+      flex: 1,
       renderCell: (params) => {
         const val = params.value || 0;
         const color =
@@ -199,14 +173,15 @@ export default function Holdings() {
   ];
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Portfolio Holdings
-      </Typography>
-
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Cash & Liquidity Metrics */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+          }}
+        >
           <Tooltip
             title="Cash Balance: Total cash available in the portfolio, including uninvested funds from deposits, withdrawals, and trading activity."
             arrow
@@ -225,7 +200,12 @@ export default function Holdings() {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+          }}
+        >
           <Tooltip
             title="Liquidity: Total liquid assets including cash and money market equivalents. Represents immediately available funds. Calculation: Cash Balance + Liquidity Assets."
             arrow
@@ -244,7 +224,12 @@ export default function Holdings() {
           </Tooltip>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+          }}
+        >
           <Tooltip
             title="Liquidity %: Percentage of portfolio that is liquid (cash + liquidity assets like money market funds). Higher percentage means more readily available funds. Calculation: Liquidity Balance / NAV × 100."
             arrow
@@ -262,42 +247,17 @@ export default function Holdings() {
           </Tooltip>
         </Grid>
       </Grid>
-
       {/* Holdings Table */}
       <Paper sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            p: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">Current Holdings</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={hideZeroQuantity}
-                  onChange={(e) => setHideZeroQuantity(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label="Hide Zero Quantity"
-            />
-          </Box>
-        </Box>
-        <TableContainer>
-          <StyledDataGrid
-            rows={rows}
-            columns={columns}
-            getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
-            pageSize={25}
-            rowsPerPageOptions={[10, 25, 50]}
-            disableSelectionOnClick
-            autoHeight
-          />
-        </TableContainer>
+        <StyledDataGrid
+          label="Holdings"
+          rows={holdings}
+          columns={columns}
+          loading={loading}
+          getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
+          pageSize={25}
+          rowsPerPageOptions={[10, 25, 50]}
+        />
       </Paper>
     </Container>
   );

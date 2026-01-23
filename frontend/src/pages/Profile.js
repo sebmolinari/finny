@@ -12,7 +12,7 @@ const Profile = () => {
       </Typography>
       <Paper sx={{ p: 4, mt: 3 }}>
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Username
             </Typography>
@@ -20,7 +20,7 @@ const Profile = () => {
               {user?.username}
             </Typography>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Email
             </Typography>
@@ -28,7 +28,7 @@ const Profile = () => {
               {user?.email}
             </Typography>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Role
             </Typography>
