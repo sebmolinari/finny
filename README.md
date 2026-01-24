@@ -117,7 +117,7 @@ A professional-grade finance management application designed to help you track t
 
 ### Prerequisites
 
-- Node.js (v20 or higher)
+- Node.js (v24 or higher)
 - npm or yarn
 
 ### Installation
@@ -148,7 +148,7 @@ cp .env.example .env
 # - EMAIL_* settings (optional, for email notifications)
 ```
 
-3. **Start servers:**
+3. **Start servers in development:**
 
 ```bash
 # Backend (from backend/)
@@ -158,55 +158,6 @@ npm start          # Runs on http://localhost:5000
 npm start          # Runs on http://localhost:3000
 ```
 
-4. **Start using:**
-
-- Navigate to http://localhost:3000
-- Register a new user account
-- Explore the Dashboard, Holdings, Asset Allocation, and Settings
-- Add your own assets, brokers, and transactions
-
-## Key Features by Page
-
-### Dashboard
-
-- Total portfolio net worth
-- Daily P&L with color indicators (green/red)
-- Holdings market value summary
-- Cash balance and liquidity metrics
-- Performance metrics (MWRR, CAGR)
-- Asset allocation pie chart
-- Top holdings table
-
-### Holdings
-
-- Complete portfolio holdings list
-- Current market values and prices
-- Unrealized gains/losses per position
-- Asset type and broker breakdowns
-- Hide/show zero quantity positions
-
-### Asset Allocation & Rebalancing
-
-- Define target allocation by asset type
-- Real-time portfolio vs. target comparison
-- Automatic rebalancing recommendations
-- BUY/SELL action indicators
-- Drift analysis and balance scoring
-
-### Blotter (Transactions)
-
-- Complete transaction history
-- Filter by type, asset, broker, date
-- CSV import/export functionality
-- Quick add transaction form
-
-### Settings
-
-- User preferences configuration
-- Email notification setup
-- Theme and display options
-- Liquidity asset configuration
-
 ## API Documentation
 
 ### Swagger API Docs
@@ -215,22 +166,6 @@ Interactive API documentation is available at:
 
 - **Development**: `http://localhost:5000/api/v1/api-docs`
 - Swagger is automatically disabled in production for security
-
-### API Endpoints
-
-Main API routes available at `/api/v1/`:
-
-- `/auth` - Authentication (login, register)
-- `/users` - User management (admin only)
-- `/assets` - Asset catalog management
-- `/brokers` - Broker management
-- `/transactions` - Transaction CRUD operations
-- `/analytics` - Portfolio analytics and performance
-- `/allocation` - Asset allocation targets and rebalancing
-- `/email` - Email notification management
-- `/settings` - User settings
-- `/audit` - Audit logs (admin only)
-- `/constants` - Valid values for dropdowns
 
 ## Contributing
 
