@@ -87,7 +87,6 @@ const Dashboard = () => {
           mtm: r.mtm || 0,
           cagr: r.cagr !== null && r.cagr !== undefined ? r.cagr : null,
         }));
-        console.log("MTM Evolution Chart Data:", chartData);
         setMtmEvolution(chartData);
       }
     } catch (error) {

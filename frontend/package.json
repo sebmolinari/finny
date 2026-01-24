@@ -8,16 +8,15 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
-    "@mui/x-charts": "^8.26.0",
-    "@mui/x-data-grid": "^8.25.0",
+    "@mui/x-data-grid": "^8.26.0",
     "axios": "^1.13.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.12.0",
+    "react-router-dom": "^7.13.0",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",
-    "recharts": "^3.6.0"
+    "recharts": "^3.7.0"
   },
   "scripts": {
     "start": "react-scripts start",

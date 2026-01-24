@@ -72,7 +72,6 @@ export default function Brokers() {
   };
 
   const handleOpenDialog = (broker = null) => {
-    console.log("handleOpenDialog", broker);
     if (broker) {
       setEditingBroker(broker);
       setFormData({
