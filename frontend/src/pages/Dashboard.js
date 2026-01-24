@@ -87,6 +87,7 @@ const Dashboard = () => {
           mtm: r.mtm || 0,
           cagr: r.cagr !== null && r.cagr !== undefined ? r.cagr : null,
         }));
+        console.log("MTM Evolution Chart Data:", chartData);
         setMtmEvolution(chartData);
       }
     } catch (error) {
@@ -100,10 +101,6 @@ const Dashboard = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      {/* <Typography variant="h4" gutterBottom>
-        Dashboard
-      </Typography> */}
-      {/* Row 1: Portfolio Value Metrics */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid
           size={{
@@ -338,39 +335,26 @@ const Dashboard = () => {
         </Grid>
       </Grid>
       {/* Portfolio Performance Chart */}
-      {performanceData.length > 0 && (
-        <PortfolioValueChart
-          data={performanceData}
-          title="Portfolio Performance (Last 30 Days)"
-          height={300}
-        />
-      )}
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid size={12}>
-          <AssetAllocationChart
-            data={dashboard.transactions.asset_allocation}
-            title="Asset Allocation"
-            height={300}
-          />
-        </Grid>
-      </Grid>
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid size={12}>
-          <MarketValueByBrokerChart
-            data={brokerSummary}
-            title="Market Value by Broker"
-            height={300}
-          />
-        </Grid>
-      </Grid>
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid size={12}>
-          <MTMEvolutionChart
-            data={mtmEvolution.length ? mtmEvolution : undefined}
-            height={380}
-          />
-        </Grid>
-      </Grid>
+      <PortfolioValueChart
+        data={performanceData}
+        title="Portfolio Performance (Last 30 Days)"
+        height={300}
+      />
+      <AssetAllocationChart
+        data={dashboard.transactions.asset_allocation}
+        title="Asset Allocation"
+        height={300}
+      />
+      <MarketValueByBrokerChart
+        data={brokerSummary}
+        title="Market Value by Broker"
+        height={300}
+      />
+      <MTMEvolutionChart
+        data={mtmEvolution}
+        title="MTM Evolution"
+        height={380}
+      />
     </Container>
   );
 };

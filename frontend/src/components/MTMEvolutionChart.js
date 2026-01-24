@@ -21,12 +21,8 @@ const CustomTooltip = ({ active, payload, label }) => {
   return (
     <div style={{ background: "#fff", padding: 10, border: "1px solid #ccc" }}>
       <div style={{ fontWeight: 600 }}>{label}</div>
-      {mtmPoint && (
-        <div>{`MTM: ${formatCurrency(mtmPoint.value)}`}</div>
-      )}
-      {cagrPoint && (
-        <div>{`CAGR: ${formatPercent(cagrPoint.value)}`}</div>
-      )}
+      {mtmPoint && <div>{`MTM: ${formatCurrency(mtmPoint.value)}`}</div>}
+      {cagrPoint && <div>{`CAGR: ${formatPercent(cagrPoint.value)}`}</div>}
     </div>
   );
 };
@@ -35,10 +31,13 @@ const MTMEvolutionChart = ({ data, title, height }) => {
   return (
     <Paper sx={{ p: 3, mt: 3 }}>
       <Typography variant="h6" gutterBottom>
-        {title || "MTM Evolution"}
+        {title}
       </Typography>
       <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart data={data} margin={{ top: 48, right: 40, left: 0, bottom: 0 }}>
+        <ComposedChart
+          data={data}
+          margin={{ top: 48, right: 40, left: 0, bottom: 0 }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="year" />
           <YAxis
@@ -54,7 +53,12 @@ const MTMEvolutionChart = ({ data, title, height }) => {
           />
           <RechartsTooltip content={<CustomTooltip />} />
           <Bar dataKey="mtm" fill="#1976d2" yAxisId="left" name="MTM">
-            <LabelList dataKey="mtm" position="top" offset={8} formatter={(v) => formatCurrency(v, 0)} />
+            <LabelList
+              dataKey="mtm"
+              position="top"
+              offset={8}
+              formatter={(v) => formatCurrency(v, 0)}
+            />
           </Bar>
           <Line
             type="monotone"
