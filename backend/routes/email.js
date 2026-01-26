@@ -55,7 +55,6 @@ router.post("/summary", authMiddleware, async (req, res) => {
       user.email,
       emailContent.subject,
       emailContent.html,
-      emailContent.text,
       {
         userId: req.user.id,
         username: req.user.username,

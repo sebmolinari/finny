@@ -263,7 +263,7 @@ class PortfolioEmailService {
               ${formatCurrency(h.unrealized_gain, 0)}
             </td>
             <td style="text-align:right;" class="${(h.daily_pnl || 0) >= 0 ? "positive" : "negative"}">
-              ${(h.daily_pnl || 0) >= 0 ? '+' : ''}${formatCurrency(h.daily_pnl || 0, 0)}
+              ${(h.daily_pnl || 0) >= 0 ? "+" : ""}${formatCurrency(h.daily_pnl || 0, 0)}
             </td>
             <td style="text-align:right;" class="${h.unrealized_gain_percent >= 0 ? "positive" : "negative"}">
               ${formatPercent(h.unrealized_gain_percent, 2)}%
@@ -294,8 +294,8 @@ class PortfolioEmailService {
             <td><strong>${a.type.toUpperCase()}</strong></td>
             <td style="text-align:right;">${formatCurrency(a.value, 0)}</td>
             <td style="text-align:right;">${formatPercent(a.percentage, 1)}%</td>
-            <td style="text-align:right;" class="${a.daily_pnl >= 0 ? 'positive' : 'negative'}">
-              ${a.daily_pnl >= 0 ? '+' : ''}${formatCurrency(a.daily_pnl, 0)}
+            <td style="text-align:right;" class="${a.daily_pnl >= 0 ? "positive" : "negative"}">
+              ${a.daily_pnl >= 0 ? "+" : ""}${formatCurrency(a.daily_pnl, 0)}
             </td>
           </tr>
         `,
@@ -353,7 +353,6 @@ class PortfolioEmailService {
               user.email,
               emailContent.subject,
               emailContent.html,
-              emailContent.text,
               {
                 userId: user.id,
                 username: user.username,
