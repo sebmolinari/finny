@@ -53,15 +53,24 @@ export default function AssetAllocation() {
   const [includedAssetTypes, setIncludedAssetTypes] = useState([]);
   const [selectedAssetType, setSelectedAssetType] = useState(null);
 
-  const loadRebalancing = useCallback(async () => {
-    try {
-      const response = await allocationAPI.getRebalancing(includedAssetTypes);
-      setRebalancing(response.data);
-    } catch (error) {
-      console.error("Error loading rebalancing:", error);
-      // Don't show error for rebalancing - it's optional
-    }
-  }, [includedAssetTypes]);
+  // Load rebalancing recommendations. Accept an explicit include list
+  // so callers can pass the computed set without waiting for state updates.
+  const loadRebalancing = useCallback(
+    async (includeList = null) => {
+      try {
+        const toSend =
+          includeList && includeList.length > 0
+            ? includeList
+            : includedAssetTypes;
+        const response = await allocationAPI.getRebalancing(toSend || []);
+        setRebalancing(response.data);
+      } catch (error) {
+        console.error("Error loading rebalancing:", error);
+        // Don't show error for rebalancing - it's optional
+      }
+    },
+    [includedAssetTypes],
+  );
 
   const loadData = useCallback(async () => {
     try {
@@ -166,8 +175,9 @@ export default function AssetAllocation() {
       );
       setTotalAllocated(total);
 
-      // Load rebalancing recommendations
-      await loadRebalancing();
+      // Load rebalancing recommendations using the displayed asset types
+      // (pass explicit list to avoid stale state during the same render)
+      await loadRebalancing(displayedAssetTypes);
     } catch (error) {
       setError(error.response?.data?.message || error.message);
       console.error("Error loading allocation data:", error);
