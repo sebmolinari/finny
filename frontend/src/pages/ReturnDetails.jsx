@@ -16,7 +16,7 @@ import { StatCard } from "../components/StyledCard";
 import { formatDate } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 
-export default function ReturnsDetails() {
+export default function ReturnDetails() {
   const theme = useTheme();
   const [details, setDetails] = useState(null);
   const [userSettings, setUserSettings] = useState(null);

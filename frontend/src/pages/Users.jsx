@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import { userAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 

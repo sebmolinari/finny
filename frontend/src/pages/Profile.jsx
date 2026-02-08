@@ -1,6 +1,6 @@
 import React from "react";
 import { Container, Paper, Typography, Grid, Chip } from "@mui/material";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 
 const Profile = () => {
   const { user } = useAuth();

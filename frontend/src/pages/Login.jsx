@@ -11,7 +11,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,10 +24,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     setError("");
   };
 
@@ -38,34 +35,44 @@ const Login = () => {
 
     try {
       await login(formData.username, formData.password);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
-      // For login, show error in the form instead of toast
       const responseData = err.response?.data;
-      if (responseData?.errors && Array.isArray(responseData.errors)) {
-        setError(
-          responseData.errors.map((e) => `${e.field}: ${e.message}`).join(", "),
-        );
-      } else {
-        setError(responseData?.message || "Login failed. Please try again.");
-      }
+      setError(responseData?.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <Paper elevation={3} sx={{ padding: 4, width: "100%" }}>
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        position: "relative",
+        overflow: "hidden",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          inset: 0,
+          zIndex: -1,
+          background: (theme) =>
+            theme.palette.mode === "light"
+              ? "radial-gradient(ellipse at top, #e3f2fd, #ffffff)"
+              : "radial-gradient(ellipse at top, rgba(30,60,90,.4), #0a0f14)",
+        },
+      }}
+    >
+      <Container maxWidth="xs">
+        <Paper
+          elevation={6}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+          }}
+        >
+          <Typography variant="h5" align="center" gutterBottom>
             Sign In
           </Typography>
 
@@ -75,12 +82,11 @@ const Login = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <Box component="form" onSubmit={handleSubmit}>
             <TextField
               margin="normal"
               required
               fullWidth
-              id="username"
               label="Username"
               name="username"
               autoComplete="username"
@@ -93,10 +99,9 @@ const Login = () => {
               margin="normal"
               required
               fullWidth
-              name="password"
               label="Password"
+              name="password"
               type="password"
-              id="password"
               autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
@@ -106,26 +111,25 @@ const Login = () => {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3 }}
               disabled={loading}
             >
               {loading ? <CircularProgress size={24} /> : "Sign In"}
             </Button>
-            <Box sx={{ textAlign: "center" }}>
+            <Box sx={{ textAlign: "center", mt: 2 }}>
               <Link
                 component="button"
                 variant="body2"
                 onClick={() => navigate("/register")}
-                type="button"
                 disabled={loading}
               >
-                Don't have an account? Sign Up
+                Don&apos;t have an account? Sign Up
               </Link>
             </Box>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

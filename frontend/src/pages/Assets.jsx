@@ -40,7 +40,7 @@ import {
   getTodayInTimezone,
   formatDate,
 } from "../utils/dateUtils";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 
 export default function Assets() {

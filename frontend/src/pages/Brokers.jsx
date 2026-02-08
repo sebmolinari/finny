@@ -25,7 +25,7 @@ import {
 import { brokerAPI, settingsAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 
 export default function Brokers() {
