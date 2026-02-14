@@ -70,25 +70,18 @@ export default function Blotter() {
     notes: "",
   });
 
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(50);
-
-  // Load transactions when page/filters change
+  // Load transactions
   const loadTransactions = useCallback(async () => {
     try {
       setTransactionsLoading(true);
-      const params = { page, limit };
-      const response = await transactionAPI.getAll(params);
+      const response = await transactionAPI.getAll();
       setTransactions(response.data.data);
-      setTotalPages(response.data.pagination.pages || 1);
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
       setTransactionsLoading(false);
     }
-  }, [page, limit]);
+  }, []);
 
   useEffect(() => {
     loadTransactions();
@@ -594,12 +587,6 @@ export default function Blotter() {
           columns={columns}
           loading={transactionsLoading}
           getRowId={(row) => row.id}
-          paginationMode="server"
-          page={page - 1}
-          onPageChange={(newPage) => setPage(newPage + 1)}
-          pageSize={limit}
-          rowsPerPageOptions={[25, 50, 100]}
-          rowCount={totalPages * limit}
           slotProps={{
             toolbar: {
               actions: (

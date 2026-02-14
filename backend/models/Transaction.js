@@ -136,48 +136,7 @@ class Transaction {
     return Transaction._mapRowToApi(row);
   }
 
-  static findByUser(userId, options = {}) {
-    const {
-      page = 1,
-      limit = 50,
-      assetId,
-      startDate,
-      endDate,
-      transactionType,
-    } = options;
-    const offset = (page - 1) * limit;
-
-    let whereConditions = ["it.user_id = ?"];
-    let params = [userId];
-
-    if (assetId) {
-      whereConditions.push("it.asset_id = ?");
-      params.push(assetId);
-    }
-
-    if (startDate) {
-      whereConditions.push("it.date >= ?");
-      params.push(startDate);
-    }
-
-    if (endDate) {
-      whereConditions.push("it.date <= ?");
-      params.push(endDate);
-    }
-
-    if (transactionType) {
-      whereConditions.push("it.transaction_type = ?");
-      params.push(transactionType);
-    }
-
-    const whereClause = whereConditions.join(" AND ");
-
-    // Get total count
-    const countStmt = db.prepare(
-      `SELECT COUNT(*) as total FROM transactions it WHERE ${whereClause}`,
-    );
-    const { total } = countStmt.get(...params);
-
+  static findByUser(userId) {
     // Get paginated data
     const dataStmt = db.prepare(`
       SELECT 
@@ -189,21 +148,14 @@ class Transaction {
       FROM transactions it
       LEFT JOIN assets a ON it.asset_id = a.id
       LEFT JOIN brokers b ON it.broker_id = b.id
-      WHERE ${whereClause}
+      WHERE it.user_id = ?
       ORDER BY it.date DESC, it.id DESC
-      LIMIT ? OFFSET ?
     `);
 
-    const rows = dataStmt.all(...params, limit, offset);
+    const rows = dataStmt.all(userId);
 
     return {
       data: rows.map(Transaction._mapRowToApi),
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
     };
   }
 

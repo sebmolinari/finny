@@ -126,7 +126,7 @@ export const assetAPI = {
 };
 
 export const transactionAPI = {
-  getAll: (params = {}) => api.get("/transactions", { params }),
+  getAll: () => api.get("/transactions"),
 
   getById: (id) => api.get(`/transactions/${id}`),
 
