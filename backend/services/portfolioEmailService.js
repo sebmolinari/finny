@@ -14,7 +14,11 @@ class PortfolioEmailService {
       const userSettings = UserSettings.findByUserId(userId);
       const today = getTodayInTimezone(userSettings.timezone);
       // Get portfolio analytics data
-      const dashboard = AnalyticsService.getPortfolioAnalytics(userId);
+      const dashboard = AnalyticsService.getPortfolioAnalytics(
+        userId,
+        [],
+        true,
+      );
 
       const htmlContent = this._generateHTML(dashboard, username, today);
       return {

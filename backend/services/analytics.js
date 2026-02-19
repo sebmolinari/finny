@@ -85,8 +85,38 @@ class AnalyticsService {
     userId,
     hideZeroQuantity = true,
     excludeAssetTypes = [],
+    groupByAsset = false,
   ) {
-    const holdings = Transaction.getPortfolioHoldings(userId, hideZeroQuantity);
+    let holdings = Transaction.getPortfolioHoldings(userId, hideZeroQuantity);
+
+    // Group by asset if requested (before enrichment)
+    if (groupByAsset) {
+      const groupedMap = {};
+
+      for (const holding of holdings) {
+        if (!groupedMap[holding.asset_id]) {
+          // First occurrence of this asset
+          groupedMap[holding.asset_id] = {
+            asset_id: holding.asset_id,
+            symbol: holding.symbol,
+            name: holding.name,
+            asset_type: holding.asset_type,
+            broker_id: null, // Grouped across brokers
+            broker_name: null, // Grouped across brokers
+            total_quantity: 0,
+            cost_basis: 0,
+            realized_gain: 0,
+          };
+        }
+
+        // Aggregate values
+        groupedMap[holding.asset_id].total_quantity += holding.total_quantity;
+        groupedMap[holding.asset_id].cost_basis += holding.cost_basis;
+        groupedMap[holding.asset_id].realized_gain += holding.realized_gain;
+      }
+
+      holdings = Object.values(groupedMap);
+    }
 
     let enrichedHoldings = holdings.map((holding) => {
       const latestPrice = PriceData.getLatestPrice(holding.asset_id);
@@ -145,7 +175,6 @@ class AnalyticsService {
       };
     });
 
-    // SORT BY MARKET VALUE (DESC)
     // Optionally filter out excluded asset types
     if (excludeAssetTypes && excludeAssetTypes.length > 0) {
       const excluded = excludeAssetTypes.map((t) => String(t).toLowerCase());
@@ -159,12 +188,17 @@ class AnalyticsService {
   }
 
   // Get comprehensive portfolio analytics data
-  static getPortfolioAnalytics(userId, excludeAssetTypes = []) {
+  static getPortfolioAnalytics(
+    userId,
+    excludeAssetTypes = [],
+    groupByAsset = false,
+  ) {
     // Get enriched portfolio with current prices and FIFO calculations in one pass
     const enrichedHoldings = this.getPortfolioHoldings(
       userId,
       true,
       excludeAssetTypes,
+      groupByAsset,
     );
 
     // Transaction analytics
@@ -210,7 +244,8 @@ class AnalyticsService {
       }
       typeMap[type].value += h.market_value;
       typeMap[type].count += 1;
-      typeMap[type].yesterday_value += h.yesterday_market_value || h.market_value;
+      typeMap[type].yesterday_value +=
+        h.yesterday_market_value || h.market_value;
       typeMap[type].daily_pnl += h.daily_pnl || 0;
     }
 

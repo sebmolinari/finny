@@ -118,7 +118,7 @@ router.get(
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Get comprehensive portfolio analytics
@@ -132,6 +132,12 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *     tags: [Analytics]
      *     security:
      *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: groupByAsset
+     *         schema:
+     *           type: boolean
+     *         description: Group holdings by asset across brokers (default false)
      *     responses:
      *       200:
      *         description: Portfolio analytics data
@@ -215,7 +221,14 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *       500:
      *         description: Server error
      */
-    const dashboard = AnalyticsService.getPortfolioAnalytics(req.user.id);
+    const { groupByAsset } = req.query;
+    const groupByAssetBool = groupByAsset === "true" || groupByAsset === true;
+
+    const dashboard = AnalyticsService.getPortfolioAnalytics(
+      req.user.id,
+      [],
+      groupByAssetBool,
+    );
 
     res.json(dashboard);
   } catch (error) {
@@ -356,13 +369,13 @@ router.get(
       const { days } = req.query;
       const performance = AnalyticsService.getPortfolioPerformance(
         req.user.id,
-        parseInt(days) || 30
+        parseInt(days) || 30,
       );
       res.json(performance);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Get detailed return calculations (MWRR & CAGR)
@@ -595,13 +608,13 @@ router.get(
         req.user.id,
         yearNum,
         excludeAssetTypes,
-        excludeBrokers
+        excludeBrokers,
       );
       res.json(report);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 module.exports = router;
