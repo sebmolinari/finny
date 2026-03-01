@@ -1,9 +1,21 @@
+# Logs
+logs
+*.log
+
+# Dependency directories
 node_modules/
+
+# Build output
+build/
+dist/
+
+# Database files
 *.db
 *.db-shm
 *.db-wal
-*.csv
+
+# Environment variables
 .env
-.DS_Store
-build/
-dist/
+
+# CSV files
+*.csv

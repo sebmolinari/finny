@@ -1,0 +1,130 @@
+import { createBrowserRouter } from "react-router-dom";
+import ProtectedRoute from "../auth/ProtectedRoute";
+import Layout from "../layouts/Layout";
+import RouteErrorBoundary from "../components/RouteErrorBoundary";
+
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+import Dashboard from "../pages/Dashboard";
+import Holdings from "../pages/Holdings";
+import Users from "../pages/Users";
+import Profile from "../pages/Profile";
+import Blotter from "../pages/Blotter";
+import Assets from "../pages/Assets";
+import ReturnDetails from "../pages/ReturnDetails";
+import CashDetails from "../pages/CashDetails";
+import Brokers from "../pages/Brokers";
+import Settings from "../pages/Settings";
+import AuditLogs from "../pages/AuditLogs";
+import Metrics from "../pages/Metrics";
+import MarketTrends from "../pages/MarketTrends";
+import TaxReport from "../pages/TaxReport";
+import ChangePassword from "../pages/ChangePassword";
+import AssetAllocation from "../pages/AssetAllocation";
+import Changelog from "../pages/Changelog";
+
+export const router = createBrowserRouter([
+  {
+    path: "/",
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        path: "login",
+        element: <Login />,
+      },
+      {
+        path: "register",
+        element: <Register />,
+      },
+      {
+        element: (
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: <Dashboard />,
+          },
+          {
+            path: "holdings",
+            element: <Holdings />,
+          },
+          {
+            path: "market-trends",
+            element: <MarketTrends />,
+          },
+          {
+            path: "blotter",
+            element: <Blotter />,
+          },
+          {
+            path: "return-details",
+            element: <ReturnDetails />,
+          },
+          {
+            path: "cash-details",
+            element: <CashDetails />,
+          },
+          {
+            path: "tax-report",
+            element: <TaxReport />,
+          },
+          {
+            path: "asset-allocation",
+            element: <AssetAllocation />,
+          },
+          {
+            path: "assets",
+            element: <Assets />,
+          },
+          {
+            path: "brokers",
+            element: <Brokers />,
+          },
+          {
+            path: "settings",
+            element: <Settings />,
+          },
+          {
+            path: "profile",
+            element: <Profile />,
+          },
+          {
+            path: "change-password",
+            element: <ChangePassword />,
+          },
+          {
+            path: "changelog",
+            element: <Changelog />,
+          },
+          {
+            path: "users",
+            element: (
+              <ProtectedRoute role="admin">
+                <Users />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "audit",
+            element: (
+              <ProtectedRoute role="admin">
+                <AuditLogs />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "host-metrics",
+            element: (
+              <ProtectedRoute role="admin">
+                <Metrics />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+]);

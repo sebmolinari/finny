@@ -188,31 +188,28 @@ class AnalyticsService {
   }
 
   // Get comprehensive portfolio analytics data
-  static getPortfolioAnalytics(
-    userId,
-    excludeAssetTypes = [],
-    groupByAsset = false,
-  ) {
-    // Get enriched portfolio with current prices and FIFO calculations in one pass
-    const enrichedHoldings = this.getPortfolioHoldings(
-      userId,
-      true,
-      excludeAssetTypes,
-      groupByAsset,
-    );
+  static getPortfolioAnalytics(userId, excludeAssetTypes = []) {
+    // All holdings (unfiltered) — used for NAV, MWRR, CAGR, total portfolio value
+    const allHoldings = this.getPortfolioHoldings(userId, true, []);
+
+    // Filtered holdings — used for holdings_market_value, unrealized gain, and asset allocation
+    const filteredHoldings =
+      excludeAssetTypes.length > 0
+        ? this.getPortfolioHoldings(userId, true, excludeAssetTypes)
+        : allHoldings;
 
     // Transaction analytics
     const netInvested = Transaction.getNetInvested(userId);
     const netContributions = Transaction.getNetContributions(userId);
-    const holdingsMarketValue = enrichedHoldings.reduce(
+    const holdingsMarketValue = filteredHoldings.reduce(
       (sum, h) => sum + h.market_value,
       0,
     );
-    const totalCostBasisHoldings = enrichedHoldings.reduce(
+    const totalCostBasisHoldings = filteredHoldings.reduce(
       (sum, h) => sum + h.cost_basis,
       0,
     );
-    const totalUnrealizedGain = enrichedHoldings.reduce(
+    const totalUnrealizedGain = filteredHoldings.reduce(
       (sum, h) => sum + h.unrealized_gain,
       0,
     );
@@ -223,15 +220,20 @@ class AnalyticsService {
     // Get liquidity asset balance
     const liquidityBalance = Transaction.getLiquidityBalance(userId);
 
-    const totalPortfolioValue = holdingsMarketValue + cashBalance;
+    // NAV and MWRR/CAGR use ALL holdings (including excluded types)
+    const allHoldingsMarketValue = allHoldings.reduce(
+      (sum, h) => sum + h.market_value,
+      0,
+    );
+    const totalPortfolioValue = allHoldingsMarketValue + cashBalance;
 
     // Calculate MWRR and CAGR
     const mwrr = Transaction.calculateMWRR(userId, totalPortfolioValue);
     const cagr = Transaction.calculateCAGR(userId, totalPortfolioValue);
 
-    // Asset allocation - aggregate per-type values and daily P&L from enriched holdings
+    // Asset allocation - aggregate per-type values and daily P&L from filtered holdings
     const typeMap = {};
-    for (const h of enrichedHoldings) {
+    for (const h of filteredHoldings) {
       const type = h.asset_type;
       if (!typeMap[type]) {
         typeMap[type] = {
@@ -262,8 +264,8 @@ class AnalyticsService {
       daily_pnl: a.daily_pnl,
     }));
 
-    // Calculate total daily P&L by summing per-holding daily_pnl
-    const dailyPnL = enrichedHoldings.reduce(
+    // Daily P&L from filtered holdings only
+    const dailyPnL = filteredHoldings.reduce(
       (sum, h) => sum + (h.daily_pnl || 0),
       0,
     );
@@ -287,16 +289,28 @@ class AnalyticsService {
             : 0,
         mwrr: mwrr,
         cagr: cagr,
-        holdings: enrichedHoldings,
+        holdings: filteredHoldings,
         asset_allocation: assetAllocation,
       },
     };
   }
 
-  static getPortfolioPerformance(userId, days = 30) {
+  static getPortfolioPerformance(userId, days = 30, excludeAssetTypes = []) {
     const db = require("../config/database");
     const userSettings = UserSettings.findByUserId(userId);
     const today = getTodayInTimezone(userSettings.timezone);
+
+    // Build set of excluded asset IDs
+    let excludedAssetIds = new Set();
+    if (excludeAssetTypes.length > 0) {
+      const placeholders = excludeAssetTypes.map(() => "?").join(",");
+      const excludedAssets = db
+        .prepare(
+          `SELECT id FROM assets WHERE LOWER(asset_type) IN (${placeholders})`,
+        )
+        .all(...excludeAssetTypes.map((t) => t.toLowerCase()));
+      excludedAssetIds = new Set(excludedAssets.map((a) => String(a.id)));
+    }
 
     // --- Build date range (ASC)
     const dates = [];
@@ -395,6 +409,7 @@ class AnalyticsService {
       let holdingsValue = 0;
       for (const [assetId, qtyValue] of Object.entries(holdings)) {
         if (qtyValue <= 0) continue;
+        if (excludedAssetIds.has(assetId)) continue;
         const priceValue = lastPrice[assetId];
         if (!priceValue) continue;
 

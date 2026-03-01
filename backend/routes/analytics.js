@@ -134,10 +134,14 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *       - bearerAuth: []
      *     parameters:
      *       - in: query
-     *         name: groupByAsset
+     *         name: exclude
      *         schema:
-     *           type: boolean
-     *         description: Group holdings by asset across brokers (default false)
+     *           type: string
+     *         description: >
+     *           Comma-separated list of asset types to exclude from holdings calculations
+     *           (e.g. `realestate`, `crypto`). Excluded types are omitted from
+     *           holdings_market_value, unrealized_gain, cost_basis, and asset_allocation.
+     *           Valid values: crypto, currency, equity, fixedincome, realestate.
      *     responses:
      *       200:
      *         description: Portfolio analytics data
@@ -158,7 +162,7 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *                       type: number
      *                     holdings_market_value:
      *                       type: number
-     *                       description: Market value of all holdings excluding cash
+     *                       description: Market value of all holdings excluding cash (and any excluded asset types)
      *                     daily_pnl:
      *                       type: number
      *                       description: Daily profit or loss based on price changes from previous day
@@ -221,13 +225,16 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *       500:
      *         description: Server error
      */
-    const { groupByAsset } = req.query;
-    const groupByAssetBool = groupByAsset === "true" || groupByAsset === true;
-
+    const { exclude } = req.query;
+    const excludeTypes = exclude
+      ? exclude
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
     const dashboard = AnalyticsService.getPortfolioAnalytics(
       req.user.id,
-      [],
-      groupByAssetBool,
+      excludeTypes,
     );
 
     res.json(dashboard);
@@ -366,10 +373,17 @@ router.get(
        *       500:
        *         description: Server error
        */
-      const { days } = req.query;
+      const { days, exclude } = req.query;
+      const excludeTypes = exclude
+        ? exclude
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
       const performance = AnalyticsService.getPortfolioPerformance(
         req.user.id,
         parseInt(days) || 30,
+        excludeTypes,
       );
       res.json(performance);
     } catch (error) {
