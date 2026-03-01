@@ -14,7 +14,7 @@ const VALID_VALUES = {
     "rental",
   ],
 
-  USER_ROLES: ["user", "superuser", "admin"],
+  USER_ROLES: ["user", "admin"],
 
   THEMES: ["light", "dark"],
 

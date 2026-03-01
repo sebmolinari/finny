@@ -25,7 +25,7 @@ export default function Layout() {
         }}
       >
         <Header />
-        <Box sx={{ flexGrow: 1, px: { md: 3 }, py: 2 }}>
+        <Box sx={{ flexGrow: 1, px: { md: 0.75 }, pt: 0.5, pb: 2 }}>
           <Outlet />
         </Box>
         <Copyright sx={{ mt: 2, mb: 2 }} />

@@ -48,7 +48,7 @@ import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 export default function Assets() {
   const theme = useTheme();
   const { user } = useAuth();
-  const isAdminOrSuperuser = user && ["admin", "superuser"].includes(user.role);
+  const isAdmin = user?.role === "admin";
   const [assets, setAssets] = useState([]);
   const [userTimezone, setUserTimezone] = useState();
   const [userDateFormat, setUserDateFormat] = useState();
@@ -84,6 +84,11 @@ export default function Assets() {
           }
         }),
       );
+      assetsWithPrices.sort((a, b) => {
+        const typeCompare = (a.asset_type || "").localeCompare(b.asset_type || "");
+        if (typeCompare !== 0) return typeCompare;
+        return (a.symbol || "").localeCompare(b.symbol || "");
+      });
       setAssets(assetsWithPrices);
     } catch (error) {
       console.error("Error loading assets:", error);
@@ -488,7 +493,7 @@ export default function Assets() {
       sortable: false,
       renderCell: (params) => {
         const asset = params.row;
-        return isAdminOrSuperuser ? (
+        return isAdmin ? (
           <Switch
             checked={!!asset.active}
             onChange={() => handleToggleActive(asset)}
@@ -529,7 +534,7 @@ export default function Assets() {
             >
               <RefreshIcon fontSize="small" />
             </IconButton>
-            {isAdminOrSuperuser && (
+            {isAdmin && (
               <>
                 <IconButton
                   size="small"
@@ -603,7 +608,7 @@ export default function Assets() {
       sortable: false,
       filterable: false,
       renderCell: (params) =>
-        isAdminOrSuperuser ? (
+        isAdmin ? (
           <Box sx={{ display: "flex", gap: 0.5 }}>
             <IconButton
               size="small"
@@ -637,7 +642,7 @@ export default function Assets() {
   }
 
   return (
-    <PageContainer title="Assets" subtitle="Manage tracked assets">
+    <PageContainer>
       <StyledDataGrid
         rows={assets}
         columns={columns}
@@ -662,14 +667,16 @@ export default function Assets() {
           toolbar: {
             actions: (
               <>
-                <Tooltip title="Add asset">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleOpenDialog()}
-                  >
-                    <AddIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
+                {isAdmin && (
+                  <Tooltip title="Add asset">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenDialog()}
+                    >
+                      <AddIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                )}
                 <Tooltip title="Refresh all prices">
                   <ToolbarButton
                     color="primary"
@@ -809,7 +816,7 @@ export default function Assets() {
               slotProps={{ step: "0.01", min: "0" }}
               helperText="Factor to divide the fetched price by"
             />
-            {isAdminOrSuperuser && (
+            {isAdmin && (
               <FormControlLabel
                 control={
                   <Switch
@@ -833,7 +840,9 @@ export default function Assets() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button color="inherit" onClick={handleCloseDialog}>
+            Cancel
+          </Button>
           <Button type="submit" variant="contained" form="asset-form">
             {editingAsset ? "Update" : "Create"}
           </Button>
@@ -860,7 +869,7 @@ export default function Assets() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            {isAdminOrSuperuser && (
+            {isAdmin && (
               <>
                 <Typography variant="h6" gutterBottom>
                   {editingPrice ? "Edit Price" : "Add New Price"}
@@ -937,7 +946,9 @@ export default function Assets() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClosePriceDialog}>Close</Button>
+          <Button color="inherit" onClick={handleClosePriceDialog}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </PageContainer>

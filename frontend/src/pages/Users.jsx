@@ -139,7 +139,6 @@ const Users = () => {
           >
             <MenuItem value="user">User</MenuItem>
             <MenuItem value="admin">Admin</MenuItem>
-            <MenuItem value="superuser">Superuser</MenuItem>
           </Select>
         </FormControl>
       ),
@@ -190,7 +189,7 @@ const Users = () => {
   ];
 
   return (
-    <PageContainer title="Users" subtitle="User management">
+    <PageContainer>
       <Box>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -233,7 +232,9 @@ const Users = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteCancel}>Cancel</Button>
+          <Button color="inherit" onClick={handleDeleteCancel}>
+            Cancel
+          </Button>
           <Button
             onClick={handleDeleteConfirm}
             color="error"

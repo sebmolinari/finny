@@ -176,7 +176,7 @@ export default function Holdings() {
   ];
 
   return (
-    <PageContainer title="Holdings" subtitle="Current portfolio positions">
+    <PageContainer>
       {/* Cash & Liquidity Metrics */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid

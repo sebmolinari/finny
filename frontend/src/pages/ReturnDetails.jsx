@@ -158,10 +158,7 @@ export default function ReturnDetails() {
   } = details;
 
   return (
-    <PageContainer
-      title="Return Details"
-      subtitle="Portfolio performance analysis"
-    >
+    <PageContainer>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid
           size={{

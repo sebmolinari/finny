@@ -612,10 +612,7 @@ export default function AssetAllocation() {
   ];
 
   return (
-    <PageContainer
-      title="Asset Allocation"
-      subtitle="Target weights & rebalancing"
-    >
+    <PageContainer>
       {/* selection moved into Asset Type tab */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>

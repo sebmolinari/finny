@@ -351,7 +351,7 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: (theme) => `
         *, *::before, *::after { box-sizing: border-box; }
-        html { font-family: ${FONT_FAMILY}; -webkit-font-smoothing: antialiased; }
+        html { font-family: ${FONT_FAMILY}; -webkit-font-smoothing: antialiased; scrollbar-gutter: stable; }
         body { background-color: ${theme.palette.mode === "light" ? "#f8fafc" : "#0b1120"}; }
 
         @keyframes fadeInUp {

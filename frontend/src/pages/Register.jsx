@@ -57,7 +57,7 @@ const Register = () => {
 
     try {
       await register(formData.username, formData.email, formData.password);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
       const responseData = err.response?.data;
       if (responseData?.errors && Array.isArray(responseData.errors)) {
@@ -153,7 +153,14 @@ const Register = () => {
         }}
       >
         {/* Logo */}
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Box
             sx={{
               width: 48,
@@ -203,7 +210,9 @@ const Register = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <PersonOutlineIcon sx={{ fontSize: 20, color: "text.disabled" }} />
+                  <PersonOutlineIcon
+                    sx={{ fontSize: 20, color: "text.disabled" }}
+                  />
                 </InputAdornment>
               ),
             }}
@@ -222,7 +231,9 @@ const Register = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <EmailOutlinedIcon sx={{ fontSize: 20, color: "text.disabled" }} />
+                  <EmailOutlinedIcon
+                    sx={{ fontSize: 20, color: "text.disabled" }}
+                  />
                 </InputAdornment>
               ),
             }}
@@ -241,7 +252,9 @@ const Register = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockOutlinedIcon sx={{ fontSize: 20, color: "text.disabled" }} />
+                  <LockOutlinedIcon
+                    sx={{ fontSize: 20, color: "text.disabled" }}
+                  />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -276,7 +289,9 @@ const Register = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockOutlinedIcon sx={{ fontSize: 20, color: "text.disabled" }} />
+                  <LockOutlinedIcon
+                    sx={{ fontSize: 20, color: "text.disabled" }}
+                  />
                 </InputAdornment>
               ),
               endAdornment: (

@@ -159,7 +159,7 @@ const AuditLogs = () => {
   ];
 
   return (
-    <PageContainer title="Audit Logs" subtitle="System activity trail">
+    <PageContainer>
       <StyledDataGrid
         rows={logs}
         columns={columns}
@@ -242,7 +242,9 @@ const AuditLogs = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDetails}>Close</Button>
+          <Button color="inherit" onClick={closeDetails}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </PageContainer>

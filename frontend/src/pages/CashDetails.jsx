@@ -191,10 +191,7 @@ export default function CashDetails() {
   };
 
   return (
-    <PageContainer
-      title="Cash Details"
-      subtitle="Cash flow & liquidity breakdown"
-    >
+    <PageContainer>
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid

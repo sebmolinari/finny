@@ -5,7 +5,7 @@ const PriceData = require("../models/PriceData");
 const AuditLog = require("../models/AuditLog");
 const PriceService = require("../services/priceService");
 const authMiddleware = require("../middleware/auth");
-const { adminOrSuperuser } = require("../middleware/admin");
+const adminMiddleware = require("../middleware/admin");
 const { validate } = require("../utils/validationMiddleware");
 const {
   assetValidation,
@@ -131,7 +131,7 @@ router.get("/symbol/:symbol", authMiddleware, (req, res) => {
  * @swagger
  * /assets:
  *   post:
- *     summary: Create a new asset (Admin/Superuser only)
+ *     summary: Create a new asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -170,7 +170,7 @@ router.get("/symbol/:symbol", authMiddleware, (req, res) => {
 router.post(
   "/",
   authMiddleware,
-  adminOrSuperuser,
+  adminMiddleware,
   validate(assetValidation),
   (req, res) => {
     try {
@@ -227,7 +227,7 @@ router.post(
  * @swagger
  * /assets/{id}:
  *   put:
- *     summary: Update an asset (Admin/Superuser only)
+ *     summary: Update an asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -272,7 +272,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  adminOrSuperuser,
+  adminMiddleware,
   validate(assetValidation),
   (req, res) => {
     try {
@@ -354,7 +354,7 @@ router.put(
  * @swagger
  * /assets/{id}:
  *   delete:
- *     summary: Delete an asset (Admin/Superuser only)
+ *     summary: Delete an asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -373,7 +373,7 @@ router.put(
  *       500:
  *         description: Server error
  */
-router.delete("/:id", authMiddleware, adminOrSuperuser, (req, res) => {
+router.delete("/:id", authMiddleware, adminMiddleware, (req, res) => {
   try {
     // Get asset before deletion for audit log
     const asset = Asset.findById(req.params.id);
@@ -498,7 +498,7 @@ router.get("/:id/price/latest", authMiddleware, (req, res) => {
  * @swagger
  * /assets/{id}/prices:
  *   post:
- *     summary: Add price data for an asset (Admin/Superuser only)
+ *     summary: Add price data for an asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -536,7 +536,7 @@ router.get("/:id/price/latest", authMiddleware, (req, res) => {
 router.post(
   "/:id/prices",
   authMiddleware,
-  adminOrSuperuser,
+  adminMiddleware,
   validate(assetPriceValidation),
   (req, res) => {
     try {
@@ -582,7 +582,7 @@ router.post(
  * @swagger
  * /assets/{id}/prices/{priceId}:
  *   put:
- *     summary: Update price data for an asset (Admin/Superuser only)
+ *     summary: Update price data for an asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -623,7 +623,7 @@ router.post(
 router.put(
   "/:id/prices/:priceId",
   authMiddleware,
-  adminOrSuperuser,
+  adminMiddleware,
   validate(assetPriceValidation),
   (req, res) => {
     try {
@@ -672,7 +672,7 @@ router.put(
  * @swagger
  * /assets/{id}/prices/bulk:
  *   post:
- *     summary: Bulk import price data for an asset (Admin/Superuser only)
+ *     summary: Bulk import price data for an asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -705,7 +705,7 @@ router.put(
 router.post(
   "/:id/prices/bulk",
   authMiddleware,
-  adminOrSuperuser,
+  adminMiddleware,
   validate(bulkImportPricesValidation),
   (req, res) => {
     try {
@@ -743,7 +743,7 @@ router.post(
  * @swagger
  * /assets/{id}/prices/{priceId}:
  *   delete:
- *     summary: Delete a price entry for an asset (Admin/Superuser only)
+ *     summary: Delete a price entry for an asset (Admin only)
  *     tags: [Assets]
  *     security:
  *       - bearerAuth: []
@@ -771,7 +771,7 @@ router.post(
 router.delete(
   "/:id/prices/:priceId",
   authMiddleware,
-  adminOrSuperuser,
+  adminMiddleware,
   (req, res) => {
     try {
       // Get price data before deletion for audit log
@@ -811,7 +811,7 @@ router.delete(
  * @swagger
  * /assets/prices/refresh-all:
  *   post:
- *     summary: Refresh prices for all assets (Admin/Superuser only)
+ *     summary: Refresh prices for all assets (Admin only)
  *     tags: [Assets]
  *     security: []
  *     responses:

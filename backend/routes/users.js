@@ -190,7 +190,7 @@ router.patch("/:id/role", validate(updateUserRoleValidation), (req, res) => {
      *             properties:
      *               role:
      *                 type: string
-     *                 enum: [user, admin, superuser]
+     *                 enum: [user, admin]
      *     responses:
      *       200:
      *         description: User role updated

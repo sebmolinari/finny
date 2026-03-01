@@ -239,7 +239,7 @@ export default function Brokers() {
   }
 
   return (
-    <PageContainer title="Brokers" subtitle="Manage brokerage accounts">
+    <PageContainer>
       <StyledDataGrid
         rows={brokers}
         columns={columns}
@@ -357,7 +357,9 @@ export default function Brokers() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button color="inherit" onClick={handleCloseDialog}>
+            Cancel
+          </Button>
           <Button type="submit" variant="contained" form="broker-form">
             {editingBroker ? "Update" : "Create"}
           </Button>

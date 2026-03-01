@@ -20,7 +20,7 @@ export default function PageContainer({
   children,
 }) {
   return (
-    <Container maxWidth={maxWidth} sx={{ py: 2.5, pb: 4 }}>
+    <Container maxWidth={maxWidth} sx={{ pt: 0.5, pb: 4 }}>
       {(title || actions) && (
         <Stack
           direction={{ xs: "column", sm: "row" }}

@@ -77,7 +77,7 @@ export default function UserMenu() {
             variant="caption"
             sx={{ color: "text.disabled", lineHeight: 1 }}
           >
-            Portfolio Manager
+            Know your worth
           </Typography>
         </Box>
       </Box>

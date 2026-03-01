@@ -580,7 +580,7 @@ export default function Blotter() {
   }
 
   return (
-    <PageContainer title="Blotter" subtitle="Transaction history">
+    <PageContainer>
       {/* Transactions Grid */}
       <StyledDataGrid
         rows={transactions}
@@ -785,7 +785,9 @@ export default function Blotter() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button color="inherit" onClick={handleCloseDialog}>
+            Cancel
+          </Button>
           <Button type="submit" variant="contained" form="transaction-form">
             {editingTransaction ? "Update" : "Create"}
           </Button>
@@ -888,7 +890,11 @@ export default function Blotter() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseImportDialog} disabled={importing}>
+          <Button
+            color="inherit"
+            onClick={handleCloseImportDialog}
+            disabled={importing}
+          >
             Close
           </Button>
           <Button

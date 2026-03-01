@@ -194,33 +194,31 @@ export default function TaxReport() {
   }
 
   return (
-    <PageContainer
-      title="Tax Report"
-      subtitle="Capital gains & year-end holdings"
-    >
-      <Paper sx={{ p: 3, ...fadeInUpSx(1) }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+    <PageContainer>
+      <Paper sx={{ p: 2, ...fadeInUpSx(1) }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Generate a tax report showing your holdings at year-end with values
           converted to local currency using the configured FX rate
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", gap: 1.5, mb: 1.5, flexWrap: "wrap", alignItems: "center" }}>
           <TextField
             type="number"
             label="Year"
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value, 10))}
             slotProps={{ min: 2000, max: 2100 }}
-            sx={{ width: 150 }}
+            size="small"
+            sx={{ width: 120 }}
           />
 
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Exclude Asset Types</InputLabel>
             <Select
               multiple
               value={excludeAssetTypes}
               onChange={(e) => setExcludeAssetTypes(e.target.value)}
-              input={<OutlinedInput label="Exclude Asset Types" />}
+              input={<OutlinedInput size="small" label="Exclude Asset Types" />}
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {selected.map((value) => (
@@ -238,13 +236,13 @@ export default function TaxReport() {
             </Select>
           </FormControl>
 
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Exclude Brokers</InputLabel>
             <Select
               multiple
               value={excludeBrokers}
               onChange={(e) => setExcludeBrokers(e.target.value)}
-              input={<OutlinedInput label="Exclude Brokers" />}
+              input={<OutlinedInput size="small" label="Exclude Brokers" />}
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {selected.map((value) => (
@@ -263,9 +261,10 @@ export default function TaxReport() {
           </FormControl>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
+        <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
           <Button
             variant="contained"
+            size="small"
             startIcon={<PreviewIcon />}
             onClick={handlePreview}
             disabled={!year}

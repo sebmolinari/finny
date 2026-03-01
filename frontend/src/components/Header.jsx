@@ -1,4 +1,5 @@
 import Stack from "@mui/material/Stack";
+import Divider from "@mui/material/Divider";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import ColorModeIconDropdown from "./ColorModeIconDropdown";
 import NavbarBreadcrumbs from "./NavbarBreadcrumbs";
@@ -15,22 +16,20 @@ export default function Header() {
         alignItems: "center",
         justifyContent: "space-between",
         maxWidth: { sm: "100%", md: "1700px" },
-        px: 3,
-        py: 1.25,
+        px: 2,
+        py: 1,
         borderBottom: "1px solid",
         borderColor: "divider",
         bgcolor: "background.paper",
-        backdropFilter: "blur(8px)",
         position: "sticky",
         top: 0,
         zIndex: 100,
       }}
-      spacing={2}
     >
       <NavbarBreadcrumbs />
-      <Stack direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
+      <Stack direction="row" sx={{ gap: 0.5, alignItems: "center" }}>
         <Today />
-        {/* TODO: showBadge when there are notifications */}
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 0.5 }} />
         <MenuButton aria-label="Open notifications">
           <NotificationsRoundedIcon fontSize="small" />
         </MenuButton>

@@ -28,6 +28,7 @@ import SpeedRoundedIcon from "@mui/icons-material/SpeedRounded";
 import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
 
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 const portfolioItems = [
   {
@@ -146,6 +147,8 @@ function NavSection({ label, items, pathname }) {
 
 export default function MenuContent() {
   const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   return (
     <Stack
       sx={{
@@ -169,11 +172,13 @@ export default function MenuContent() {
           pathname={location.pathname}
         />
         <Divider sx={{ my: 1 }} />
-        <NavSection
-          label="Admin"
-          items={adminItems}
-          pathname={location.pathname}
-        />
+        {isAdmin && (
+          <NavSection
+            label="Admin"
+            items={adminItems}
+            pathname={location.pathname}
+          />
+        )}
       </div>
     </Stack>
   );
