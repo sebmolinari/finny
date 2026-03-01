@@ -8,44 +8,11 @@ All notable changes to this project are documented below.
 
 - New Look & Feel
 
-- Upgrade backend components:
-  - bcryptjs: "2.4.3" -> "3.0.3"
-  - better-sqlite3-multiple-ciphers: "12.5.0" -> 12.6.2
-  - dotenv: "16.6.1" -> "17.2.3"
-  - express: "4.18.2" -> "5.2.1"
-  - jsonwebtoken: "9.0.2" -> "9.0.3"
-  - nodemailer: "6.9.7" -> "7.0.12"
-
-- Frontend library versions:
-  - React: "^18.2.0" -> "^19.2.3"
-  - React DOM: "^18.2.0" -> "^19.2.3"
-  - @mui/material: "^5.15.0" -> "^7.3.7"
-  - @mui/icons-material: "^5.15.0" -> "^7.3.7"
-  - @mui/x-data-grid: "^6.0.0" -> "^8.25.0"
-  - react-router-dom: "^6.20.1" -> "^7.12.0"
-
 ## [0.1.0] – 2026-01-23
 
 ### Added
 
 - Migrate table-based UIs to MUI DataGrid
-
-### Changed
-
-- Upgrade backend components:
-  - bcryptjs: "2.4.3" -> "3.0.3"
-  - better-sqlite3-multiple-ciphers: "12.5.0" -> 12.6.2
-  - dotenv: "16.6.1" -> "17.2.3"
-  - express: "4.18.2" -> "5.2.1"
-  - jsonwebtoken: "9.0.2" -> "9.0.3"
-  - nodemailer: "6.9.7" -> "7.0.12"
-- Frontend library versions:
-  - React: "^18.2.0" -> "^19.2.3"
-  - React DOM: "^18.2.0" -> "^19.2.3"
-  - @mui/material: "^5.15.0" -> "^7.3.7"
-  - @mui/icons-material: "^5.15.0" -> "^7.3.7"
-  - @mui/x-data-grid: "^6.0.0" -> "^8.25.0"
-  - react-router-dom: "^6.20.1" -> "^7.12.0"
 
 ## [0.0.4] – 2026-01-17
 
