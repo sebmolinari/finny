@@ -1,4 +1,6 @@
+//stop backed to commit transactions
 //scp username@ip_address:/path/to/remote/file /path/to/local/destination
+//start backedn
 
 require("dotenv").config();
 const Database = require("better-sqlite3-multiple-ciphers");

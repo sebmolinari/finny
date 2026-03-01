@@ -196,7 +196,8 @@ export default function Holdings() {
                   analytics?.transactions?.cash_balance || 0,
                   0,
                 )}
-                valueColor="primary"
+                valueColor={theme.palette.primary.main}
+                valueFontWeight={400}
                 icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
@@ -220,7 +221,8 @@ export default function Holdings() {
                   analytics?.transactions?.liquidity_balance || 0,
                   0,
                 )}
-                valueColor="primary"
+                valueColor={theme.palette.primary.main}
+                valueFontWeight={400}
                 icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>
@@ -243,7 +245,8 @@ export default function Holdings() {
                 value={formatPercent(
                   analytics?.transactions?.liquidity_percent || 0,
                 )}
-                valueColor="primary"
+                valueColor={theme.palette.primary.main}
+                valueFontWeight={400}
                 icon={<AttachMoneyIcon color="warning" />}
               />
             </Box>

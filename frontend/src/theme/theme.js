@@ -237,17 +237,17 @@ export const theme = createTheme({
     MuiTooltip: {
       defaultProps: { arrow: true },
       styleOverrides: {
-        tooltip: ({ theme }) => ({
-          backgroundColor:
-            theme.palette.mode === "light" ? "#1e293b" : "#334155",
+        tooltip: {
+          backgroundColor: "grey",
+          color: "#ffffff",
           borderRadius: 6,
           fontSize: "0.75rem",
           maxWidth: 320,
           lineHeight: 1.5,
-        }),
-        arrow: ({ theme }) => ({
-          color: theme.palette.mode === "light" ? "#1e293b" : "#334155",
-        }),
+        },
+        arrow: {
+          color: "grey",
+        },
       },
     },
 
@@ -402,6 +402,7 @@ export const theme = createTheme({
         ::-webkit-scrollbar-thumb:hover {
           background: ${theme.palette.mode === "light" ? "rgba(0,0,0,0.30)" : "rgba(255,255,255,0.30)"};
         }
+
       `,
     },
   },

@@ -118,7 +118,7 @@ router.get(
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Get comprehensive portfolio analytics
@@ -132,6 +132,16 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *     tags: [Analytics]
      *     security:
      *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: exclude
+     *         schema:
+     *           type: string
+     *         description: >
+     *           Comma-separated list of asset types to exclude from holdings calculations
+     *           (e.g. `realestate`, `crypto`). Excluded types are omitted from
+     *           holdings_market_value, unrealized_gain, cost_basis, and asset_allocation.
+     *           Valid values: crypto, currency, equity, fixedincome, realestate.
      *     responses:
      *       200:
      *         description: Portfolio analytics data
@@ -152,7 +162,7 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *                       type: number
      *                     holdings_market_value:
      *                       type: number
-     *                       description: Market value of all holdings excluding cash
+     *                       description: Market value of all holdings excluding cash (and any excluded asset types)
      *                     daily_pnl:
      *                       type: number
      *                       description: Daily profit or loss based on price changes from previous day
@@ -215,7 +225,17 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
      *       500:
      *         description: Server error
      */
-    const dashboard = AnalyticsService.getPortfolioAnalytics(req.user.id);
+    const { exclude } = req.query;
+    const excludeTypes = exclude
+      ? exclude
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+    const dashboard = AnalyticsService.getPortfolioAnalytics(
+      req.user.id,
+      excludeTypes,
+    );
 
     res.json(dashboard);
   } catch (error) {
@@ -353,16 +373,23 @@ router.get(
        *       500:
        *         description: Server error
        */
-      const { days } = req.query;
+      const { days, exclude } = req.query;
+      const excludeTypes = exclude
+        ? exclude
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
       const performance = AnalyticsService.getPortfolioPerformance(
         req.user.id,
-        parseInt(days) || 30
+        parseInt(days) || 30,
+        excludeTypes,
       );
       res.json(performance);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Get detailed return calculations (MWRR & CAGR)
@@ -595,13 +622,13 @@ router.get(
         req.user.id,
         yearNum,
         excludeAssetTypes,
-        excludeBrokers
+        excludeBrokers,
       );
       res.json(report);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 module.exports = router;

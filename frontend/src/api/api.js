@@ -141,10 +141,18 @@ export const transactionAPI = {
 };
 
 export const analyticsAPI = {
-  getPortfolioAnalytics: () => api.get("/analytics/portfolio/analytics"),
+  getPortfolioAnalytics: (excludeTypes = []) =>
+    api.get("/analytics/portfolio/analytics", {
+      params: excludeTypes.length ? { exclude: excludeTypes.join(",") } : {},
+    }),
 
-  getPortfolioPerformance: (days = 30) =>
-    api.get("/analytics/portfolio/performance", { params: { days } }),
+  getPortfolioPerformance: (days = 30, excludeTypes = []) =>
+    api.get("/analytics/portfolio/performance", {
+      params: {
+        days,
+        ...(excludeTypes.length ? { exclude: excludeTypes.join(",") } : {}),
+      },
+    }),
 
   getReturnDetails: () => api.get("/analytics/portfolio/returns/details"),
 

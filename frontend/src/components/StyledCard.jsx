@@ -17,6 +17,7 @@ export const MetricCard = ({
   icon,
   valueColor,
   subtitle,
+  valueFontWeight = 700,
   sx = {},
   ...props
 }) => {
@@ -27,10 +28,14 @@ export const MetricCard = ({
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
             mb: 1.5,
           }}
         >
+          {icon && (
+            <Box sx={{ mr: 1, display: "flex", alignItems: "center" }}>
+              {icon}
+            </Box>
+          )}
           <Typography
             color="text.secondary"
             variant="caption"
@@ -42,27 +47,11 @@ export const MetricCard = ({
           >
             {label}
           </Typography>
-          {icon && (
-            <Box
-              sx={{
-                width: 34,
-                height: 34,
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                bgcolor: "action.hover",
-                flexShrink: 0,
-              }}
-            >
-              {icon}
-            </Box>
-          )}
         </Box>
         <Typography
           variant="h5"
           sx={{
-            fontWeight: 700,
+            fontWeight: valueFontWeight,
             color: valueColor || "text.primary",
             letterSpacing: "-0.02em",
           }}
