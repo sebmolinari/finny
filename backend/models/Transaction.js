@@ -154,7 +154,6 @@ class Transaction {
     `);
 
     const rows = dataStmt.all(userId);
-    const rows = dataStmt.all(userId);
 
     return {
       data: rows.map(Transaction._mapRowToApi),
