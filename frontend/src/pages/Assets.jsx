@@ -85,7 +85,9 @@ export default function Assets() {
         }),
       );
       assetsWithPrices.sort((a, b) => {
-        const typeCompare = (a.asset_type || "").localeCompare(b.asset_type || "");
+        const typeCompare = (a.asset_type || "").localeCompare(
+          b.asset_type || "",
+        );
         if (typeCompare !== 0) return typeCompare;
         return (a.symbol || "").localeCompare(b.symbol || "");
       });

@@ -81,10 +81,12 @@ export default function MarketTrends() {
   const rows = Array.from(assetMap.values())
     .filter((r) => !EXCLUDED_SYMBOLS.includes(r.symbol))
     .sort((a, b) => {
-    const typeCompare = (a.asset_type || "").localeCompare(b.asset_type || "");
-    if (typeCompare !== 0) return typeCompare;
-    return (a.symbol || "").localeCompare(b.symbol || "");
-  });
+      const typeCompare = (a.asset_type || "").localeCompare(
+        b.asset_type || "",
+      );
+      if (typeCompare !== 0) return typeCompare;
+      return (a.symbol || "").localeCompare(b.symbol || "");
+    });
 
   const columns = [
     {

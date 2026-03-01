@@ -201,7 +201,15 @@ export default function TaxReport() {
           converted to local currency using the configured FX rate
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 1.5, mb: 1.5, flexWrap: "wrap", alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1.5,
+            mb: 1.5,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
           <TextField
             type="number"
             label="Year"
