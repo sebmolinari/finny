@@ -62,17 +62,7 @@ const {
  */
 router.get("/", authMiddleware, (req, res) => {
   try {
-    const { page, limit, assetId, startDate, endDate, transactionType } =
-      req.query;
-
-    const result = Transaction.findByUser(req.user.id, {
-      page: parseInt(page) || 1,
-      limit: parseInt(limit) || 50,
-      assetId,
-      startDate,
-      endDate,
-      transactionType,
-    });
+    const result = Transaction.findByUser(req.user.id);
 
     res.json(result);
   } catch (error) {

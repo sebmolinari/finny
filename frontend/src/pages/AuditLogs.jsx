@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Typography,
-  Paper,
-  Chip,
-  Grid,
-  Button,
-  Container,
-  Tooltip,
-} from "@mui/material";
+import { Typography, Paper, Chip, Grid, Button, Tooltip } from "@mui/material";
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import api from "../api/api";
@@ -20,6 +12,7 @@ import DialogActions from "@mui/material/DialogActions";
 import { settingsAPI } from "../api/api";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -166,29 +159,26 @@ const AuditLogs = () => {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Paper>
-        <StyledDataGrid
-          label="Events"
-          rows={logs}
-          columns={columns}
-          loading={loadingAudit}
-          getRowId={(row) => row.id}
-          pageSize={100}
-          rowsPerPageOptions={[25, 50, 100]}
-          slotProps={{
-            toolbar: {
-              actions: (
-                <Tooltip title="Refresh">
-                  <ToolbarButton color="primary" onClick={() => fetchLogs()}>
-                    <RefreshIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-              ),
-            },
-          }}
-        />
-      </Paper>
+    <PageContainer title="Audit Logs" subtitle="System activity trail">
+      <StyledDataGrid
+        rows={logs}
+        columns={columns}
+        loading={loadingAudit}
+        getRowId={(row) => row.id}
+        pageSize={100}
+        rowsPerPageOptions={[25, 50, 100]}
+        slotProps={{
+          toolbar: {
+            actions: (
+              <Tooltip title="Refresh">
+                <ToolbarButton color="primary" onClick={() => fetchLogs()}>
+                  <RefreshIcon fontSize="small" />
+                </ToolbarButton>
+              </Tooltip>
+            ),
+          },
+        }}
+      />
       <Dialog open={detailsOpen} onClose={closeDetails} maxWidth="md" fullWidth>
         <DialogTitle>Details</DialogTitle>
         <DialogContent>
@@ -255,7 +245,7 @@ const AuditLogs = () => {
           <Button onClick={closeDetails}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Container,
   Box,
   Paper,
   Button,
@@ -15,12 +14,15 @@ import {
   DialogContentText,
   DialogActions,
   Chip,
+  IconButton,
 } from "@mui/material";
+import { CloseRounded as CloseIcon } from "@mui/icons-material";
 import { userAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
 
 const Users = () => {
   const { user: currentUser } = useAuth();
@@ -188,8 +190,8 @@ const Users = () => {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mt: 4, mb: 4 }}>
+    <PageContainer title="Users" subtitle="User management">
+      <Box>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -202,19 +204,28 @@ const Users = () => {
           </Alert>
         )}
 
-        <Paper>
-          <StyledDataGrid
-            label="Users"
-            rows={users}
-            columns={columns}
-            loading={loading}
-            getRowId={(row) => row.id}
-          />
-        </Paper>
+        <StyledDataGrid
+          rows={users}
+          columns={columns}
+          loading={loading}
+          getRowId={(row) => row.id}
+        />
       </Box>
 
       <Dialog open={deleteDialog.open} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
+          Confirm Delete
+          <IconButton size="small" onClick={handleDeleteCancel}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete user "{deleteDialog.username}"? This
@@ -232,7 +243,7 @@ const Users = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

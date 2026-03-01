@@ -10,13 +10,17 @@ export const StyledTable = ({ children, ...props }) => {
   );
 };
 
-// Styled header cell with gray background
+// Styled header cell with theme-aware background
 export const StyledHeaderCell = ({ children, sx = {}, ...props }) => {
   return (
     <TableCell
       sx={{
-        backgroundColor: "#f5f5f5",
-        fontWeight: "bold",
+        bgcolor: "background.default",
+        fontWeight: 700,
+        fontSize: "0.72rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+        color: "text.secondary",
         ...sx,
       }}
       {...props}
@@ -26,12 +30,12 @@ export const StyledHeaderCell = ({ children, sx = {}, ...props }) => {
   );
 };
 
-// Styled header row with gray background
+// Styled header row with theme-aware background
 export const StyledHeaderRow = ({ children, sx = {}, ...props }) => {
   return (
     <TableRow
       sx={{
-        backgroundColor: "#f5f5f5",
+        bgcolor: "background.default",
         ...sx,
       }}
       {...props}

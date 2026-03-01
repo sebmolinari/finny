@@ -28,7 +28,7 @@ export default function RouteErrorBoundary() {
         alignItems: "center",
         justifyContent: "center",
         p: 3,
-        backgroundColor: "#f5f5f5",
+        bgcolor: "background.default",
       }}
     >
       <Paper elevation={3} sx={{ p: 4, maxWidth: 600, textAlign: "center" }}>
@@ -47,7 +47,7 @@ export default function RouteErrorBoundary() {
             sx={{
               mt: 2,
               p: 2,
-              backgroundColor: "#eee",
+              bgcolor: "action.hover",
               borderRadius: 1,
               textAlign: "left",
             }}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Container,
   Paper,
   Button,
   Box,
@@ -21,12 +20,14 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  CloseRounded as CloseIcon,
 } from "@mui/icons-material";
 import { brokerAPI, settingsAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
 import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
+import PageContainer from "../components/PageContainer";
 
 export default function Brokers() {
   const { user } = useAuth();
@@ -238,45 +239,42 @@ export default function Brokers() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Paper>
-        <StyledDataGrid
-          label="Brokers"
-          rows={brokers}
-          columns={columns}
-          loading={loading}
-          getRowId={(row) => row.id}
-          pageSize={25}
-          rowsPerPageOptions={[10, 25, 50]}
-          initialState={{
-            filter: {
-              filterModel: {
-                items: [
-                  {
-                    field: "active",
-                    operator: "=",
-                    value: 1,
-                  },
-                ],
-              },
+    <PageContainer title="Brokers" subtitle="Manage brokerage accounts">
+      <StyledDataGrid
+        rows={brokers}
+        columns={columns}
+        loading={loading}
+        getRowId={(row) => row.id}
+        pageSize={25}
+        rowsPerPageOptions={[10, 25, 50]}
+        initialState={{
+          filter: {
+            filterModel: {
+              items: [
+                {
+                  field: "active",
+                  operator: "=",
+                  value: 1,
+                },
+              ],
             },
-          }}
-          slotProps={{
-            toolbar: {
-              actions: (
-                <Tooltip title="Add broker">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleOpenDialog()}
-                  >
-                    <AddIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-              ),
-            },
-          }}
-        />
-      </Paper>
+          },
+        }}
+        slotProps={{
+          toolbar: {
+            actions: (
+              <Tooltip title="Add broker">
+                <ToolbarButton
+                  color="primary"
+                  onClick={() => handleOpenDialog()}
+                >
+                  <AddIcon fontSize="small" />
+                </ToolbarButton>
+              </Tooltip>
+            ),
+          },
+        }}
+      />
 
       <Dialog
         open={openDialog}
@@ -284,8 +282,18 @@ export default function Brokers() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
           {editingBroker ? "Edit Broker" : "Add Broker"}
+          <IconButton size="small" onClick={handleCloseDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
         <DialogContent>
           <Box
@@ -355,6 +363,6 @@ export default function Brokers() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 }

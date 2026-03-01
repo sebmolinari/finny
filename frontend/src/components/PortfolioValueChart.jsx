@@ -1,82 +1,102 @@
-import React from "react";
+﻿import React from "react";
 import {
   ResponsiveContainer,
-  LineChart,
+  AreaChart,
+  Area,
   CartesianGrid,
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
-  Line,
 } from "recharts";
-import { Paper, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import ChartCard from "./ChartCard";
 import { formatCurrency } from "../utils/formatNumber";
 
-const PortfolioValueChart = ({ data, title, height }) => {
+const PortfolioValueChart = ({ data, title, height = 300, animIndex = 1 }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const stroke = theme.palette.primary.main;
+  const gridColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const tickColor = theme.palette.text.secondary;
+  const tooltipBg = isDark ? "#1e293b" : "#ffffff";
+  const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+
   return (
-    <Paper sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
+    <ChartCard title={title} height={height} animIndex={animIndex}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+        >
+          <defs>
+            <linearGradient id="pvGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="5%"
+                stopColor={stroke}
+                stopOpacity={isDark ? 0.35 : 0.18}
+              />
+              <stop offset="95%" stopColor={stroke} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="date"
-            tickFormatter={(date) => {
-              const d = new Date(date);
-              return d.toLocaleDateString("en-US", {
+            tickFormatter={(d) =>
+              new Date(d).toLocaleDateString("en-US", {
                 month: "short",
                 day: "2-digit",
-              });
-            }}
-            tick={{ angle: -30, fontSize: 12, dy: 10 }}
+              })
+            }
+            tick={{ angle: -25, fontSize: 11, fill: tickColor, dy: 8 }}
+            axisLine={false}
+            tickLine={false}
           />
           <YAxis
             domain={(() => {
               if (!data.length) return [0, "auto"];
-              const values = data.map((d) => d.value);
-              const min = Math.floor(Math.min(...values) / 1000) * 1000;
-              const max = Math.ceil(Math.max(...values) / 1000) * 1000;
-              const buffer = Math.max((max - min) * 0.05, 100);
-              return [min - buffer, max + buffer];
+              const vals = data.map((d) => d.value);
+              const min = Math.floor(Math.min(...vals) / 1000) * 1000;
+              const max = Math.ceil(Math.max(...vals) / 1000) * 1000;
+              const buf = Math.max((max - min) * 0.07, 100);
+              return [min - buf, max + buf];
             })()}
-            tickFormatter={(value) => formatCurrency(value, 0)}
-            allowDecimals={false}
-            tick={{ fontSize: 12 }}
-            ticks={(() => {
-              if (!data.length) return undefined;
-              const values = data.map((d) => d.value);
-              const min = Math.floor(Math.min(...values) / 1000) * 1000;
-              const max = Math.ceil(Math.max(...values) / 1000) * 1000;
-              const buffer = Math.max((max - min) * 0.05, 100);
-              const start = min - buffer;
-              const end = max + buffer;
-              const step = Math.max(
-                Math.round((end - start) / 5 / 1000) * 1000,
-                1000
-              );
-              let ticks = [];
-              for (let t = start; t <= end; t += step) {
-                ticks.push(Math.round(t));
-              }
-              return ticks;
-            })()}
+            tickFormatter={(v) => formatCurrency(v, 0)}
+            tick={{ fontSize: 11, fill: tickColor }}
+            axisLine={false}
+            tickLine={false}
+            width={80}
           />
           <RechartsTooltip
-            formatter={(value) => formatCurrency(value)}
-            labelStyle={{ color: "#000" }}
+            formatter={(v) => [formatCurrency(v), "Portfolio Value"]}
+            contentStyle={{
+              background: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
+              borderRadius: 10,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+              fontSize: 12,
+              fontFamily: "inherit",
+            }}
+            labelStyle={{ color: tickColor, fontWeight: 600, marginBottom: 4 }}
+            itemStyle={{ color: stroke }}
+            cursor={{ stroke: stroke, strokeWidth: 1, strokeDasharray: "4 4" }}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="value"
-            stroke="#1976d2"
-            strokeWidth={2}
+            stroke={stroke}
+            strokeWidth={2.5}
+            fill="url(#pvGrad)"
             dot={false}
-            name="Portfolio Value"
+            activeDot={{
+              r: 5,
+              strokeWidth: 2,
+              fill: tooltipBg,
+              stroke: stroke,
+            }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
-    </Paper>
+    </ChartCard>
   );
 };
 

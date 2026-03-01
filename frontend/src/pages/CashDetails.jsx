@@ -1,13 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  Container,
-  Typography,
-  Paper,
-  Box,
-  Grid,
-  Divider,
-  Chip,
-} from "@mui/material";
+import { Typography, Paper, Box, Grid, Divider, Chip } from "@mui/material";
 import { MetricCard, StatCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { settingsAPI } from "../api/api";
@@ -16,6 +8,8 @@ import { useTheme } from "@mui/material/styles";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { formatDate } from "../utils/dateUtils";
 import StyledDataGrid from "../components/StyledDataGrid";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 
 export default function CashDetails() {
   const theme = useTheme();
@@ -197,16 +191,10 @@ export default function CashDetails() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Cash Balance Details
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        This page shows a detailed breakdown of your cash balance, including all
-        transactions that affect cash: deposits add cash, withdrawals remove
-        cash, buys consume cash, sells generate cash, and dividends add cash.
-        The running balance shows your cash position after each transaction.
-      </Typography>
+    <PageContainer
+      title="Cash Details"
+      subtitle="Cash flow & liquidity breakdown"
+    >
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid
@@ -219,6 +207,7 @@ export default function CashDetails() {
             label="Current Cash Balance"
             value={formatCurrency(summary.current_balance)}
             valueColor={theme.palette.primary.main}
+            sx={{ ...fadeInUpSx(1) }}
           />
         </Grid>
         <Grid
@@ -227,7 +216,11 @@ export default function CashDetails() {
             md: 3,
           }}
         >
-          <StatCard label="Total Transactions" value={transaction_count} />
+          <StatCard
+            label="Total Transactions"
+            value={transaction_count}
+            sx={{ ...fadeInUpSx(2) }}
+          />
         </Grid>
         <Grid
           size={{
@@ -244,6 +237,7 @@ export default function CashDetails() {
                 ? theme.palette.success.main
                 : theme.palette.error.main
             }
+            sx={{ ...fadeInUpSx(3) }}
           />
         </Grid>
         <Grid
@@ -261,6 +255,7 @@ export default function CashDetails() {
                 ? theme.palette.success.main
                 : theme.palette.error.main
             }
+            sx={{ ...fadeInUpSx(4) }}
           />
         </Grid>
       </Grid>
@@ -276,7 +271,7 @@ export default function CashDetails() {
               md: 4,
             }}
           >
-            <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
+            <Box sx={{ p: 2, bgcolor: "background.default", borderRadius: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Inflows
               </Typography>
@@ -373,7 +368,7 @@ export default function CashDetails() {
               md: 4,
             }}
           >
-            <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
+            <Box sx={{ p: 2, bgcolor: "background.default", borderRadius: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Outflows
               </Typography>
@@ -421,7 +416,15 @@ export default function CashDetails() {
               md: 4,
             }}
           >
-            <Box sx={{ p: 2, backgroundColor: "#e3f2fd", borderRadius: 1 }}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "action.hover",
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "primary.light",
+              }}
+            >
               <Typography variant="subtitle2" color="text.secondary">
                 Net Cash Position
               </Typography>
@@ -489,17 +492,16 @@ export default function CashDetails() {
           negative effects reduce it.
         </Typography>
 
-        <Paper>
-          <StyledDataGrid
-            rows={cash_flows}
-            columns={columns}
-            loading={detailsLoading}
-            getRowId={(row) => row.id}
-            pageSize={100}
-            rowsPerPageOptions={[25, 50, 100]}
-          />
-        </Paper>
+        <StyledDataGrid
+          label="Cash Transactions"
+          rows={cash_flows}
+          columns={columns}
+          loading={detailsLoading}
+          getRowId={(row) => row.id}
+          pageSize={100}
+          rowsPerPageOptions={[25, 50, 100]}
+        />
       </Paper>
-    </Container>
+    </PageContainer>
   );
 }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Container, Paper, Typography, Chip } from "@mui/material";
+import { Typography, Chip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
 
 export default function MarketTrends() {
   const [trends30D, setTrends30D] = useState([]);
@@ -300,16 +301,16 @@ export default function MarketTrends() {
   ];
 
   return (
-    <Container maxWidth="ml" sx={{ mt: 4, mb: 4 }}>
-      <Paper>
-        <StyledDataGrid
-          label="Market Trends"
-          rows={rows}
-          columns={columns}
-          loading={loading}
-          getRowId={(r) => r.asset_id}
-        />
-      </Paper>
-    </Container>
+    <PageContainer
+      title="Market Trends"
+      subtitle="Latest asset price movements"
+    >
+      <StyledDataGrid
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        getRowId={(r) => r.asset_id}
+      />
+    </PageContainer>
   );
 }

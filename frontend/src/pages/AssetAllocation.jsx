@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Container,
   Paper,
   Typography,
   Box,
@@ -19,6 +18,13 @@ import {
   Autocomplete,
   Tabs,
   Tab,
+  LinearProgress,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -28,6 +34,9 @@ import {
   TrendingDown as TrendingDownIcon,
   Remove as RemoveIcon,
   Add as AddIcon,
+  CloseRounded as CloseIcon,
+  BalanceOutlined as BalanceIcon,
+  BarChart as BarChartIcon,
 } from "@mui/icons-material";
 import { allocationAPI, constantsAPI, assetAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
@@ -36,6 +45,8 @@ import { MetricCard } from "../components/StyledCard";
 import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 
 export default function AssetAllocation() {
   const theme = useTheme();
@@ -52,6 +63,11 @@ export default function AssetAllocation() {
   const [assetTypes, setAssetTypes] = useState([]);
   const [includedAssetTypes, setIncludedAssetTypes] = useState([]);
   const [selectedAssetType, setSelectedAssetType] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    open: false,
+    label: "",
+    onConfirm: null,
+  });
 
   // Load rebalancing recommendations. Accept an explicit include list
   // so callers can pass the computed set without waiting for state updates.
@@ -313,11 +329,11 @@ export default function AssetAllocation() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this target?")) {
-      return;
-    }
+  const confirmDelete = (label, onConfirm) => {
+    setDeleteConfirm({ open: true, label, onConfirm });
+  };
 
+  const handleDelete = async (id) => {
     try {
       await allocationAPI.deleteTarget(id);
       await loadData();
@@ -596,10 +612,10 @@ export default function AssetAllocation() {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Asset Allocation & Rebalancing
-      </Typography>
+    <PageContainer
+      title="Asset Allocation"
+      subtitle="Target weights & rebalancing"
+    >
       {/* selection moved into Asset Type tab */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -621,6 +637,7 @@ export default function AssetAllocation() {
             valueColor={
               isValid ? theme.palette.primary.main : theme.palette.error.main
             }
+            sx={{ ...fadeInUpSx(1) }}
           />
         </Grid>
         <Grid
@@ -642,6 +659,7 @@ export default function AssetAllocation() {
                   ? theme.palette.error.main
                   : theme.palette.primary.main
             }
+            sx={{ ...fadeInUpSx(2) }}
           />
         </Grid>
         <Grid
@@ -665,41 +683,112 @@ export default function AssetAllocation() {
                 ? theme.palette.success.main
                 : theme.palette.warning.main
             }
+            sx={{ ...fadeInUpSx(3) }}
           />
         </Grid>
       </Grid>
       {/* Target Allocation Form */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper sx={{ p: 3, mb: 3, ...fadeInUpSx(4) }}>
+        {/* Paper header */}
         <Box
           display="flex"
           justifyContent="space-between"
-          alignItems="center"
+          alignItems="flex-start"
           mb={2}
         >
-          <Typography variant="h6">Target Allocation</Typography>
-          <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 2,
+                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <BarChartIcon sx={{ color: "#fff", fontSize: 18 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                Target Allocation
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Define how your portfolio should be distributed
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: "flex", gap: 1 }}>
             <Button
+              variant="outlined"
               startIcon={<RefreshIcon />}
               onClick={loadData}
-              sx={{ mr: 1 }}
+              size="small"
             >
               Refresh
             </Button>
             <Button
               variant="contained"
+              color="primary"
               startIcon={<SaveIcon />}
               onClick={handleSave}
               disabled={!isValid || hasInvalidAssetAllocations || saving}
+              size="small"
             >
-              {saving ? "Saving..." : "Save Targets"}
+              {saving ? "Saving…" : "Save Targets"}
             </Button>
           </Box>
+        </Box>
+
+        {/* Allocation progress bar */}
+        <Box sx={{ mb: 3 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}
+          >
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={600}
+            >
+              Allocated
+            </Typography>
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color={isValid ? "success.main" : "error.main"}
+            >
+              {totalAllocated.toFixed(1)}% / 100%
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(totalAllocated, 100)}
+            color={
+              totalAllocated > 100
+                ? "error"
+                : totalAllocated === 100
+                  ? "success"
+                  : "primary"
+            }
+            sx={{ height: 8, borderRadius: 4 }}
+          />
+          {remaining > 0 && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 0.5, display: "block" }}
+            >
+              {remaining.toFixed(1)}% remaining to allocate
+            </Typography>
+          )}
         </Box>
 
         <Tabs
           value={tabValue}
           onChange={(e, val) => setTabValue(val)}
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, borderBottom: "1px solid", borderColor: "divider" }}
         >
           <Tab label="Asset Type Level" />
           <Tab label="Individual Asset Level" />
@@ -720,16 +809,17 @@ export default function AssetAllocation() {
                     {...params}
                     label="Select Asset Type"
                     size="small"
+                    placeholder="e.g. Equity, Bond, Cash…"
                   />
                 )}
                 sx={{ flexGrow: 1 }}
               />
               <Button
                 variant="contained"
+                color="primary"
                 startIcon={<AddIcon />}
                 onClick={() => {
                   if (!selectedAssetType) return;
-                  // avoid duplicates
                   if (targets.some((t) => t.asset_type === selectedAssetType)) {
                     setError("This asset type is already added");
                     return;
@@ -743,7 +833,6 @@ export default function AssetAllocation() {
                       notes: "",
                     },
                   ]);
-                  // ensure includedAssetTypes contains it
                   setIncludedAssetTypes((prev) =>
                     prev && prev.includes(selectedAssetType)
                       ? prev
@@ -756,10 +845,14 @@ export default function AssetAllocation() {
                 Add Type
               </Button>
             </Box>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Set your portfolio allocation by asset type. These percentages
-              should sum to 100% of your total portfolio.
-            </Alert>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 2 }}
+            >
+              Set portfolio weights by asset type. Percentages should total
+              100%.
+            </Typography>
             <TableContainer>
               <StyledTable>
                 <TableHead>
@@ -813,23 +906,28 @@ export default function AssetAllocation() {
                         <Tooltip title="Remove">
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              target.id
-                                ? handleDelete(target.id)
-                                : (setTargets((prev) =>
-                                    prev.filter(
-                                      (t) => t.asset_type !== target.asset_type,
-                                    ),
-                                  ),
-                                  setIncludedAssetTypes((prev) =>
-                                    (prev || []).filter(
-                                      (p) => p !== target.asset_type,
-                                    ),
-                                  ))
-                            }
                             color="error"
+                            onClick={() => {
+                              const removeLocal = () => {
+                                setTargets((prev) =>
+                                  prev.filter(
+                                    (t) => t.asset_type !== target.asset_type,
+                                  ),
+                                );
+                                setIncludedAssetTypes((prev) =>
+                                  (prev || []).filter(
+                                    (p) => p !== target.asset_type,
+                                  ),
+                                );
+                              };
+                              confirmDelete(target.asset_type, () =>
+                                target.id
+                                  ? handleDelete(target.id)
+                                  : removeLocal(),
+                              );
+                            }}
                           >
-                            <DeleteIcon />
+                            <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       </TableCell>
@@ -843,11 +941,15 @@ export default function AssetAllocation() {
 
         {tabValue === 1 && (
           <>
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 2 }}
+            >
               Set allocation for individual assets{" "}
-              <strong>within their asset type</strong>. Asset percentages should
-              sum to 100% within each asset type.
-            </Alert>
+              <strong>within their asset type</strong>. Percentages should total
+              100% within each type.
+            </Typography>
             <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
               <Autocomplete
                 value={selectedAsset}
@@ -861,6 +963,7 @@ export default function AssetAllocation() {
               />
               <Button
                 variant="contained"
+                color="primary"
                 startIcon={<AddIcon />}
                 onClick={handleAddAssetTarget}
                 disabled={!selectedAsset}
@@ -886,11 +989,24 @@ export default function AssetAllocation() {
                 <TableBody>
                   {assetTargets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          No asset-level targets. Add assets above to set
-                          individual allocation targets.
-                        </Typography>
+                      <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 1,
+                            color: "text.disabled",
+                          }}
+                        >
+                          <BarChartIcon sx={{ fontSize: 40 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            No asset-level targets yet
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled">
+                            Use the selector above to add individual assets
+                          </Typography>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -948,14 +1064,20 @@ export default function AssetAllocation() {
                             <Tooltip title="Remove">
                               <IconButton
                                 size="small"
-                                onClick={() =>
-                                  target.id
-                                    ? handleDelete(target.id)
-                                    : handleRemoveAssetTarget(target.asset_id)
-                                }
                                 color="error"
+                                onClick={() =>
+                                  confirmDelete(
+                                    `${target.symbol} target`,
+                                    () =>
+                                      target.id
+                                        ? handleDelete(target.id)
+                                        : handleRemoveAssetTarget(
+                                            target.asset_id,
+                                          ),
+                                  )
+                                }
                               >
-                                <DeleteIcon />
+                                <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           </TableCell>
@@ -965,12 +1087,25 @@ export default function AssetAllocation() {
                       {Object.entries(assetTypeTotals).length > 0 && (
                         <>
                           <TableRow>
-                            <TableCell colSpan={6} sx={{ pt: 2 }}>
+                            <TableCell
+                              colSpan={6}
+                              sx={{
+                                pt: 2,
+                                pb: 0.5,
+                                borderTop: "2px solid",
+                                borderColor: "divider",
+                              }}
+                            >
                               <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
+                                variant="overline"
+                                sx={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 700,
+                                  letterSpacing: "0.08em",
+                                  color: "text.disabled",
+                                }}
                               >
-                                Totals by Asset Type:
+                                Totals by Asset Type
                               </Typography>
                             </TableCell>
                           </TableRow>
@@ -978,42 +1113,41 @@ export default function AssetAllocation() {
                             ([type, total]) => (
                               <TableRow
                                 key={type}
-                                sx={{
-                                  backgroundColor:
+                                sx={({ palette }) => ({
+                                  bgcolor:
                                     total > 100
-                                      ? "rgba(255, 0, 0, 0.05)"
-                                      : "rgba(0, 255, 0, 0.02)",
-                                }}
+                                      ? `${palette.error.main}14`
+                                      : total === 100
+                                        ? `${palette.success.main}14`
+                                        : palette.action.hover,
+                                })}
                               >
                                 <TableCell colSpan={3}>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight="medium"
-                                  >
+                                  <Typography variant="body2" fontWeight={600}>
                                     {type}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography
                                     variant="body2"
-                                    fontWeight="bold"
+                                    fontWeight={700}
                                     color={
                                       total > 100
-                                        ? theme.palette.error.main
+                                        ? "error.main"
                                         : total === 100
-                                          ? theme.palette.success.main
-                                          : theme.palette.warning.main
+                                          ? "success.main"
+                                          : "warning.main"
                                     }
                                   >
                                     {total.toFixed(1)}%{" "}
                                     {total > 100
-                                      ? "(OVER)"
+                                      ? "⚠ OVER"
                                       : total === 100
                                         ? "✓"
                                         : ""}
                                   </Typography>
                                 </TableCell>
-                                <TableCell colSpan={2}></TableCell>
+                                <TableCell colSpan={2} />
                               </TableRow>
                             ),
                           )}
@@ -1050,19 +1184,45 @@ export default function AssetAllocation() {
       {/* Rebalancing Recommendations - Asset Type Level (Strategic) */}
       {rebalancing?.has_targets &&
         rebalancing.recommendations.some((r) => r.level === "type") && (
-          <Paper sx={{ p: 2, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Rebalancing Recommendations - Asset Type Level
-            </Typography>
+          <Paper sx={{ p: 3, mb: 3, ...fadeInUpSx(5) }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
+            >
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                  background: rebalancing.is_balanced
+                    ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
+                    : "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <BalanceIcon sx={{ color: "#fff", fontSize: 18 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                  Asset Type Rebalancing
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Strategic allocation across asset classes
+                </Typography>
+              </Box>
+            </Box>
 
             {rebalancing.is_balanced ? (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Your portfolio is well-balanced! Rebalance intensity is within
-                tolerance ({formatPercent(rebalancing.rebalance_intensity)}).
+                Portfolio is well-balanced! Rebalance intensity:{" "}
+                {formatPercent(rebalancing.rebalance_intensity)} — within
+                tolerance.
               </Alert>
             ) : (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Your portfolio needs rebalancing. Rebalance intensity:{" "}
+                Rebalancing needed. Intensity:{" "}
                 {formatPercent(rebalancing.rebalance_intensity)} exceeds
                 tolerance of {formatPercent(rebalancing.rebalancing_tolerance)}.
               </Alert>
@@ -1077,24 +1237,46 @@ export default function AssetAllocation() {
               getRowClassName={(params) =>
                 params.row.is_balanced ? "" : "needs-rebalance"
               }
-              sx={{
-                "& .MuiDataGrid-row": {
-                  height: "70px !important",
-                },
+              sx={({ palette }) => ({
+                "& .MuiDataGrid-row": { height: "70px !important" },
                 "& .MuiDataGrid-row.needs-rebalance": {
-                  backgroundColor: "rgba(255, 0, 0, 0.05) !important",
+                  backgroundColor: `${palette.warning.main}12 !important`,
                 },
-              }}
+              })}
             />
           </Paper>
         )}
       {/* Rebalancing Recommendations - Asset Level (Tactical) */}
       {rebalancing?.has_targets &&
         rebalancing.recommendations.some((r) => r.level === "asset") && (
-          <Paper sx={{ p: 2, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Rebalancing Recommendations - Individual Asset Level
-            </Typography>
+          <Paper sx={{ p: 3, mb: 3, ...fadeInUpSx(6) }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
+            >
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                  background:
+                    "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <BarChartIcon sx={{ color: "#fff", fontSize: 18 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                  Individual Asset Rebalancing
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Tactical allocation within each asset class
+                </Typography>
+              </Box>
+            </Box>
 
             <StyledDataGrid
               rows={assetRows}
@@ -1105,14 +1287,12 @@ export default function AssetAllocation() {
               getRowClassName={(params) =>
                 params.row.is_balanced ? "" : "needs-rebalance"
               }
-              sx={{
-                "& .MuiDataGrid-row": {
-                  maxHeight: "70px !important",
-                },
+              sx={({ palette }) => ({
+                "& .MuiDataGrid-row": { maxHeight: "70px !important" },
                 "& .MuiDataGrid-row.needs-rebalance": {
-                  backgroundColor: "rgba(255, 0, 0, 0.05) !important",
+                  backgroundColor: `${palette.warning.main}12 !important`,
                 },
-              }}
+              })}
             />
           </Paper>
         )}
@@ -1121,6 +1301,66 @@ export default function AssetAllocation() {
           Set target allocations above to see rebalancing recommendations.
         </Alert>
       )}
-    </Container>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog
+        open={deleteConfirm.open}
+        onClose={() =>
+          setDeleteConfirm({ open: false, label: "", onConfirm: null })
+        }
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
+          Remove Target
+          <IconButton
+            size="small"
+            onClick={() =>
+              setDeleteConfirm({ open: false, label: "", onConfirm: null })
+            }
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Remove <strong>{deleteConfirm.label}</strong> from your targets? Any
+            saved data must be committed with <em>Save Targets</em> to persist.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="outlined"
+            onClick={() =>
+              setDeleteConfirm({ open: false, label: "", onConfirm: null })
+            }
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            sx={{
+              bgcolor: "error.main",
+              color: "#fff",
+              "&:hover": { bgcolor: "error.dark" },
+            }}
+            onClick={() => {
+              deleteConfirm.onConfirm?.();
+              setDeleteConfirm({ open: false, label: "", onConfirm: null });
+            }}
+          >
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </PageContainer>
   );
 }

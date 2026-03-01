@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Container,
   Paper,
   Typography,
   Box,
@@ -23,6 +22,8 @@ import { formatDate } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
 import StyledDataGrid from "../components/StyledDataGrid";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -193,11 +194,11 @@ export default function TaxReport() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Tax Report
-      </Typography>
-      <Paper sx={{ p: 3 }}>
+    <PageContainer
+      title="Tax Report"
+      subtitle="Capital gains & year-end holdings"
+    >
+      <Paper sx={{ p: 3, ...fadeInUpSx(1) }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Generate a tax report showing your holdings at year-end with values
           converted to local currency using the configured FX rate
@@ -353,6 +354,6 @@ export default function TaxReport() {
           </>
         )}
       </Paper>
-    </Container>
+    </PageContainer>
   );
 }

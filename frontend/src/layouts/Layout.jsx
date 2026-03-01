@@ -1,23 +1,34 @@
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
-import SideMenu from "../components/SideMenu";
+import UserMenu from "../components/UserMenu";
 import Header from "../components/Header";
 import Copyright from "../components/Copyright";
 import { Outlet } from "react-router-dom";
 
 export default function Layout() {
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <SideMenu />
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        bgcolor: "background.default",
+      }}
+    >
+      <UserMenu />
       <Box
         component="main"
-        sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+        }}
       >
         <Header />
-        <Box sx={{ flexGrow: 1, p: 1 }}>
+        <Box sx={{ flexGrow: 1, px: { md: 3 }, py: 2 }}>
           <Outlet />
         </Box>
-        <Copyright sx={{ my: 2 }} />
+        <Copyright sx={{ mt: 2, mb: 2 }} />
       </Box>
     </Box>
   );

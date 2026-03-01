@@ -58,13 +58,25 @@ export function StyledDataGridToolbar({ label, actions }) {
   return (
     <Toolbar
       sx={{
-        minHeight: 40, // default is ~56
-        height: 40,
-        px: 1,
+        minHeight: "46px !important",
+        height: 46,
+        px: 1.5,
+        borderBottom: "1px solid",
+        borderColor: "divider",
+        gap: 0.5,
       }}
     >
       {/* LEFT SIDE */}
-      <Typography fontWeight="bold" sx={{ flex: 1, mx: 0.5 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          flex: 1,
+          mx: 0.5,
+          fontWeight: 700,
+          letterSpacing: "-0.01em",
+          color: "text.primary",
+        }}
+      >
         {label}
       </Typography>
 

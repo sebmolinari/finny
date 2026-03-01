@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -7,40 +7,82 @@ import {
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
+  Cell,
 } from "recharts";
-import { Paper, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import ChartCard from "./ChartCard";
 import { formatCurrency } from "../utils/formatNumber";
 
-const MarketValueByBrokerChart = ({ data, title, height }) => (
-  <Paper sx={{ p: 3 }}>
-    <Typography variant="h6" gutterBottom>
-      {title}
-    </Typography>
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis
-          dataKey="name"
-          interval={0}
-          tick={{ fontSize: 14 }}
-          allowDataOverflow={false}
-        />
-        <YAxis
-          domain={[0, "dataMax"]}
-          tickFormatter={(value) => formatCurrency(value, 0)}
-        />
-        <RechartsTooltip
-          formatter={(value) => formatCurrency(value)}
-          contentStyle={{
-            backgroundColor: "rgba(255, 255, 255, 0.95)",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-          }}
-        />
-        <Bar dataKey="value" fill="#2196f3" radius={[8, 8, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  </Paper>
-);
+const BAR_PALETTE = [
+  "#2563eb",
+  "#9333ea",
+  "#16a34a",
+  "#f59e0b",
+  "#ef4444",
+  "#06b6d4",
+];
+
+const MarketValueByBrokerChart = ({
+  data,
+  title,
+  height = 300,
+  animIndex = 3,
+}) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const gridColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const tickColor = theme.palette.text.secondary;
+  const tooltipBg = isDark ? "#1e293b" : "#ffffff";
+  const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+
+  return (
+    <ChartCard title={title} height={height} animIndex={animIndex}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={gridColor}
+            vertical={false}
+          />
+          <XAxis
+            dataKey="name"
+            interval={0}
+            tick={{ fontSize: 12, fill: tickColor }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            domain={[0, "dataMax"]}
+            tickFormatter={(v) => formatCurrency(v, 0)}
+            tick={{ fontSize: 11, fill: tickColor }}
+            axisLine={false}
+            tickLine={false}
+            width={80}
+          />
+          <RechartsTooltip
+            formatter={(v) => [formatCurrency(v), "Market Value"]}
+            contentStyle={{
+              background: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
+              borderRadius: 10,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+              fontSize: 12,
+              fontFamily: "inherit",
+            }}
+            itemStyle={{ color: BAR_PALETTE[0] }}
+            cursor={{
+              fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+            }}
+          />
+          <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={64}>
+            {data.map((_, i) => (
+              <Cell key={i} fill={BAR_PALETTE[i % BAR_PALETTE.length]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+};
 
 export default MarketValueByBrokerChart;

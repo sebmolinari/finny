@@ -13,7 +13,7 @@ export const AuditFieldsDisplay = ({ item, userTimezone, userDateFormat }) => {
   if (!item) return null;
 
   return (
-    <Box sx={{ mt: 3, pt: 2, borderTop: "1px solid #eee" }}>
+    <Box sx={{ mt: 3, pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
       <Typography
         variant="caption"
         sx={{ fontWeight: 600, display: "block", mb: 2 }}

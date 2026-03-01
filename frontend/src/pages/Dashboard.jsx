@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Container, Box, Typography, Grid, Tooltip } from "@mui/material";
+import { Box, Typography, Grid, Tooltip } from "@mui/material";
+import { fadeInUpSx } from "../utils/animations";
 import { MetricCard } from "../components/StyledCard";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -14,9 +15,11 @@ import AssetAllocationChart from "../components/AssetAllocationChart";
 import PortfolioValueChart from "../components/PortfolioValueChart";
 import MarketValueByBrokerChart from "../components/MarketValueByBrokerChart";
 import MTMEvolutionChart from "../components/MTMEvolutionChart";
+import StatCard from "../components/StatCard";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -99,25 +102,25 @@ const Dashboard = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid
-          size={{
-            xs: 12,
-            md: 3,
-          }}
-        >
+    <PageContainer title="Overview">
+      <Grid container spacing={2.5} sx={{ mt: 0 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Tooltip
             title="Net Asset Value (NAV): Total market value of portfolio holdings plus available cash. The comprehensive value of all portfolio assets. Calculation: Holdings Market Value + Cash Balance."
             arrow
           >
-            <Box sx={{ height: "100%" }}>
-              <MetricCard
-                label="NAV"
-                value={formatCurrency(dashboard?.nav || 0, 0)}
+            <Box sx={{ height: "100%", ...fadeInUpSx(1) }}>
+              <StatCard
+                title="NAV"
                 icon={<AccountBalanceIcon color="primary" />}
-                sx={{ height: "100%" }}
-                valueColor={theme.palette.primary.main}
+                value={formatCurrency(dashboard?.nav || 0, 0)}
+                interval="Last 30 days"
+                trend="up"
+                data={[
+                  200, 24, 220, 260, 240, 380, 100, 240, 280, 240, 300, 340,
+                  320, 360, 340, 380, 360, 400, 380, 420, 400, 640, 340, 460,
+                  440, 480, 460, 600, 880, 920,
+                ]}
               />
             </Box>
           </Tooltip>
@@ -133,7 +136,7 @@ const Dashboard = () => {
             title="Holdings Market Value: Current fair market value of all investment positions based on latest market prices. Excludes cash. Calculation: Sum of (quantity × market price) for all holdings."
             arrow
           >
-            <Box sx={{ height: "100%" }}>
+            <Box sx={{ height: "100%", ...fadeInUpSx(2) }}>
               <MetricCard
                 label="Holdings Market Value"
                 value={formatCurrency(
@@ -186,7 +189,7 @@ const Dashboard = () => {
             title="Unrealized P&L: Profit or loss on open positions that have not yet been closed. Calculation: Holdings Market Value - Cost Basis."
             arrow
           >
-            <Box sx={{ height: "100%" }}>
+            <Box sx={{ height: "100%", ...fadeInUpSx(3) }}>
               <MetricCard
                 label="Unrealized P&L"
                 value={formatCurrency(
@@ -215,7 +218,7 @@ const Dashboard = () => {
             title="Return on Investment (ROI): Percentage return on invested capital in current holdings. Calculation: Unrealized P&L / Cost Basis × 100."
             arrow
           >
-            <Box sx={{ height: "100%" }}>
+            <Box sx={{ height: "100%", ...fadeInUpSx(4) }}>
               <MetricCard
                 label="ROI %"
                 value={formatPercent(
@@ -234,7 +237,7 @@ const Dashboard = () => {
         </Grid>
       </Grid>
       {/* Row 2: Performance & Funding Metrics */}
-      <Grid container spacing={3} sx={{ mt: 2 }}>
+      <Grid container spacing={2.5} sx={{ mt: 0 }}>
         <Grid
           size={{
             xs: 12,
@@ -245,7 +248,7 @@ const Dashboard = () => {
             title="Net Contributions: The total cash flow into your account, calculated as all deposits minus withdrawals. Includes both invested and uninvested cash. Calculation: Deposits - Withdrawals."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(5) }}>
               <MetricCard
                 label="Net Contributions"
                 value={formatCurrency(
@@ -269,7 +272,7 @@ const Dashboard = () => {
             title="Net Invested: Net capital currently allocated to holdings after accounting for purchases and sales. Calculation: Buy transactions - Sell transactions."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(6) }}>
               <MetricCard
                 label="Net Invested"
                 value={formatCurrency(
@@ -293,7 +296,7 @@ const Dashboard = () => {
             title="MWRR (IRR): Money-Weighted Rate of Return, also known as Internal Rate of Return. Reflects the annualized return considering the timing and size of cash flows in/out. Calculation: IRR of all portfolio cash flows."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(7) }}>
               <MetricCard
                 label="MWRR (IRR)"
                 value={formatPercent(dashboard?.transactions?.mwrr || 0)}
@@ -318,7 +321,7 @@ const Dashboard = () => {
             title="CAGR: Compound Annual Growth Rate. Shows the mean annual growth rate of the portfolio over time. Calculation: (Ending Value / Beginning Value)^(1/years) - 1."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(8) }}>
               <MetricCard
                 label="CAGR"
                 value={formatPercent(dashboard?.transactions?.cagr || 0)}
@@ -354,7 +357,7 @@ const Dashboard = () => {
         title="MTM Evolution"
         height={380}
       />
-    </Container>
+    </PageContainer>
   );
 };
 

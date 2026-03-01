@@ -1,17 +1,28 @@
 import React from "react";
-import { Container, Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Typography } from "@mui/material";
 
-export default function LoadingSpinner({ maxWidth = "xl" }) {
+export default function LoadingSpinner({ maxWidth = "xl", message }) {
   return (
-    <Container maxWidth={maxWidth} sx={{ mt: 4, mb: 4 }}>
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
-        <CircularProgress />
-      </Box>
-    </Container>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "400px",
+        gap: 2,
+      }}
+    >
+      <CircularProgress
+        size={40}
+        thickness={3.5}
+        sx={{ color: "primary.main" }}
+      />
+      {message && (
+        <Typography variant="body2" color="text.secondary">
+          {message}
+        </Typography>
+      )}
+    </Box>
   );
 }

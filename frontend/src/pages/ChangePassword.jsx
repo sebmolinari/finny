@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Container,
   Box,
   Paper,
   Typography,
@@ -8,9 +7,17 @@ import {
   Button,
   Alert,
   Grid,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import api from "../api/api";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 
 const ChangePassword = () => {
   const navigate = useNavigate();
@@ -21,6 +28,9 @@ const ChangePassword = () => {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handlePasswordChange = (e) => {
     setPasswordData({
@@ -92,12 +102,53 @@ const ChangePassword = () => {
     }
   };
 
+  const showHideAdornment = (visible, toggle) => ({
+    endAdornment: (
+      <InputAdornment position="end">
+        <IconButton onClick={toggle} edge="end" size="small" tabIndex={-1}>
+          {visible ? (
+            <VisibilityOffOutlinedIcon fontSize="small" />
+          ) : (
+            <VisibilityOutlinedIcon fontSize="small" />
+          )}
+        </IconButton>
+      </InputAdornment>
+    ),
+  });
+
   return (
-    <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Change Password
-      </Typography>
-      <Paper sx={{ p: 4, mt: 3 }}>
+    <PageContainer
+      title="Change Password"
+      subtitle="Update your account password"
+      maxWidth="sm"
+    >
+      <Paper sx={{ p: 4, ...fadeInUpSx(1) }}>
+        {/* Lock icon header */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <LockOutlinedIcon sx={{ color: "#fff", fontSize: 20 }} />
+          </Box>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
+              Security Update
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Choose a strong password with uppercase, lowercase, and number
+            </Typography>
+          </Box>
+        </Box>
+
         <Box component="form" onSubmit={handlePasswordSubmit}>
           {message.text && (
             <Alert severity={message.type} sx={{ mb: 3 }}>
@@ -111,11 +162,14 @@ const ChangePassword = () => {
                 fullWidth
                 label="Current Password"
                 name="currentPassword"
-                type="password"
+                type={showCurrent ? "text" : "password"}
                 value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
                 required
                 disabled={loading}
+                InputProps={showHideAdornment(showCurrent, () =>
+                  setShowCurrent((v) => !v),
+                )}
               />
             </Grid>
             <Grid size={12}>
@@ -123,12 +177,15 @@ const ChangePassword = () => {
                 fullWidth
                 label="New Password"
                 name="newPassword"
-                type="password"
+                type={showNew ? "text" : "password"}
                 value={passwordData.newPassword}
                 onChange={handlePasswordChange}
                 required
                 disabled={loading}
                 helperText="At least 8 characters with uppercase, lowercase, and a number"
+                InputProps={showHideAdornment(showNew, () =>
+                  setShowNew((v) => !v),
+                )}
               />
             </Grid>
             <Grid size={12}>
@@ -136,11 +193,14 @@ const ChangePassword = () => {
                 fullWidth
                 label="Confirm New Password"
                 name="confirmPassword"
-                type="password"
+                type={showConfirm ? "text" : "password"}
                 value={passwordData.confirmPassword}
                 onChange={handlePasswordChange}
                 required
                 disabled={loading}
+                InputProps={showHideAdornment(showConfirm, () =>
+                  setShowConfirm((v) => !v),
+                )}
               />
             </Grid>
             <Grid size={12}>
@@ -151,21 +211,22 @@ const ChangePassword = () => {
                   color="primary"
                   disabled={loading}
                 >
-                  {loading ? "Changing Password..." : "Change Password"}
+                  {loading ? "Saving…" : "Change Password"}
                 </Button>
                 <Button
                   variant="outlined"
+                  startIcon={<ArrowBackIcon />}
                   onClick={() => navigate("/profile")}
                   disabled={loading}
                 >
-                  Cancel
+                  Back to Profile
                 </Button>
               </Box>
             </Grid>
           </Grid>
         </Box>
       </Paper>
-    </Container>
+    </PageContainer>
   );
 };
 

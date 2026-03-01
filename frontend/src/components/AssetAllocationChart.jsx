@@ -1,40 +1,80 @@
-import React from "react";
+﻿import React from "react";
 import {
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
   Tooltip as RechartsTooltip,
+  Legend,
 } from "recharts";
-import { Paper, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import ChartCard from "./ChartCard";
 import { formatCurrency } from "../utils/formatNumber";
 
-const COLORS = ["#2196f3", "#4caf50", "#ff9800", "#9c27b0"];
+const PALETTE = [
+  "#2563eb",
+  "#16a34a",
+  "#f59e0b",
+  "#9333ea",
+  "#ef4444",
+  "#06b6d4",
+  "#f97316",
+];
 
-const AssetAllocationChart = ({ data, title, height }) => (
-  <Paper sx={{ p: 3 }}>
-    <Typography variant="h6" gutterBottom>
-      {title}
-    </Typography>
-    <ResponsiveContainer width="100%" height={height}>
-      <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="type"
-          cx="50%"
-          cy="50%"
-          outerRadius={80}
-          label={(entry) => `${entry.type}: ${entry.percentage.toFixed(1)}%`}
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <RechartsTooltip formatter={(value) => formatCurrency(value)} />
-      </PieChart>
-    </ResponsiveContainer>
-  </Paper>
-);
+const AssetAllocationChart = ({ data, title, height = 300, animIndex = 2 }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const tooltipBg = isDark ? "#1e293b" : "#ffffff";
+  const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+
+  return (
+    <ChartCard title={title} height={height} animIndex={animIndex}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="type"
+            cx="50%"
+            cy="50%"
+            outerRadius={Math.min(height / 2 - 30, 110)}
+            innerRadius={Math.min(height / 2 - 30, 110) * 0.52}
+            paddingAngle={2}
+            strokeWidth={0}
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+            ))}
+          </Pie>
+          <RechartsTooltip
+            formatter={(v, name, props) => [
+              `${formatCurrency(v)}  (${props.payload?.percentage?.toFixed(1)}%)`,
+              props.payload?.type,
+            ]}
+            contentStyle={{
+              background: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
+              borderRadius: 10,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+              fontSize: 12,
+              fontFamily: "inherit",
+            }}
+          />
+          <Legend
+            iconType="circle"
+            iconSize={8}
+            formatter={(v) => (
+              <span
+                style={{ fontSize: 12, color: theme.palette.text.secondary }}
+              >
+                {v}
+              </span>
+            )}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+};
 
 export default AssetAllocationChart;

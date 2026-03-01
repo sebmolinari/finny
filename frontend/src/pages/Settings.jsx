@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  Container,
   Paper,
   Typography,
   Box,
@@ -20,6 +19,8 @@ import { settingsAPI, assetAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -93,15 +94,12 @@ export default function Settings() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          User Settings
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Configure your personal preferences
-        </Typography>
-
+    <PageContainer
+      title="Settings"
+      subtitle="Configure your personal preferences"
+      maxWidth="md"
+    >
+      <Paper sx={{ p: 3, ...fadeInUpSx(1) }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid
@@ -397,6 +395,6 @@ export default function Settings() {
           </Grid>
         </form>
       </Paper>
-    </Container>
+    </PageContainer>
   );
 }

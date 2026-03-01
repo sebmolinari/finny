@@ -23,12 +23,14 @@ import {
 import StyledDataGrid from "../components/StyledDataGrid";
 import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   ShowChart as ShowChartIcon,
   Refresh as RefreshIcon,
+  CloseRounded as CloseIcon,
 } from "@mui/icons-material";
 import { assetAPI, settingsAPI, constantsAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
@@ -635,62 +637,71 @@ export default function Assets() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Paper>
-        <StyledDataGrid
-          label="Assets"
-          rows={assets}
-          columns={columns}
-          loading={loading}
-          getRowId={(row) => row.id}
-          pageSize={25}
-          rowsPerPageOptions={[25, 50, 100]}
-          initialState={{
-            filter: {
-              filterModel: {
-                items: [
-                  {
-                    field: "active",
-                    operator: "=",
-                    value: 1,
-                  },
-                ],
-              },
+    <PageContainer title="Assets" subtitle="Manage tracked assets">
+      <StyledDataGrid
+        rows={assets}
+        columns={columns}
+        loading={loading}
+        getRowId={(row) => row.id}
+        pageSize={25}
+        rowsPerPageOptions={[25, 50, 100]}
+        initialState={{
+          filter: {
+            filterModel: {
+              items: [
+                {
+                  field: "active",
+                  operator: "=",
+                  value: 1,
+                },
+              ],
             },
-          }}
-          slotProps={{
-            toolbar: {
-              actions: (
-                <>
-                  <Tooltip title="Add asset">
-                    <ToolbarButton
-                      color="primary"
-                      onClick={() => handleOpenDialog()}
-                    >
-                      <AddIcon fontSize="small" />
-                    </ToolbarButton>
-                  </Tooltip>
-                  <Tooltip title="Refresh all prices">
-                    <ToolbarButton
-                      color="primary"
-                      onClick={() => handleRefreshAllPrices()}
-                    >
-                      <RefreshIcon fontSize="small" />
-                    </ToolbarButton>
-                  </Tooltip>
-                </>
-              ),
-            },
-          }}
-        />
-      </Paper>
+          },
+        }}
+        slotProps={{
+          toolbar: {
+            actions: (
+              <>
+                <Tooltip title="Add asset">
+                  <ToolbarButton
+                    color="primary"
+                    onClick={() => handleOpenDialog()}
+                  >
+                    <AddIcon fontSize="small" />
+                  </ToolbarButton>
+                </Tooltip>
+                <Tooltip title="Refresh all prices">
+                  <ToolbarButton
+                    color="primary"
+                    onClick={() => handleRefreshAllPrices()}
+                  >
+                    <RefreshIcon fontSize="small" />
+                  </ToolbarButton>
+                </Tooltip>
+              </>
+            ),
+          },
+        }}
+      />
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>{editingAsset ? "Edit Asset" : "Add Asset"}</DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
+          {editingAsset ? "Edit Asset" : "Add Asset"}
+          <IconButton size="small" onClick={handleCloseDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Box
             component="form"
@@ -834,8 +845,18 @@ export default function Assets() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
           Manage Prices - {selectedAsset?.symbol} ({selectedAsset?.name})
+          <IconButton size="small" onClick={handleClosePriceDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
@@ -919,6 +940,6 @@ export default function Assets() {
           <Button onClick={handleClosePriceDialog}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 }

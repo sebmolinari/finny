@@ -23,6 +23,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Upload as UploadIcon,
+  CloseRounded as CloseIcon,
 } from "@mui/icons-material";
 import {
   transactionAPI,
@@ -40,6 +41,7 @@ import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
 import StyledDataGrid from "../components/StyledDataGrid";
 import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
+import PageContainer from "../components/PageContainer";
 
 export default function Blotter() {
   const theme = useTheme();
@@ -70,25 +72,18 @@ export default function Blotter() {
     notes: "",
   });
 
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(50);
-
-  // Load transactions when page/filters change
+  // Load transactions
   const loadTransactions = useCallback(async () => {
     try {
       setTransactionsLoading(true);
-      const params = { page, limit };
-      const response = await transactionAPI.getAll(params);
+      const response = await transactionAPI.getAll();
       setTransactions(response.data.data);
-      setTotalPages(response.data.pagination.pages || 1);
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
       setTransactionsLoading(false);
     }
-  }, [page, limit]);
+  }, []);
 
   useEffect(() => {
     loadTransactions();
@@ -585,57 +580,57 @@ export default function Blotter() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer title="Blotter" subtitle="Transaction history">
       {/* Transactions Grid */}
-      <Paper>
-        <StyledDataGrid
-          label="Blotter"
-          rows={transactions}
-          columns={columns}
-          loading={transactionsLoading}
-          getRowId={(row) => row.id}
-          paginationMode="server"
-          page={page - 1}
-          onPageChange={(newPage) => setPage(newPage + 1)}
-          pageSize={limit}
-          rowsPerPageOptions={[25, 50, 100]}
-          rowCount={totalPages * limit}
-          slotProps={{
-            toolbar: {
-              actions: (
-                <>
-                  <Tooltip title="Add transaction">
-                    <ToolbarButton
-                      color="primary"
-                      onClick={() => handleOpenDialog()}
-                    >
-                      <AddIcon fontSize="small" />
-                    </ToolbarButton>
-                  </Tooltip>
-                  <Tooltip title="Import">
-                    <ToolbarButton
-                      color="primary"
-                      onClick={() => handleOpenImportDialog()}
-                    >
-                      <UploadIcon fontSize="small" />
-                    </ToolbarButton>
-                  </Tooltip>
-                </>
-              ),
-            },
-          }}
-        />
-      </Paper>
+      <StyledDataGrid
+        rows={transactions}
+        columns={columns}
+        loading={transactionsLoading}
+        getRowId={(row) => row.id}
+        slotProps={{
+          toolbar: {
+            actions: (
+              <>
+                <Tooltip title="Add transaction">
+                  <ToolbarButton
+                    color="primary"
+                    onClick={() => handleOpenDialog()}
+                  >
+                    <AddIcon fontSize="small" />
+                  </ToolbarButton>
+                </Tooltip>
+                <Tooltip title="Import">
+                  <ToolbarButton
+                    color="primary"
+                    onClick={() => handleOpenImportDialog()}
+                  >
+                    <UploadIcon fontSize="small" />
+                  </ToolbarButton>
+                </Tooltip>
+              </>
+            ),
+          },
+        }}
+      />
 
-      {/* Transaction Dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
           {editingTransaction ? "Edit Transaction" : "Add Transaction"}
+          <IconButton size="small" onClick={handleCloseDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
         <DialogContent>
           {availableCash !== null && (
@@ -804,7 +799,19 @@ export default function Blotter() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Bulk Import Transactions</DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
+          Bulk Import Transactions
+          <IconButton size="small" onClick={handleCloseImportDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             <Typography variant="body2" color="text.secondary">
@@ -893,6 +900,6 @@ export default function Blotter() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 }

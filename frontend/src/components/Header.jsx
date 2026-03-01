@@ -12,19 +12,27 @@ export default function Header() {
       sx={{
         display: { xs: "none", md: "flex" },
         width: "100%",
-        alignItems: { xs: "flex-start", md: "center" },
-        // justifyContent: "flex-end",
+        alignItems: "center",
         justifyContent: "space-between",
         maxWidth: { sm: "100%", md: "1700px" },
-        pt: 1.5,
+        px: 3,
+        py: 1.25,
+        borderBottom: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.paper",
+        backdropFilter: "blur(8px)",
+        position: "sticky",
+        top: 0,
+        zIndex: 100,
       }}
       spacing={2}
     >
       <NavbarBreadcrumbs />
-      <Stack direction="row" sx={{ gap: 1 }}>
+      <Stack direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
         <Today />
-        <MenuButton showBadge aria-label="Open notifications">
-          <NotificationsRoundedIcon />
+        {/* TODO: showBadge when there are notifications */}
+        <MenuButton aria-label="Open notifications">
+          <NotificationsRoundedIcon fontSize="small" />
         </MenuButton>
         <ColorModeIconDropdown />
       </Stack>

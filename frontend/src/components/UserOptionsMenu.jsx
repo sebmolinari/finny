@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useNavigate } from "react-router-dom";
 import { styled } from "@mui/material/styles";
 import Divider, { dividerClasses } from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
@@ -10,13 +11,19 @@ import ListItemIcon, { listItemIconClasses } from "@mui/material/ListItemIcon";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import MenuButton from "./MenuButton";
+import { useAuth } from "../auth/AuthContext";
+import { toast } from "react-toastify";
+import { emailAPI } from "../api/api";
+import { handleApiError } from "../utils/errorHandler";
 
 const MenuItem = styled(MuiMenuItem)({
   margin: "2px 0",
 });
 
-export default function OptionsMenu() {
+export default function UserOptionsMenu() {
   const [anchorEl, setAnchorEl] = React.useState(null);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -24,6 +31,37 @@ export default function OptionsMenu() {
   const handleClose = () => {
     setAnchorEl(null);
   };
+  const handleProfileClick = () => {
+    handleClose();
+    navigate("/profile");
+  };
+
+  const handleChangePasswordClick = () => {
+    handleClose();
+    navigate("/change-password");
+  };
+
+  const handleSettingsClick = () => {
+    handleClose();
+    navigate("/settings");
+  };
+
+  const handleLogoutClick = async () => {
+    handleClose();
+    await logout();
+    navigate("/login");
+  };
+
+  const handleSendPortfolioEmail = async () => {
+    handleClose();
+    try {
+      const response = await emailAPI.sendPortfolioSummary();
+      toast.success(`Portfolio email sent to ${response.data.email}`);
+    } catch (error) {
+      handleApiError(error, "Failed to send portfolio email");
+    }
+  };
+
   return (
     <React.Fragment>
       <MenuButton
@@ -53,14 +91,16 @@ export default function OptionsMenu() {
           },
         }}
       >
-        <MenuItem onClick={handleClose}>Profile</MenuItem>
-        <MenuItem onClick={handleClose}>My account</MenuItem>
+        <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
+        <MenuItem onClick={handleChangePasswordClick}>Change Password</MenuItem>
+        <MenuItem onClick={handleSendPortfolioEmail}>
+          Send Portfolio Email
+        </MenuItem>
         <Divider />
-        <MenuItem onClick={handleClose}>Add another account</MenuItem>
-        <MenuItem onClick={handleClose}>Settings</MenuItem>
+        <MenuItem onClick={handleSettingsClick}>Settings</MenuItem>
         <Divider />
         <MenuItem
-          onClick={handleClose}
+          onClick={handleLogoutClick}
           sx={{
             [`& .${listItemIconClasses.root}`]: {
               ml: "auto",

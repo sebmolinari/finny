@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Container, Paper, Box, Grid, Tooltip, Chip } from "@mui/material";
+import { Box, Grid, Tooltip, Chip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { AttachMoney as AttachMoneyIcon } from "@mui/icons-material";
 import { MetricCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StyledDataGrid from "../components/StyledDataGrid";
+
 import { analyticsAPI } from "../api/api";
 import {
   formatNumber,
   formatCurrency,
   formatPercent,
 } from "../utils/formatNumber";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 
 export default function Holdings() {
   const [holdings, setHoldings] = useState(null);
@@ -173,7 +176,7 @@ export default function Holdings() {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <PageContainer title="Holdings" subtitle="Current portfolio positions">
       {/* Cash & Liquidity Metrics */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid
@@ -186,7 +189,7 @@ export default function Holdings() {
             title="Cash Balance: Total cash available in the portfolio, including uninvested funds from deposits, withdrawals, and trading activity."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(1) }}>
               <MetricCard
                 label="Cash Balance"
                 value={formatCurrency(
@@ -210,7 +213,7 @@ export default function Holdings() {
             title="Liquidity: Total liquid assets including cash and money market equivalents. Represents immediately available funds. Calculation: Cash Balance + Liquidity Assets."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(2) }}>
               <MetricCard
                 label="Liquidity"
                 value={formatCurrency(
@@ -234,7 +237,7 @@ export default function Holdings() {
             title="Liquidity %: Percentage of portfolio that is liquid (cash + liquidity assets like money market funds). Higher percentage means more readily available funds. Calculation: Liquidity Balance / NAV × 100."
             arrow
           >
-            <Box>
+            <Box sx={{ ...fadeInUpSx(3) }}>
               <MetricCard
                 label="Liquidity %"
                 value={formatPercent(
@@ -248,17 +251,14 @@ export default function Holdings() {
         </Grid>
       </Grid>
       {/* Holdings Table */}
-      <Paper sx={{ mb: 4 }}>
-        <StyledDataGrid
-          label="Holdings"
-          rows={holdings}
-          columns={columns}
-          loading={loading}
-          getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
-          pageSize={25}
-          rowsPerPageOptions={[10, 25, 50]}
-        />
-      </Paper>
-    </Container>
+      <StyledDataGrid
+        rows={holdings}
+        columns={columns}
+        loading={loading}
+        getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
+        pageSize={25}
+        rowsPerPageOptions={[10, 25, 50]}
+      />
+    </PageContainer>
   );
 }

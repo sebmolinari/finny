@@ -7,7 +7,7 @@ const db = new Database(
   // Enable for debugging
   // {
   //   verbose: console.log,
-  // }
+  // },
 );
 
 db.pragma(`key='${process.env.DB_KEY}'`);

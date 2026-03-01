@@ -1,16 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  Container,
-  Typography,
-  Paper,
-  Box,
-  Grid,
-  Divider,
-} from "@mui/material";
+import { Typography, Paper, Box, Grid, Divider } from "@mui/material";
 import { analyticsAPI } from "../api/api";
 import { settingsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import StyledDataGrid from "../components/StyledDataGrid";
+import PageContainer from "../components/PageContainer";
+import { fadeInUpSx } from "../utils/animations";
 import { useTheme } from "@mui/material/styles";
 import { StatCard } from "../components/StyledCard";
 import { formatDate } from "../utils/dateUtils";
@@ -163,11 +158,10 @@ export default function ReturnDetails() {
   } = details;
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Return Calculations (MWRR & CAGR)
-      </Typography>
-      {/* Portfolio Totals */}
+    <PageContainer
+      title="Return Details"
+      subtitle="Portfolio performance analysis"
+    >
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid
           size={{
@@ -179,6 +173,7 @@ export default function ReturnDetails() {
             label="Holdings Market Value"
             value={formatCurrency(holdings_market_value)}
             valueColor={theme.palette.primary.main}
+            sx={{ ...fadeInUpSx(1) }}
           />
         </Grid>
         <Grid
@@ -191,6 +186,7 @@ export default function ReturnDetails() {
             label="Cash Balance"
             value={formatCurrency(cash_balance)}
             valueColor={theme.palette.primary.main}
+            sx={{ ...fadeInUpSx(2) }}
           />
         </Grid>
         <Grid
@@ -203,6 +199,7 @@ export default function ReturnDetails() {
             label="NAV (Net Asset Value)"
             value={formatCurrency(current_total_value)}
             valueColor={theme.palette.primary.main}
+            sx={{ ...fadeInUpSx(3) }}
           />
         </Grid>
       </Grid>
@@ -241,34 +238,28 @@ export default function ReturnDetails() {
         </Box>
 
         <Divider sx={{ my: 2 }} />
-        <Paper sx={{ width: "100%", mb: 2 }}>
-          <div style={{ width: "100%" }}>
-            <StyledDataGrid
-              label="Cash Flows Used"
-              rows={mwrr_cash_flows.map((r, i) => ({
-                ...r,
-                id: r.id ?? `${r.date}-${r.type}-${i}`,
-              }))}
-              loading={detailsLoading}
-              columns={columnsMwrrCashFlows}
-              pageSize={25}
-              rowsPerPageOptions={[25, 50]}
-            />
-          </div>
-        </Paper>
+        <StyledDataGrid
+          label="Cash Flows Used"
+          rows={mwrr_cash_flows.map((r, i) => ({
+            ...r,
+            id: r.id ?? `${r.date}-${r.type}-${i}`,
+          }))}
+          loading={detailsLoading}
+          columns={columnsMwrrCashFlows}
+          pageSize={25}
+          rowsPerPageOptions={[25, 50]}
+        />
 
         <Divider sx={{ my: 2 }} />
-        <Paper sx={{ width: "100%" }}>
-          <StyledDataGrid
-            rows={mwrr_iterations}
-            columns={columnsMwrrIterations}
-            loading={detailsLoading}
-            getRowId={(row) => row.iteration}
-            pageSize={25}
-            rowsPerPageOptions={[25, 50]}
-            disableToolbar
-          />
-        </Paper>
+        <StyledDataGrid
+          rows={mwrr_iterations}
+          columns={columnsMwrrIterations}
+          loading={detailsLoading}
+          getRowId={(row) => row.iteration}
+          pageSize={25}
+          rowsPerPageOptions={[25, 50]}
+          disableToolbar
+        />
       </Paper>
       {/* CAGR Details */}
       <Paper sx={{ p: 2 }}>
@@ -377,6 +368,6 @@ export default function ReturnDetails() {
           />
         </Paper>
       )}
-    </Container>
+    </PageContainer>
   );
 }

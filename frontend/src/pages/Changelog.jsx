@@ -1,15 +1,17 @@
-import { Container, Paper, Box } from "@mui/material";
+import { Paper, Box } from "@mui/material";
+import PageContainer from "../components/PageContainer";
 import ReactMarkdown from "react-markdown";
 import changelog from "../assets/CHANGELOG.md?raw";
+import { fadeInUpSx } from "../utils/animations";
 
 export default function Changelog() {
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 3 }}>
+    <PageContainer title="Changelog" maxWidth="md">
+      <Paper sx={{ p: 3, ...fadeInUpSx(1) }}>
         <Box sx={{ fontSize: "0.95rem" }}>
           <ReactMarkdown>{changelog}</ReactMarkdown>
         </Box>
       </Paper>
-    </Container>
+    </PageContainer>
   );
 }
