@@ -25,6 +25,7 @@ const BAR_PALETTE = [
 const MarketValueByBrokerChart = ({
   data,
   title,
+  subtitle,
   height = 300,
   animIndex = 3,
 }) => {
@@ -36,7 +37,12 @@ const MarketValueByBrokerChart = ({
   const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
 
   return (
-    <ChartCard title={title} height={height} animIndex={animIndex}>
+    <ChartCard
+      title={title}
+      subtitle={subtitle}
+      height={height}
+      animIndex={animIndex}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
