@@ -232,12 +232,12 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
           .map((t) => t.trim())
           .filter(Boolean)
       : [];
-    const dashboard = AnalyticsService.getPortfolioAnalytics(
+    const analytics = AnalyticsService.getPortfolioAnalytics(
       req.user.id,
       excludeTypes,
     );
 
-    res.json(dashboard);
+    res.json(analytics);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

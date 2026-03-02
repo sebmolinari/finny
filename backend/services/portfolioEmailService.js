@@ -14,7 +14,7 @@ class PortfolioEmailService {
       const userSettings = UserSettings.findByUserId(userId);
       const today = getTodayInTimezone(userSettings.timezone);
       // Get portfolio analytics data (real estate excluded from liquid metrics)
-      const dashboard = AnalyticsService.getPortfolioAnalytics(
+      const analytics = AnalyticsService.getPortfolioAnalytics(
         userId,
         ["realestate"],
         true,
@@ -32,11 +32,18 @@ class PortfolioEmailService {
         ["realestate"],
       );
 
+      const last30Performance = AnalyticsService.getPortfolioPerformance(
+        userId,
+        30,
+        ["realestate"],
+      );
+
       const htmlContent = this._generateHTML(
-        dashboard,
+        analytics,
         username,
         today,
         ytdPerformance,
+        last30Performance,
       );
       return {
         subject: `Portfolio Summary - ${today}`,
@@ -53,8 +60,8 @@ class PortfolioEmailService {
   /**
    * Generate HTML email template
    */
-  static _generateHTML(dashboard, username, today, ytdPerformance = []) {
-    const { nav, transactions } = dashboard;
+  static _generateHTML(analytics, username, today, ytdPerformance = [], last30Performance = []) {
+    const { nav, transactions } = analytics;
     const {
       holdings_market_value,
       daily_pnl,
@@ -271,8 +278,11 @@ class PortfolioEmailService {
                 </tbody>
               </table>
 
+              <!-- ═══ LAST 30 DAYS NAV CHART ═══ -->
+              ${this._generateChartImg(last30Performance, 'NAV &mdash; Last 30 Days')}
+
               <!-- ═══ YTD NAV CHART ═══ -->
-              ${this._generateChartImg(ytdPerformance)}
+              ${this._generateChartImg(ytdPerformance, 'NAV &mdash; Year to Date')}
 
               <!-- ═══ FOOTER ═══ -->
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #e0e0e0;">
@@ -306,7 +316,7 @@ class PortfolioEmailService {
    * @param {Array<{date: string, total_value: number}>} data
    * @returns {string} HTML string, or empty string if insufficient data
    */
-  static _generateChartImg(data) {
+  static _generateChartImg(data, title = 'NAV &mdash; Year to Date') {
     if (!data || data.length < 2) return "";
 
     // Downsample to ≤60 points so the URL stays well within limits
@@ -368,7 +378,7 @@ class PortfolioEmailService {
     const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=700&h=220&bkg=white`;
 
     return `
-<h2 style="color:#1976d2; font-size:18px; font-weight:700; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:0.03em;">NAV &mdash; Year to Date</h2>
+<h2 style="color:#1976d2; font-size:18px; font-weight:700; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:0.03em;">${title}</h2>
 <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
   <tr>
     <td>
