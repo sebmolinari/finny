@@ -188,14 +188,28 @@ class AnalyticsService {
   }
 
   // Get comprehensive portfolio analytics data
-  static getPortfolioAnalytics(userId, excludeAssetTypes = []) {
+  static getPortfolioAnalytics(
+    userId,
+    excludeAssetTypes = [],
+    groupByAsset = false,
+  ) {
     // All holdings (unfiltered) — used for NAV, MWRR, CAGR, total portfolio value
-    const allHoldings = this.getPortfolioHoldings(userId, true, []);
+    const allHoldings = this.getPortfolioHoldings(
+      userId,
+      true,
+      [],
+      groupByAsset,
+    );
 
     // Filtered holdings — used for holdings_market_value, unrealized gain, and asset allocation
     const filteredHoldings =
       excludeAssetTypes.length > 0
-        ? this.getPortfolioHoldings(userId, true, excludeAssetTypes)
+        ? this.getPortfolioHoldings(
+            userId,
+            true,
+            excludeAssetTypes,
+            groupByAsset,
+          )
         : allHoldings;
 
     // Transaction analytics
