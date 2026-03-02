@@ -388,7 +388,7 @@ const Dashboard = () => {
           <AssetAllocationChart
             data={dashboard.transactions.asset_allocation}
             title="Asset Allocation"
-            subtitle="Liquid holdings only — real estate excluded."
+            subtitle="Liquid holdings only"
             height={300}
           />
         </Grid>
@@ -396,6 +396,7 @@ const Dashboard = () => {
           <MarketValueByBrokerChart
             data={brokerSummary}
             title="Exposure by Broker"
+            subtitle="Include all holdings"
             height={300}
           />
         </Grid>
