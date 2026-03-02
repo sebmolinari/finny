@@ -38,7 +38,10 @@ const MarketValueByBrokerChart = ({
   return (
     <ChartCard title={title} height={height} animIndex={animIndex}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 4, right: 8, left: 0, bottom: 48 }}
+        >
           <CartesianGrid
             strokeDasharray="3 3"
             stroke={gridColor}
@@ -47,9 +50,11 @@ const MarketValueByBrokerChart = ({
           <XAxis
             dataKey="name"
             interval={0}
-            tick={{ fontSize: 12, fill: tickColor }}
+            tick={{ fontSize: 12, fill: tickColor, textAnchor: "end" }}
             axisLine={false}
             tickLine={false}
+            angle={-45}
+            dx={-4}
           />
           <YAxis
             domain={[0, "dataMax"]}
