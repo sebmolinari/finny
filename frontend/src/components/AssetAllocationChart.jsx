@@ -21,6 +21,25 @@ const PALETTE = [
   "#f97316",
 ];
 
+const renderSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }) => {
+  if (percentage < 5) return null;
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      style={{ fontSize: 11, fontWeight: 600, fill: "#fff", pointerEvents: "none" }}
+    >
+      {`${percentage.toFixed(1)}%`}
+    </text>
+  );
+};
+
 const AssetAllocationChart = ({ data, title, height = 300, animIndex = 2 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
@@ -41,6 +60,8 @@ const AssetAllocationChart = ({ data, title, height = 300, animIndex = 2 }) => {
             innerRadius={Math.min(height / 2 - 30, 110) * 0.52}
             paddingAngle={2}
             strokeWidth={0}
+            label={renderSliceLabel}
+            labelLine={false}
           >
             {data.map((_, i) => (
               <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
