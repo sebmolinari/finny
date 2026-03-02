@@ -73,8 +73,7 @@ const Dashboard = () => {
     try {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const ytdDays =
-        Math.ceil((now - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+      const ytdDays = Math.ceil((now - startOfYear) / (1000 * 60 * 60 * 24));
       const response = await analyticsAPI.getPortfolioPerformance(ytdDays);
       const allData = response.data;
       const perfData = allData.map((item) => ({

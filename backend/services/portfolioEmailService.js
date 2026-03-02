@@ -23,8 +23,9 @@ class PortfolioEmailService {
       // Get YTD performance for NAV chart
       const todayDate = new Date(today);
       const startOfYear = new Date(todayDate.getFullYear(), 0, 1);
-      const ytdDays =
-        Math.ceil((todayDate - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+      const ytdDays = Math.ceil(
+        (todayDate - startOfYear) / (1000 * 60 * 60 * 24),
+      );
       const ytdPerformance = AnalyticsService.getPortfolioPerformance(
         userId,
         ytdDays,
