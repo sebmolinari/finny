@@ -52,14 +52,14 @@ const renderSliceLabel = ({
   );
 };
 
-const AssetAllocationChart = ({ data, title, height = 300, animIndex = 2 }) => {
+const AssetAllocationChart = ({ data, title, subtitle, height = 300, animIndex = 2 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const tooltipBg = isDark ? "#1e293b" : "#ffffff";
   const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
 
   return (
-    <ChartCard title={title} height={height} animIndex={animIndex}>
+    <ChartCard title={title} subtitle={subtitle} height={height} animIndex={animIndex}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

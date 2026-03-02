@@ -167,10 +167,10 @@ export default function ReturnDetails() {
           }}
         >
           <StatCard
-            label="Holdings Market Value"
-            value={formatCurrency(holdings_market_value)}
+            label="Net Asset Value"
+            value={formatCurrency(current_total_value)}
             valueColor={theme.palette.primary.main}
-            sx={{ ...fadeInUpSx(1) }}
+            sx={{ ...fadeInUpSx(3) }}
           />
         </Grid>
         <Grid
@@ -193,10 +193,10 @@ export default function ReturnDetails() {
           }}
         >
           <StatCard
-            label="NAV (Net Asset Value)"
-            value={formatCurrency(current_total_value)}
+            label="Holdings Market Value"
+            value={formatCurrency(holdings_market_value)}
             valueColor={theme.palette.primary.main}
-            sx={{ ...fadeInUpSx(3) }}
+            sx={{ ...fadeInUpSx(1) }}
           />
         </Grid>
       </Grid>

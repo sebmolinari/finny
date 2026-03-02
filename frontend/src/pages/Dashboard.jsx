@@ -245,7 +245,7 @@ const Dashboard = () => {
           }}
         >
           <Tooltip
-            title="Unrealized P&L: Profit or loss on open positions that have not yet been closed. Excl. real estate. Calculation: Holdings Market Value - Cost Basis."
+            title="Unrealized P&L: Profit or loss on open positions that have not yet been closed. Excl. real estate. Calculation: Liquid Market Value - Cost Basis."
             arrow
           >
             <Box sx={{ height: "100%", ...fadeInUpSx(3) }}>
@@ -388,6 +388,7 @@ const Dashboard = () => {
           <AssetAllocationChart
             data={dashboard.transactions.asset_allocation}
             title="Asset Allocation"
+            subtitle="Liquid holdings only — real estate excluded."
             height={300}
           />
         </Grid>
