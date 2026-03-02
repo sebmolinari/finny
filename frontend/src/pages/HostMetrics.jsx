@@ -40,6 +40,17 @@ const MetricRow = ({ label, value, extra }) => (
   </TableRow>
 );
 
+const formatUptime = (seconds) => {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  parts.push(`${m}m`);
+  return parts.join(" ");
+};
+
 const UtilBar = ({ value, max, color = "primary" }) => {
   const pct = Math.min(100, Math.round((value / max) * 100));
   const severity = pct > 85 ? "error" : pct > 60 ? "warning" : color;
@@ -62,7 +73,7 @@ const UtilBar = ({ value, max, color = "primary" }) => {
   );
 };
 
-export default function Metrics() {
+export default function HostMetrics() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -124,7 +135,7 @@ export default function Metrics() {
                 />
                 <Chip
                   icon={<AccessTimeIcon />}
-                  label={`Uptime ${Math.floor(metrics.uptime / 60)} min`}
+                  label={`Uptime ${formatUptime(metrics.uptime)}`}
                   size="small"
                   variant="outlined"
                 />

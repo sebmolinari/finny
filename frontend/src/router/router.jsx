@@ -16,7 +16,7 @@ import CashDetails from "../pages/CashDetails";
 import Brokers from "../pages/Brokers";
 import Settings from "../pages/Settings";
 import AuditLogs from "../pages/AuditLogs";
-import Metrics from "../pages/Metrics";
+import HostMetrics from "../pages/HostMetrics";
 import MarketTrends from "../pages/MarketTrends";
 import TaxReport from "../pages/TaxReport";
 import ChangePassword from "../pages/ChangePassword";
@@ -119,7 +119,7 @@ export const router = createBrowserRouter([
             path: "host-metrics",
             element: (
               <ProtectedRoute role="admin">
-                <Metrics />
+                <HostMetrics />
               </ProtectedRoute>
             ),
           },
