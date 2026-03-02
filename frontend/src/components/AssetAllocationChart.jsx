@@ -21,7 +21,14 @@ const PALETTE = [
   "#f97316",
 ];
 
-const renderSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }) => {
+const renderSliceLabel = ({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percentage,
+}) => {
   if (percentage < 5) return null;
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -33,7 +40,12 @@ const renderSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percenta
       y={y}
       textAnchor="middle"
       dominantBaseline="central"
-      style={{ fontSize: 11, fontWeight: 600, fill: "#fff", pointerEvents: "none" }}
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        fill: "#fff",
+        pointerEvents: "none",
+      }}
     >
       {`${percentage.toFixed(1)}%`}
     </text>
