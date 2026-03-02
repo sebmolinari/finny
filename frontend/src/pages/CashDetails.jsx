@@ -4,7 +4,7 @@ import { MetricCard, StatCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { settingsAPI } from "../api/api";
 import { analyticsAPI } from "../api/api";
-import { useTheme } from "@mui/material/styles";
+import { useTheme, alpha } from "@mui/material/styles";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { formatDate } from "../utils/dateUtils";
 import StyledDataGrid from "../components/StyledDataGrid";
@@ -268,7 +268,13 @@ export default function CashDetails() {
               md: 4,
             }}
           >
-            <Box sx={{ p: 2, bgcolor: "background.default", borderRadius: 1 }}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: theme.palette.action.selected,
+                borderRadius: 1,
+              }}
+            >
               <Typography variant="subtitle2" color="text.secondary">
                 Inflows
               </Typography>
@@ -365,7 +371,13 @@ export default function CashDetails() {
               md: 4,
             }}
           >
-            <Box sx={{ p: 2, bgcolor: "background.default", borderRadius: 1 }}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: theme.palette.action.selected,
+                borderRadius: 1,
+              }}
+            >
               <Typography variant="subtitle2" color="text.secondary">
                 Outflows
               </Typography>
@@ -416,7 +428,7 @@ export default function CashDetails() {
             <Box
               sx={{
                 p: 2,
-                bgcolor: "action.hover",
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
                 borderRadius: 1,
                 border: "1px solid",
                 borderColor: "primary.light",

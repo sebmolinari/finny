@@ -17,7 +17,7 @@ export const MetricCard = ({
   icon,
   valueColor,
   subtitle,
-  valueFontWeight = 700,
+  valueFontWeight = 400,
   sx = {},
   ...props
 }) => {
@@ -38,11 +38,9 @@ export const MetricCard = ({
           )}
           <Typography
             color="text.secondary"
-            variant="caption"
+            variant="body2"
             sx={{
               fontWeight: 600,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
             }}
           >
             {label}
@@ -65,17 +63,22 @@ export const MetricCard = ({
 };
 
 // Stat Card - displays label and value in a compact format
-export const StatCard = ({ label, value, valueColor, sx = {}, ...props }) => {
+export const StatCard = ({
+  label,
+  value,
+  valueColor,
+  valueFontWeight = 400,
+  sx = {},
+  ...props
+}) => {
   return (
     <StyledCard sx={{ ...sx }} {...props}>
       <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
         <Typography
           color="text.secondary"
-          variant="caption"
+          variant="body2"
           sx={{
             fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
           }}
           gutterBottom
         >
@@ -84,7 +87,7 @@ export const StatCard = ({ label, value, valueColor, sx = {}, ...props }) => {
         <Typography
           variant="h5"
           sx={{
-            fontWeight: 700,
+            fontWeight: valueFontWeight,
             color: valueColor || "text.primary",
             letterSpacing: "-0.02em",
           }}

@@ -5,6 +5,7 @@ import {
   Typography,
   Button,
   Box,
+  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -474,6 +475,27 @@ export default function Blotter() {
     calculateAmount,
   ]);
 
+  const getTypeColor = (type) => {
+    switch (type?.toLowerCase()) {
+      case "deposit":
+        return "success";
+      case "withdraw":
+      case "withdrawal":
+        return "error";
+      case "buy":
+        return "warning";
+      case "sell":
+        return "info";
+      case "dividend":
+      case "interest":
+      case "coupon":
+      case "rental":
+        return "secondary";
+      default:
+        return "default";
+    }
+  };
+
   const columns = [
     {
       field: "date",
@@ -494,8 +516,16 @@ export default function Blotter() {
       field: "transaction_type",
       headerName: "Type",
       headerAlign: "center",
+      align: "center",
       flex: 1,
       minWidth: 120,
+      renderCell: (params) => (
+        <Chip
+          label={params.value}
+          color={getTypeColor(params.value)}
+          size="small"
+        />
+      ),
     },
     {
       field: "broker_name",

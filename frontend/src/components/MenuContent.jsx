@@ -66,14 +66,14 @@ const analysisItems = [
     path: "/brokers",
   },
   {
-    text: "Cash Details",
-    icon: <SavingsRoundedIcon fontSize="small" />,
-    path: "/cash-details",
-  },
-  {
     text: "Return Details",
     icon: <QueryStatsRoundedIcon fontSize="small" />,
     path: "/return-details",
+  },
+  {
+    text: "Cash Details",
+    icon: <SavingsRoundedIcon fontSize="small" />,
+    path: "/cash-details",
   },
   {
     text: "Tax Report",

@@ -634,6 +634,7 @@ export default function AssetAllocation() {
             valueColor={
               isValid ? theme.palette.primary.main : theme.palette.error.main
             }
+            valueFontWeight={400}
             sx={{ ...fadeInUpSx(1) }}
           />
         </Grid>
@@ -656,6 +657,7 @@ export default function AssetAllocation() {
                   ? theme.palette.error.main
                   : theme.palette.primary.main
             }
+            valueFontWeight={400}
             sx={{ ...fadeInUpSx(2) }}
           />
         </Grid>
@@ -680,6 +682,7 @@ export default function AssetAllocation() {
                 ? theme.palette.success.main
                 : theme.palette.warning.main
             }
+            valueFontWeight={400}
             sx={{ ...fadeInUpSx(3) }}
           />
         </Grid>

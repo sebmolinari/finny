@@ -194,7 +194,7 @@ const Dashboard = () => {
           >
             <Box sx={{ height: "100%", ...fadeInUpSx(1) }}>
               <StatCard
-                title="NAV"
+                title="Net Asset Value"
                 icon={<AccountBalanceIcon color="primary" />}
                 value={formatCurrency(dashboard?.nav || 0, 0)}
                 interval={navInterval}

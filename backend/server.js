@@ -167,7 +167,7 @@ app.get("/api/v1/health", (req, res) => {
 
 // Serve static files from React app in production
 if (process.env.NODE_ENV === "production") {
-  const frontendBuildPath = path.join(__dirname, "..", "frontend", "build");
+  const frontendBuildPath = path.join(__dirname, "..", "frontend", "dist");
   app.use(express.static(frontendBuildPath));
 
   // Handle React routing - return index.html for all non-API routes
