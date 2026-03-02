@@ -149,7 +149,6 @@ class Transaction {
       LEFT JOIN assets a ON it.asset_id = a.id
       LEFT JOIN brokers b ON it.broker_id = b.id
       WHERE it.user_id = ?
-      WHERE it.user_id = ?
       ORDER BY it.date DESC, it.id DESC
     `);
 
