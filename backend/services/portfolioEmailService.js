@@ -60,7 +60,13 @@ class PortfolioEmailService {
   /**
    * Generate HTML email template
    */
-  static _generateHTML(analytics, username, today, ytdPerformance = [], last30Performance = []) {
+  static _generateHTML(
+    analytics,
+    username,
+    today,
+    ytdPerformance = [],
+    last30Performance = [],
+  ) {
     const { nav, transactions } = analytics;
     const {
       holdings_market_value,
@@ -279,10 +285,10 @@ class PortfolioEmailService {
               </table>
 
               <!-- ═══ LAST 30 DAYS NAV CHART ═══ -->
-              ${this._generateChartImg(last30Performance, 'NAV &mdash; Last 30 Days')}
+              ${this._generateChartImg(last30Performance, "NAV &mdash; Last 30 Days")}
 
               <!-- ═══ YTD NAV CHART ═══ -->
-              ${this._generateChartImg(ytdPerformance, 'NAV &mdash; Year to Date')}
+              ${this._generateChartImg(ytdPerformance, "NAV &mdash; Year to Date")}
 
               <!-- ═══ FOOTER ═══ -->
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #e0e0e0;">
@@ -316,7 +322,7 @@ class PortfolioEmailService {
    * @param {Array<{date: string, total_value: number}>} data
    * @returns {string} HTML string, or empty string if insufficient data
    */
-  static _generateChartImg(data, title = 'NAV &mdash; Year to Date') {
+  static _generateChartImg(data, title = "NAV &mdash; Year to Date") {
     if (!data || data.length < 2) return "";
 
     // Downsample to ≤60 points so the URL stays well within limits
