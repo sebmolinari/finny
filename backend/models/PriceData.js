@@ -128,6 +128,17 @@ class PriceData {
     return PriceData._mapRowToApi(row);
   }
 
+  static getLatestPriceAsOf(assetId, asOfDate) {
+    const stmt = db.prepare(`
+      SELECT * FROM price_data 
+      WHERE asset_id = ? AND date <= ?
+      ORDER BY date DESC 
+      LIMIT 1
+    `);
+    const row = stmt.get(assetId, asOfDate);
+    return PriceData._mapRowToApi(row);
+  }
+
   static getAssetPriceHistory(assetId, days = 30) {
     const stmt = db.prepare(`
       SELECT date, price 

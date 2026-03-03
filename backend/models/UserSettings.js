@@ -14,12 +14,16 @@ class UserSettings {
     emailFrequency,
     validateCashBalance,
     validateSellBalance,
-    createdBy = userId
+    createdBy = userId,
+    marginalTaxRate = 0.25,
+    ltHoldingPeriodDays = 365,
+    notificationPollingEnabled = 1,
+    notificationPollingInterval = 60,
   ) {
     const stmt = db.prepare(`
       INSERT INTO user_settings 
-      (user_id, date_format, theme, timezone, language, liquidity_asset_id, fx_rate_asset_id, rebalancing_tolerance, email_notifications_enabled, email_frequency, validate_cash_balance, validate_sell_balance, created_by, updated_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (user_id, date_format, theme, timezone, language, liquidity_asset_id, fx_rate_asset_id, rebalancing_tolerance, email_notifications_enabled, email_frequency, validate_cash_balance, validate_sell_balance, created_by, updated_by, marginal_tax_rate, lt_holding_period_days, notification_polling_enabled, notification_polling_interval)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         date_format = ?,
         theme = ?,
@@ -32,6 +36,10 @@ class UserSettings {
         email_frequency = ?,
         validate_cash_balance = ?,
         validate_sell_balance = ?,
+        marginal_tax_rate = ?,
+        lt_holding_period_days = ?,
+        notification_polling_enabled = ?,
+        notification_polling_interval = ?,
         updated_at = CURRENT_TIMESTAMP
     `);
     const result = stmt.run(
@@ -49,6 +57,10 @@ class UserSettings {
       validateSellBalance,
       createdBy,
       createdBy,
+      marginalTaxRate,
+      ltHoldingPeriodDays,
+      notificationPollingEnabled,
+      notificationPollingInterval,
       dateFormat,
       theme,
       timezone,
@@ -59,7 +71,11 @@ class UserSettings {
       emailNotificationsEnabled,
       emailFrequency,
       validateCashBalance,
-      validateSellBalance
+      validateSellBalance,
+      marginalTaxRate,
+      ltHoldingPeriodDays,
+      notificationPollingEnabled,
+      notificationPollingInterval,
     );
     return result.lastInsertRowid;
   }
@@ -77,7 +93,11 @@ class UserSettings {
     emailFrequency,
     validateCashBalance,
     validateSellBalance,
-    updatedBy
+    updatedBy,
+    marginalTaxRate,
+    ltHoldingPeriodDays,
+    notificationPollingEnabled,
+    notificationPollingInterval,
   ) {
     const stmt = db.prepare(`
       UPDATE user_settings 
@@ -92,6 +112,10 @@ class UserSettings {
           email_frequency = ?,
           validate_cash_balance = ?,
           validate_sell_balance = ?,
+          marginal_tax_rate = ?,
+          lt_holding_period_days = ?,
+          notification_polling_enabled = ?,
+          notification_polling_interval = ?,
           updated_by = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
@@ -108,8 +132,12 @@ class UserSettings {
       emailFrequency,
       validateCashBalance,
       validateSellBalance,
+      marginalTaxRate,
+      ltHoldingPeriodDays,
+      notificationPollingEnabled,
+      notificationPollingInterval,
       updatedBy,
-      userId
+      userId,
     );
     return result.changes;
   }

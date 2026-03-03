@@ -1,13 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { Box, Typography, Grid, Tooltip } from "@mui/material";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Box,
+  Typography,
+  Grid,
+  Tooltip,
+  ToggleButtonGroup,
+  ToggleButton,
+  TextField,
+  CircularProgress,
+  CardContent,
+} from "@mui/material";
 import { fadeInUpSx } from "../utils/animations";
-import { MetricCard } from "../components/StyledCard";
+import { MetricCard, StyledCard } from "../components/StyledCard";
 import { useTheme } from "@mui/material/styles";
 import {
   AccountBalance as AccountBalanceIcon,
   TrendingUp as TrendingUpIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
   ShowChart as ShowChartIcon,
+  EmojiEvents as EmojiEventsIcon,
+  TrendingDown as TrendingDownIcon,
 } from "@mui/icons-material";
 
 import AssetAllocationChart from "../components/AssetAllocationChart";
@@ -20,6 +32,15 @@ import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 
+// Helper: format a date to YYYY-MM-DD without timezone shift
+function toDateInput(date) {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
 const Dashboard = () => {
   const theme = useTheme();
   const [dashboard, setDashboard] = useState(null);
@@ -30,14 +51,68 @@ const Dashboard = () => {
   const [mtmEvolution, setMtmEvolution] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Date range selector
+  const [rangeMode, setRangeMode] = useState("ytd"); // 'ytd' | '12m' | 'inception' | 'custom'
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState(toDateInput(new Date()));
+  const [inceptionDate, setInceptionDate] = useState(null);
+  const [rangeMetrics, setRangeMetrics] = useState(null);
+  const [rangeMetricsLoading, setRangeMetricsLoading] = useState(false);
+
+  // Compute start/end for the current range mode
+  const getActiveRange = useCallback(() => {
+    const now = new Date();
+    const todayStr = toDateInput(now);
+    switch (rangeMode) {
+      case "ytd": {
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        return { startDate: toDateInput(startOfYear), endDate: todayStr };
+      }
+      case "30d": {
+        const start = new Date(now);
+        start.setDate(start.getDate() - 30);
+        return { startDate: toDateInput(start), endDate: todayStr };
+      }
+      case "12m": {
+        const start = new Date(now);
+        start.setFullYear(start.getFullYear() - 1);
+        return { startDate: toDateInput(start), endDate: todayStr };
+      }
+      case "inception":
+        return inceptionDate
+          ? { startDate: inceptionDate, endDate: todayStr }
+          : null;
+      case "custom":
+        return customStart && customEnd
+          ? { startDate: customStart, endDate: customEnd }
+          : null;
+      default:
+        return null;
+    }
+  }, [rangeMode, customStart, customEnd, inceptionDate]);
+
   useEffect(() => {
     loadDashboard();
     loadBrokerData();
-    loadPerformanceData();
     loadSparklineData();
     loadHoldingsSparklineData();
     loadReturnDetails();
+    loadInceptionDate();
   }, []);
+
+  // Compute a stable key that only changes when the resolved date range actually changes.
+  // This prevents re-firing when inceptionDate loads but rangeMode is not "inception".
+  const activeRangeKey = useMemo(() => {
+    const range = getActiveRange();
+    return range ? `${range.startDate}|${range.endDate}` : null;
+  }, [getActiveRange]);
+
+  // Reload performance chart + range metrics whenever the resolved range changes
+  useEffect(() => {
+    if (!activeRangeKey) return;
+    loadPerformanceForRange();
+    loadRangeMetrics();
+  }, [activeRangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadDashboard = async () => {
     try {
@@ -69,14 +144,26 @@ const Dashboard = () => {
     }
   };
 
-  const loadPerformanceData = async () => {
+  const loadInceptionDate = async () => {
     try {
-      const now = new Date();
-      const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const ytdDays = Math.ceil((now - startOfYear) / (1000 * 60 * 60 * 24));
-      const response = await analyticsAPI.getPortfolioPerformance(ytdDays);
-      const allData = response.data;
-      const perfData = allData.map((item) => ({
+      const response = await analyticsAPI.getInceptionDate();
+      setInceptionDate(response.data.inception_date || null);
+    } catch (error) {
+      console.error("Error loading inception date:", error);
+    }
+  };
+
+  const loadPerformanceForRange = async () => {
+    const range = getActiveRange();
+    if (!range) return;
+    try {
+      const response = await analyticsAPI.getPortfolioPerformance(
+        undefined,
+        undefined,
+        range.startDate,
+        range.endDate,
+      );
+      const perfData = response.data.map((item) => ({
         date: item.date,
         value: item.total_value,
       }));
@@ -86,9 +173,30 @@ const Dashboard = () => {
     }
   };
 
+  const loadRangeMetrics = async () => {
+    const range = getActiveRange();
+    if (!range) {
+      setRangeMetrics(null);
+      return;
+    }
+    try {
+      setRangeMetricsLoading(true);
+      const response = await analyticsAPI.getDateRangeMetrics(
+        range.startDate,
+        range.endDate,
+      );
+      setRangeMetrics(response.data);
+    } catch (error) {
+      console.error("Error loading range metrics:", error);
+      setRangeMetrics(null);
+    } finally {
+      setRangeMetricsLoading(false);
+    }
+  };
+
   const loadSparklineData = async () => {
     try {
-      const response = await analyticsAPI.getPortfolioPerformance(30);
+      const response = await analyticsAPI.getPortfolioPerformance(31);
       const sparkData = response.data.map((item) => ({
         date: item.date,
         value: item.total_value,
@@ -101,7 +209,7 @@ const Dashboard = () => {
 
   const loadHoldingsSparklineData = async () => {
     try {
-      const response = await analyticsAPI.getPortfolioPerformance(30, [
+      const response = await analyticsAPI.getPortfolioPerformance(31, [
         "realestate",
       ]);
       const data = response.data.map((item) => ({
@@ -182,6 +290,27 @@ const Dashboard = () => {
     holdingsSparklineData.length >= 2
       ? `Period: ${new Date(holdingsSparklineData[0].date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(holdingsSparklineData[holdingsSparklineData.length - 1].date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
       : "Last 30 days";
+
+  // Best & Worst performers from holdings
+  const holdings = dashboard?.transactions?.holdings || [];
+  const holdingsWithCost = holdings.filter((h) => (h.cost_basis || 0) > 0);
+  const sortedByPct = [...holdingsWithCost].sort(
+    (a, b) => b.unrealized_gain_percent - a.unrealized_gain_percent,
+  );
+  const bestPerformers = sortedByPct.slice(0, 3);
+  const worstPerformers = sortedByPct.slice(-3).reverse();
+
+  // Chart title based on range
+  const rangeLabel =
+    rangeMode === "ytd"
+      ? "Year-to-Date"
+      : rangeMode === "30d"
+        ? "Last 30 Days"
+        : rangeMode === "12m"
+          ? "Last 12 Months"
+          : rangeMode === "inception"
+            ? "Since Inception"
+            : "Custom Range";
 
   return (
     <PageContainer>
@@ -372,17 +501,244 @@ const Dashboard = () => {
           </Tooltip>
         </Grid>
       </Grid>
-      {/* Portfolio Performance Chart */}
-      <PortfolioValueChart
-        data={performanceData}
-        title="Portfolio Performance (YTD)"
-        height={300}
-      />
+      {/* Portfolio Performance Chart with Date Range Selector */}
+      <Box sx={{ mt: 2.5 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 1.5,
+            mb: 1,
+          }}
+        >
+          <ToggleButtonGroup
+            value={rangeMode}
+            exclusive
+            onChange={(_, v) => v && setRangeMode(v)}
+            size="small"
+          >
+            <ToggleButton value="ytd">YTD</ToggleButton>
+            <ToggleButton value="30d">Last 30 Days</ToggleButton>
+            <ToggleButton value="12m">Last 12 Months</ToggleButton>
+            <ToggleButton value="inception" disabled={!inceptionDate}>
+              Since Inception
+            </ToggleButton>
+            <ToggleButton value="custom">Custom</ToggleButton>
+          </ToggleButtonGroup>
+
+          {rangeMode === "custom" && (
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+              <TextField
+                type="date"
+                label="Start"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ width: 150 }}
+              />
+              <TextField
+                type="date"
+                label="End"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ width: 150 }}
+              />
+            </Box>
+          )}
+
+          {rangeMetricsLoading ? (
+            <CircularProgress size={18} sx={{ ml: "auto" }} />
+          ) : rangeMetrics ? (
+            <Box sx={{ display: "flex", gap: 2.5, ml: "auto" }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  NAV Change
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color={
+                    rangeMetrics.nav_change_pct >= 0
+                      ? theme.palette.success.main
+                      : theme.palette.error.main
+                  }
+                >
+                  {rangeMetrics.nav_change_pct >= 0 ? "+" : ""}
+                  {rangeMetrics.nav_change_pct.toFixed(2)}%{" "}
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    ({formatCurrency(rangeMetrics.nav_change, 0)})
+                  </Typography>
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Period MWRR
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color={
+                    rangeMetrics.mwrr >= 0
+                      ? theme.palette.success.main
+                      : theme.palette.error.main
+                  }
+                >
+                  {rangeMetrics.mwrr >= 0 ? "+" : ""}
+                  {rangeMetrics.mwrr.toFixed(2)}%
+                </Typography>
+              </Box>
+            </Box>
+          ) : null}
+        </Box>
+        <PortfolioValueChart
+          data={performanceData}
+          title={`Portfolio Performance — ${rangeLabel}`}
+          height={300}
+        />
+      </Box>
       <MTMEvolutionChart
         data={mtmEvolution}
         title="Net Asset Value Evolution"
         height={380}
       />
+
+      {/* Best & Worst Performers */}
+      {holdingsWithCost.length > 0 && (
+        <Grid container spacing={2.5} sx={{ mt: 0 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <StyledCard animIndex={9}>
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1.5,
+                  }}
+                >
+                  <EmojiEventsIcon
+                    fontSize="small"
+                    sx={{ color: theme.palette.success.main }}
+                  />
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Best Performers
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    (vs. cost basis)
+                  </Typography>
+                </Box>
+                {bestPerformers.map((h) => (
+                  <Box
+                    key={`best-${h.asset_id}-${h.broker_id}`}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      py: 0.75,
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      "&:last-child": { borderBottom: "none" },
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {h.symbol}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {h.broker_name || "—"}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: "right" }}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color={theme.palette.success.main}
+                      >
+                        +{h.unrealized_gain_percent.toFixed(2)}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatCurrency(h.unrealized_gain, 0)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </CardContent>
+            </StyledCard>
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <StyledCard animIndex={10}>
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1.5,
+                  }}
+                >
+                  <TrendingDownIcon
+                    fontSize="small"
+                    sx={{ color: theme.palette.error.main }}
+                  />
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Worst Performers
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    (vs. cost basis)
+                  </Typography>
+                </Box>
+                {worstPerformers.map((h) => (
+                  <Box
+                    key={`worst-${h.asset_id}-${h.broker_id}`}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      py: 0.75,
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      "&:last-child": { borderBottom: "none" },
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {h.symbol}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {h.broker_name || "—"}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: "right" }}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color={
+                          h.unrealized_gain_percent < 0
+                            ? theme.palette.error.main
+                            : theme.palette.success.main
+                        }
+                      >
+                        {h.unrealized_gain_percent >= 0 ? "+" : ""}
+                        {h.unrealized_gain_percent.toFixed(2)}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatCurrency(h.unrealized_gain, 0)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </CardContent>
+            </StyledCard>
+          </Grid>
+        </Grid>
+      )}
+
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 6 }}>
           <AssetAllocationChart

@@ -21,6 +21,7 @@ const constantsRoutes = require("./routes/constants");
 const emailRoutes = require("./routes/email");
 const allocationRoutes = require("./routes/allocation");
 const hostMetricsRoutes = require("./routes/hostMetrics");
+const notificationsRoutes = require("./routes/notifications");
 const { runSchemaMigrations } = require("./scripts/migrationRunner");
 
 const app = express();
@@ -145,6 +146,7 @@ app.use("/api/v1/constants", constantsRoutes);
 app.use("/api/v1/email", emailRoutes);
 app.use("/api/v1/allocation", allocationRoutes);
 app.use("/api/v1/metrics", hostMetricsRoutes);
+app.use("/api/v1/notifications", notificationsRoutes);
 
 // Health check with database validation
 app.get("/api/v1/health", (req, res) => {

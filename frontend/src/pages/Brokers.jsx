@@ -1,33 +1,20 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Paper,
-  Button,
-  Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  IconButton,
-  FormControlLabel,
-  Switch,
-  Tooltip,
-} from "@mui/material";
+import { Box, IconButton, Switch, Tooltip } from "@mui/material";
 import StyledDataGrid from "../components/StyledDataGrid";
+import BrokerDialog from "../components/BrokerDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CloseRounded as CloseIcon,
 } from "@mui/icons-material";
 import { brokerAPI, settingsAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
-import AuditFieldsDisplay from "../components/AuditFieldsDisplay";
 import PageContainer from "../components/PageContainer";
+import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
 
 export default function Brokers() {
   const { user } = useAuth();
@@ -37,13 +24,11 @@ export default function Brokers() {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingBroker, setEditingBroker] = useState(null);
-  const [formData, setFormData] = useState({
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    open: false,
+    id: null,
     name: "",
-    description: "",
-    website: "",
-    active: true,
   });
-
   const loadBrokers = useCallback(async () => {
     try {
       setLoading(true);
@@ -61,10 +46,13 @@ export default function Brokers() {
 
   useEffect(() => {
     loadBrokers();
+  }, [loadBrokers]);
+
+  useEffect(() => {
     if (user?.id) {
       loadUserSettings();
     }
-  }, [user, loadBrokers]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserSettings = async () => {
     const response = await settingsAPI.get();
@@ -73,23 +61,7 @@ export default function Brokers() {
   };
 
   const handleOpenDialog = (broker = null) => {
-    if (broker) {
-      setEditingBroker(broker);
-      setFormData({
-        name: broker.name,
-        description: broker.description || "",
-        website: broker.website || "",
-        active: broker.active !== 0,
-      });
-    } else {
-      setEditingBroker(null);
-      setFormData({
-        name: "",
-        description: "",
-        website: "",
-        active: true,
-      });
-    }
+    setEditingBroker(broker || null);
     setOpenDialog(true);
   };
 
@@ -98,31 +70,19 @@ export default function Brokers() {
     setEditingBroker(null);
   };
 
-  const handleSubmit = async () => {
-    try {
-      if (editingBroker) {
-        await brokerAPI.update(editingBroker.id, formData);
-        toast.success("Broker updated successfully");
-      } else {
-        await brokerAPI.create(formData);
-        toast.success("Broker created successfully");
-      }
-      handleCloseDialog();
-      loadBrokers();
-    } catch (error) {
-      handleApiError(error, "Failed to save broker");
-    }
+  const handleDelete = (id, name) => {
+    setDeleteConfirm({ open: true, id, name });
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this broker?")) {
-      try {
-        await brokerAPI.delete(id);
-        toast.success("Broker deleted successfully");
-        loadBrokers();
-      } catch (error) {
-        handleApiError(error, "Failed to delete broker");
-      }
+  const handleDeleteConfirmed = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ open: false, id: null, name: "" });
+    try {
+      await brokerAPI.delete(id);
+      toast.success("Broker deleted successfully");
+      loadBrokers();
+    } catch (error) {
+      handleApiError(error, "Failed to delete broker");
     }
   };
 
@@ -222,7 +182,7 @@ export default function Brokers() {
           </IconButton>
           <IconButton
             size="small"
-            onClick={() => handleDelete(params.row.id)}
+            onClick={() => handleDelete(params.row.id, params.row.name)}
             color="error"
             title="Delete"
             sx={{ padding: "4px" }}
@@ -276,95 +236,22 @@ export default function Brokers() {
         }}
       />
 
-      <Dialog
+      <BrokerDialog
         open={openDialog}
+        editingBroker={editingBroker}
+        userTimezone={userTimezone}
+        userDateFormat={userDateFormat}
         onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pr: 1,
-          }}
-        >
-          {editingBroker ? "Edit Broker" : "Add Broker"}
-          <IconButton size="small" onClick={handleCloseDialog}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box
-            component="form"
-            id="broker-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-            sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
-          >
-            <TextField
-              label="Broker Name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              fullWidth
-              required
-              placeholder="e.g., Interactive Brokers, Fidelity, Questrade"
-            />
-            <TextField
-              label="Website"
-              value={formData.website}
-              onChange={(e) =>
-                setFormData({ ...formData, website: e.target.value })
-              }
-              fullWidth
-              placeholder="https://example.com"
-            />
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              fullWidth
-              multiline
-              rows={3}
-              placeholder="Notes about this broker..."
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.active}
-                  onChange={(e) =>
-                    setFormData({ ...formData, active: e.target.checked })
-                  }
-                  color="success"
-                />
-              }
-              label="Active"
-            />
-            {editingBroker && (
-              <AuditFieldsDisplay
-                item={editingBroker}
-                userTimezone={userTimezone}
-                userDateFormat={userDateFormat}
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button color="inherit" onClick={handleCloseDialog}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="contained" form="broker-form">
-            {editingBroker ? "Update" : "Create"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={loadBrokers}
+      />
+      <ConfirmPhraseDialog
+        open={deleteConfirm.open}
+        title="Delete Broker"
+        phrase={deleteConfirm.name}
+        description="This will permanently delete the broker and may affect associated transactions. Type the broker name to confirm."
+        onConfirm={handleDeleteConfirmed}
+        onClose={() => setDeleteConfirm({ open: false, id: null, name: "" })}
+      />
     </PageContainer>
   );
 }

@@ -11,12 +11,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   IconButton,
-  FormHelperText,
   Tooltip,
 } from "@mui/material";
 import {
@@ -40,9 +35,11 @@ import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
 import StyledDataGrid from "../components/StyledDataGrid";
+import TransactionDialog from "../components/TransactionDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
+import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
 
 export default function Blotter() {
   const theme = useTheme();
@@ -57,21 +54,11 @@ export default function Blotter() {
   const [availableCash, setAvailableCash] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
   const [importResults, setImportResults] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
-  const [formData, setFormData] = useState({
-    asset_id: "",
-    broker_id: "",
-    date: getTodayInTimezone(userTimezone),
-    transaction_type: "buy",
-    quantity: "",
-    price: "",
-    total_amount: "",
-    fee: "",
-    notes: "",
-  });
 
   // Load transactions
   const loadTransactions = useCallback(async () => {
@@ -145,51 +132,9 @@ export default function Blotter() {
     loadUserSettings();
   }, [loadAssets, loadBrokers, loadValidTransactionTypes, loadUserSettings]);
 
-  // Update form date when timezone is loaded
-  useEffect(() => {
-    if (userTimezone) {
-      setFormData((prev) => ({
-        ...prev,
-        date: getTodayInTimezone(userTimezone),
-      }));
-    }
-  }, [userTimezone]);
-
   const handleOpenDialog = (transaction = null) => {
-    // Refresh cash balance when opening the dialog
     loadCashBalance();
-    if (transaction) {
-      setEditingTransaction(transaction);
-      const resolvedBrokerId =
-        transaction.broker_id ||
-        (transaction.broker_name
-          ? brokers.find((b) => b.name === transaction.broker_name)?.id || ""
-          : "");
-      setFormData({
-        asset_id: transaction.asset_id,
-        broker_id: resolvedBrokerId,
-        date: transaction.date,
-        transaction_type: transaction.transaction_type,
-        quantity: transaction.quantity,
-        price: transaction.price,
-        total_amount: transaction.total_amount,
-        fee: transaction.fee || "",
-        notes: transaction.notes || "",
-      });
-    } else {
-      setEditingTransaction(null);
-      setFormData({
-        asset_id: "",
-        broker_id: "",
-        date: getTodayInTimezone(userTimezone),
-        transaction_type: "buy",
-        quantity: "",
-        price: "",
-        total_amount: "",
-        fee: "",
-        notes: "",
-      });
-    }
+    setEditingTransaction(transaction || null);
     setOpenDialog(true);
   };
 
@@ -198,131 +143,19 @@ export default function Blotter() {
     setEditingTransaction(null);
   };
 
-  // Auto-populate price when asset is selected
-  const handleAssetChange = async (assetId) => {
-    setFormData({ ...formData, asset_id: assetId });
-
-    if (assetId && !editingTransaction) {
-      try {
-        const response = await assetAPI.getLatestPrice(assetId);
-        if (response.data?.price) {
-          setFormData((prev) => ({
-            ...prev,
-            asset_id: assetId,
-            price: response.data.price,
-          }));
-        }
-      } catch (error) {
-        // Price not available, just set the asset_id
-        console.error("No price available for asset");
-      }
-    }
+  const handleDelete = (id) => {
+    setDeleteConfirm({ open: true, id });
   };
 
-  // Helper text per field based on transaction type
-  const transactionType = formData.transaction_type;
-
-  const requiresBroker =
-    transactionType !== "deposit" && transactionType !== "withdraw";
-
-  const brokerHelp = requiresBroker
-    ? "Broker is required for this transaction type"
-    : "Broker not required for deposit/withdraw";
-
-  const requiresAsset =
-    transactionType !== "deposit" && transactionType !== "withdraw";
-  const requiresQtyPrice = ["buy", "sell"].includes(transactionType);
-  const feeEnabled = ["buy", "sell"].includes(transactionType);
-
-  const assetHelp = requiresAsset
-    ? ["dividend", "coupon", "interest", "rental"].includes(transactionType)
-      ? "Asset is required for dividend/coupon/interest/rental"
-      : "Asset is required for buy/sell"
-    : "";
-
-  const quantityHelp = requiresQtyPrice
-    ? "Enter a positive quantity of units"
-    : "";
-
-  const priceHelp = requiresQtyPrice ? "Enter a positive price" : "";
-
-  const feeHelp = feeEnabled
-    ? transactionType === "buy"
-      ? "Fee increases cash outflow (added to total)"
-      : transactionType === "sell"
-        ? "Fee decreases cash inflow (subtracted from total)"
-        : "Optional; enter 0 if none"
-    : "";
-
-  const totalAmountHelp =
-    transactionType === "buy"
-      ? "Calculated as Quantity × Price + Fee"
-      : transactionType === "sell"
-        ? "Calculated as Quantity × Price − Fee"
-        : "Total cash amount for this transaction";
-
-  const notesHelp =
-    transactionType === "sell"
-      ? "Notes are required for sell transactions"
-      : "Optional notes or comments";
-
-  const handleSubmit = async () => {
+  const handleDeleteConfirmed = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ open: false, id: null });
     try {
-      const type = formData.transaction_type;
-
-      // Validate notes for sell transactions
-      if (type === "sell" && !formData.notes?.trim()) {
-        toast.error("Notes are required for sell transactions");
-        return;
-      }
-
-      const isCash = type === "deposit" || type === "withdraw";
-      const incomeNoQtyPrice = [
-        "dividend",
-        "coupon",
-        "interest",
-        "rental",
-      ].includes(type);
-
-      // Prepare data, nulling out disabled fields
-      const submitData = { ...formData };
-      if (isCash) {
-        submitData.asset_id = null;
-        submitData.quantity = null;
-        submitData.price = null;
-        submitData.fee = null;
-        submitData.broker_id = null;
-      }
-
-      if (incomeNoQtyPrice) {
-        submitData.quantity = null;
-        submitData.price = null;
-        submitData.fee = null;
-      }
-
-      if (editingTransaction) {
-        await transactionAPI.update(editingTransaction.id, submitData);
-        toast.success("Transaction updated successfully");
-      } else {
-        await transactionAPI.create(submitData);
-        toast.success("Transaction created successfully");
-      }
-      handleCloseDialog();
+      await transactionAPI.delete(id);
+      toast.success("Transaction deleted successfully");
       loadTransactions();
     } catch (error) {
-      handleApiError(error, "Failed to save transaction");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      try {
-        await transactionAPI.delete(id);
-        toast.success("Transaction deleted successfully");
-        loadTransactions();
-      } catch (error) {
-        handleApiError(error, "Failed to delete transaction");
-      }
+      handleApiError(error, "Failed to delete transaction");
     }
   };
 
@@ -437,44 +270,6 @@ export default function Blotter() {
 2024-03-20,VTI,buy,15,242.50,0.00,3637.50,TD Ameritrade,Additional index fund`;
   };
 
-  const calculateAmount = useCallback(() => {
-    const quantity = parseFloat(formData.quantity) || 0;
-    const price = parseFloat(formData.price) || 0;
-    const fee = parseFloat(formData.fee) || 0;
-    const baseAmount = quantity * price;
-
-    // For buy transactions, add fee to total
-    // For sell transactions, subtract fee from total
-    // For others (dividend, deposit, withdraw), just use base amount
-    if (formData.transaction_type === "buy") {
-      return (baseAmount + fee).toFixed(4);
-    } else if (formData.transaction_type === "sell") {
-      return (baseAmount - fee).toFixed(4);
-    }
-
-    return baseAmount.toFixed(4);
-  }, [
-    formData.quantity,
-    formData.price,
-    formData.fee,
-    formData.transaction_type,
-  ]);
-
-  useEffect(() => {
-    if (formData.quantity && formData.price) {
-      setFormData((prev) => ({
-        ...prev,
-        total_amount: calculateAmount(),
-      }));
-    }
-  }, [
-    formData.quantity,
-    formData.price,
-    formData.fee,
-    formData.transaction_type,
-    calculateAmount,
-  ]);
-
   const getTypeColor = (type) => {
     switch (type?.toLowerCase()) {
       case "deposit":
@@ -483,14 +278,16 @@ export default function Blotter() {
       case "withdrawal":
         return "error";
       case "buy":
-        return "warning";
-      case "sell":
         return "info";
+      case "sell":
+        return "warning";
       case "dividend":
       case "interest":
       case "coupon":
       case "rental":
         return "secondary";
+      case "transfer":
+        return "default";
       default:
         return "default";
     }
@@ -533,6 +330,19 @@ export default function Blotter() {
       headerAlign: "center",
       flex: 1,
       minWidth: 140,
+      renderCell: (params) => {
+        const dest = params.row.destination_broker_name;
+        if (dest) {
+          return (
+            <Tooltip title={`Source broker`}>
+              <span>
+                {params.value} → {dest}
+              </span>
+            </Tooltip>
+          );
+        }
+        return params.value || "-";
+      },
     },
     {
       field: "quantity",
@@ -643,186 +453,17 @@ export default function Blotter() {
         }}
       />
 
-      <Dialog
+      <TransactionDialog
         open={openDialog}
+        editingTransaction={editingTransaction}
+        assets={assets}
+        brokers={brokers}
+        validTransactionTypes={validTransactionTypes}
+        userTimezone={userTimezone}
+        availableCash={availableCash}
         onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pr: 1,
-          }}
-        >
-          {editingTransaction ? "Edit Transaction" : "Add Transaction"}
-          <IconButton size="small" onClick={handleCloseDialog}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          {availableCash !== null && (
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Available cash balance: {formatCurrency(availableCash)}
-              </Typography>
-            </Box>
-          )}
-          <Box
-            component="form"
-            id="transaction-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-            sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
-          >
-            <TextField
-              label="Date"
-              type="date"
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required
-            />
-            <FormControl fullWidth required>
-              <InputLabel>Transaction Type</InputLabel>
-              <Select
-                value={formData.transaction_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, transaction_type: e.target.value })
-                }
-                label="Transaction Type"
-              >
-                {validTransactionTypes.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            {requiresBroker && (
-              <FormControl fullWidth required={requiresBroker}>
-                <InputLabel>Broker</InputLabel>
-                <Select
-                  value={formData.broker_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, broker_id: e.target.value })
-                  }
-                  label="Broker"
-                >
-                  {brokers.map((broker) => (
-                    <MenuItem key={broker.id} value={broker.id}>
-                      {broker.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>{brokerHelp}</FormHelperText>
-              </FormControl>
-            )}
-            {requiresAsset && (
-              <FormControl fullWidth required>
-                <InputLabel>Asset</InputLabel>
-                <Select
-                  value={formData.asset_id}
-                  onChange={(e) => handleAssetChange(e.target.value)}
-                  label="Asset"
-                >
-                  {assets.map((asset) => (
-                    <MenuItem key={asset.id} value={asset.id}>
-                      {asset.symbol} - {asset.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {assetHelp && <FormHelperText>{assetHelp}</FormHelperText>}
-              </FormControl>
-            )}
-
-            {requiresQtyPrice && (
-              <>
-                <TextField
-                  label="Quantity"
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quantity: e.target.value })
-                  }
-                  fullWidth
-                  required
-                  slotProps={{
-                    step: "0.00000001",
-                    min: "0",
-                  }}
-                  helperText={quantityHelp}
-                />
-                <TextField
-                  label="Price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  fullWidth
-                  required
-                  slotProps={{ step: "0.000001", min: "0" }}
-                  helperText={priceHelp}
-                />
-              </>
-            )}
-
-            {feeEnabled && (
-              <TextField
-                label="Fee"
-                type="number"
-                value={formData.fee}
-                onChange={(e) =>
-                  setFormData({ ...formData, fee: e.target.value })
-                }
-                fullWidth
-                slotProps={{ step: "0.0001", min: "0" }}
-                helperText={feeHelp}
-              />
-            )}
-            <TextField
-              label="Total Amount"
-              type="number"
-              value={formData.total_amount}
-              onChange={(e) =>
-                setFormData({ ...formData, total_amount: e.target.value })
-              }
-              fullWidth
-              required
-              slotProps={{ step: "0.0001", min: "0" }}
-              helperText={totalAmountHelp}
-            />
-            <TextField
-              label="Notes"
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              fullWidth
-              multiline
-              rows={2}
-              required={transactionType === "sell"}
-              helperText={notesHelp}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button color="inherit" onClick={handleCloseDialog}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="contained" form="transaction-form">
-            {editingTransaction ? "Update" : "Create"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={loadTransactions}
+      />
 
       {/* Import Dialog */}
       <Dialog
@@ -936,6 +577,16 @@ export default function Blotter() {
           </Button>
         </DialogActions>
       </Dialog>
+      <ConfirmPhraseDialog
+        open={deleteConfirm.open}
+        title="Delete Transaction"
+        phrase="delete"
+        description={
+          'This will permanently remove the transaction. Type "delete" to confirm.'
+        }
+        onConfirm={handleDeleteConfirmed}
+        onClose={() => setDeleteConfirm({ open: false, id: null })}
+      />
     </PageContainer>
   );
 }

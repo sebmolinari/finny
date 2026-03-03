@@ -21,6 +21,8 @@ import {
   LinearProgress,
   Divider,
   Dialog,
+  InputAdornment,
+  CircularProgress,
   DialogTitle,
   DialogContent,
   DialogContentText,
@@ -37,6 +39,7 @@ import {
   CloseRounded as CloseIcon,
   BalanceOutlined as BalanceIcon,
   BarChart as BarChartIcon,
+  Calculate as SimulateIcon,
 } from "@mui/icons-material";
 import { allocationAPI, constantsAPI, assetAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
@@ -58,6 +61,11 @@ export default function AssetAllocation() {
   const [totalAllocated, setTotalAllocated] = useState(0);
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+
+  // Simulation state
+  const [simulationDeposit, setSimulationDeposit] = useState("");
+  const [simulationResult, setSimulationResult] = useState(null);
+  const [simulating, setSimulating] = useState(false);
   const [assets, setAssets] = useState([]);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [assetTypes, setAssetTypes] = useState([]);
@@ -345,9 +353,9 @@ export default function AssetAllocation() {
   const getActionIcon = (action) => {
     switch (action) {
       case "BUY":
-        return <TrendingUpIcon fontSize="small" color="success" />;
+        return <TrendingUpIcon fontSize="small" color="info" />;
       case "SELL":
-        return <TrendingDownIcon fontSize="small" color="error" />;
+        return <TrendingDownIcon fontSize="small" color="warning" />;
       default:
         return <RemoveIcon fontSize="small" color="action" />;
     }
@@ -356,9 +364,9 @@ export default function AssetAllocation() {
   const getActionColor = (action) => {
     switch (action) {
       case "BUY":
-        return "success";
+        return "info";
       case "SELL":
-        return "error";
+        return "warning";
       default:
         return "default";
     }
@@ -792,6 +800,11 @@ export default function AssetAllocation() {
         >
           <Tab label="Asset Type Level" />
           <Tab label="Individual Asset Level" />
+          <Tab
+            icon={<SimulateIcon fontSize="small" />}
+            iconPosition="start"
+            label="Simulation"
+          />
         </Tabs>
 
         {tabValue === 0 && (
@@ -1161,7 +1174,202 @@ export default function AssetAllocation() {
           </>
         )}
 
-        {!isValid && (
+        {tabValue === 2 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Enter a deposit amount to see how it should be split across your
+              asset types to move toward your targets.
+            </Typography>
+            <Box
+              sx={{ display: "flex", gap: 2, alignItems: "flex-start", mb: 3 }}
+            >
+              <TextField
+                label="Deposit Amount"
+                type="number"
+                value={simulationDeposit}
+                onChange={(e) => setSimulationDeposit(e.target.value)}
+                size="small"
+                sx={{ width: 220 }}
+                slotProps={{ min: "0", step: "100" }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
+                }}
+              />
+              <Button
+                variant="contained"
+                startIcon={
+                  simulating ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SimulateIcon />
+                  )
+                }
+                onClick={async () => {
+                  const deposit = parseFloat(simulationDeposit);
+                  if (!deposit || deposit <= 0) {
+                    return;
+                  }
+                  setSimulating(true);
+                  try {
+                    const res = await allocationAPI.simulate(
+                      deposit,
+                      includedAssetTypes || [],
+                    );
+                    setSimulationResult(res.data);
+                  } catch (err) {
+                    console.error("Simulation error", err);
+                  } finally {
+                    setSimulating(false);
+                  }
+                }}
+                disabled={!simulationDeposit || simulating}
+              >
+                Simulate
+              </Button>
+            </Box>
+
+            {simulationResult && (
+              <>
+                <Box sx={{ display: "flex", gap: 3, mb: 2, flexWrap: "wrap" }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Deposit
+                    </Typography>
+                    <Typography variant="body1" fontWeight={700}>
+                      {formatCurrency(simulationResult.deposit_amount, 0)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Allocated
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      fontWeight={700}
+                      color="success.main"
+                    >
+                      {formatCurrency(simulationResult.total_allocated, 0)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Unallocated
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      fontWeight={700}
+                      color={
+                        simulationResult.remaining_unallocated > 0
+                          ? "warning.main"
+                          : "text.secondary"
+                      }
+                    >
+                      {formatCurrency(
+                        simulationResult.remaining_unallocated,
+                        0,
+                      )}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Projected Portfolio
+                    </Typography>
+                    <Typography variant="body1" fontWeight={700}>
+                      {formatCurrency(
+                        simulationResult.projected_portfolio_value,
+                        0,
+                      )}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <TableContainer>
+                  <StyledTable size="small">
+                    <TableHead>
+                      <TableRow>
+                        <StyledHeaderCell>Asset Type</StyledHeaderCell>
+                        <StyledHeaderCell align="right">
+                          Current Value
+                        </StyledHeaderCell>
+                        <StyledHeaderCell align="right">
+                          Current %
+                        </StyledHeaderCell>
+                        <StyledHeaderCell align="right">
+                          Target %
+                        </StyledHeaderCell>
+                        <StyledHeaderCell align="right">
+                          Allocated
+                        </StyledHeaderCell>
+                        <StyledHeaderCell align="right">
+                          Projected Value
+                        </StyledHeaderCell>
+                        <StyledHeaderCell align="right">
+                          Projected %
+                        </StyledHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {simulationResult.simulation.map((row) => {
+                        const diff =
+                          row.projected_percentage - row.target_percentage;
+                        const projColor =
+                          Math.abs(diff) <= 1
+                            ? "success.main"
+                            : Math.abs(diff) <= 3
+                              ? "warning.main"
+                              : "error.main";
+                        return (
+                          <TableRow key={row.asset_type}>
+                            <TableCell>
+                              <Chip label={row.asset_type} size="small" />
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatCurrency(row.current_value, 0)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {row.current_percentage.toFixed(2)}%
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>
+                              {row.target_percentage.toFixed(1)}%
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ color: "success.main", fontWeight: 600 }}
+                            >
+                              {row.allocated_deposit > 0
+                                ? `+${formatCurrency(row.allocated_deposit, 0)}`
+                                : "—"}
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatCurrency(row.projected_value, 0)}
+                            </TableCell>
+                            <TableCell align="right">
+                              <Tooltip
+                                title={`Target: ${row.target_percentage.toFixed(1)}% | Diff: ${diff >= 0 ? "+" : ""}${diff.toFixed(1)}%`}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={700}
+                                  color={projColor}
+                                >
+                                  {row.projected_percentage.toFixed(1)}%
+                                </Typography>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </StyledTable>
+                </TableContainer>
+              </>
+            )}
+          </Box>
+        )}
+
+        {tabValue !== 2 && !isValid && (
           <Alert severity="error" sx={{ mt: 2 }}>
             Total type-level allocation exceeds 100%. Please adjust your
             targets.

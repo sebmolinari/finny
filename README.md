@@ -50,6 +50,8 @@ A professional-grade finance management application designed to help you track t
 - Portfolio drift analysis with balance scoring
 - Multi-broker asset aggregation for accurate calculations
 - Configurable rebalancing tolerance threshold (percentage)
+- **Asset type filter**: scope the rebalancing view to a selected subset of asset types for partial-portfolio analysis
+- **Rebalancing Simulation**: enter a deposit amount and instantly see how it should be split across underweight asset types — shows allocated amount, projected value and projected % for each type
 
 ### 📊 Market Trends
 
@@ -57,15 +59,24 @@ A professional-grade finance management application designed to help you track t
 - 30-day and YTD sparkline charts side-by-side
 - Price change percentage for both 30D and YTD periods
 - Current price and last price date per asset
+- **Asset-Class Heatmap**: color-coded tiles showing 30-day average return by asset type (green = positive, red = negative)
 
 ### 🧾 Tax Report
 
-- Year-end holdings snapshot for any historical year
-- FX rate at year-end for local-currency valuation
-- Filter by asset type and/or broker to include only relevant positions
-- Quantity, cost basis, market price and market value per holding
+- **Four-tab layout** covering the full tax workflow:
+  - **Year-End Holdings** – snapshot of all positions at year-end with quantity, cost basis, market price, market value and FX rate for local-currency valuation; filter by asset type and/or broker
+  - **Realized Gains/Losses** – FIFO-based closed-position report with short-term vs. long-term classification and configurable holding-period threshold
+  - **Tax-Loss Harvesting Suggestions** – positions with unrealized losses ranked by estimated tax saving, using the marginal tax rate from Settings
+  - **Wash Sale Detection** – flags buy transactions within 30 days of a loss sale
 
-### 📧 Email Notifications
+### � In-App Notification Center
+
+- Bell icon in the header with live unread-count badge
+- Notification feed with mark-as-read and mark-all-read actions
+- Polls every 60 seconds for new notifications
+- **Drift Alerts**: automatic notifications when any asset class drifts beyond the configured rebalancing tolerance
+
+### �📧 Email Notifications
 
 - Automated portfolio summary emails
 - Configurable frequency (daily, weekly, monthly)
@@ -112,6 +123,8 @@ A professional-grade finance management application designed to help you track t
 - Liquidity asset selection (currency asset used for cash calculations)
 - FX rate asset selection (currency asset used as exchange rate reference)
 - Rebalancing tolerance threshold (percentage)
+- **Marginal tax rate** – used by Tax-Loss Harvesting to estimate potential tax savings
+- **Long-term holding period** – configurable threshold (days) for short-term vs. long-term gain classification
 - Cash balance validation toggle (prevent negative cash on transactions)
 - Sell balance validation toggle (prevent selling more than held)
 - Email notification settings
@@ -126,6 +139,7 @@ A professional-grade finance management application designed to help you track t
 - Rate limiting on API requests
 - Helmet security headers
 - Admin-only user management: enable/disable accounts and change roles
+- **Confirmation phrase dialogs** – destructive actions (delete asset, broker, transaction, user) require typing a confirmation phrase before proceeding
 
 ### 📡 Host Metrics (Admin)
 

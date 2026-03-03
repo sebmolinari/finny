@@ -1,5 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Typography, Paper, Box, Grid, Divider, Chip } from "@mui/material";
+import {
+  Typography,
+  Paper,
+  Box,
+  Grid,
+  Divider,
+  Chip,
+  Tooltip,
+} from "@mui/material";
 import { MetricCard, StatCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { settingsAPI } from "../api/api";
@@ -96,7 +104,20 @@ export default function CashDetails() {
       field: "broker_name",
       headerName: "Broker",
       headerAlign: "center",
-      width: 150,
+      width: 180,
+      renderCell: (params) => {
+        const dest = params.row.destination_broker_name;
+        if (dest) {
+          return (
+            <Tooltip title="Source → Destination">
+              <span>
+                {params.value} → {dest}
+              </span>
+            </Tooltip>
+          );
+        }
+        return params.value || "—";
+      },
     },
     {
       field: "quantity",
@@ -130,19 +151,24 @@ export default function CashDetails() {
       headerAlign: "center",
       align: "right",
       flex: 1,
-      renderCell: (params) => (
-        <span
-          style={{
-            color:
-              params.row.cash_effect >= 0
-                ? theme.palette.success.main
-                : theme.palette.error.main,
-          }}
-        >
-          {params.row.cash_effect >= 0 ? "+" : ""}
-          {formatCurrency(params.row.cash_effect)}
-        </span>
-      ),
+      renderCell: (params) => {
+        if (params.row.type === "Transfer") {
+          return <span style={{ color: theme.palette.text.disabled }}>—</span>;
+        }
+        return (
+          <span
+            style={{
+              color:
+                params.row.cash_effect >= 0
+                  ? theme.palette.success.main
+                  : theme.palette.error.main,
+            }}
+          >
+            {params.row.cash_effect >= 0 ? "+" : ""}
+            {formatCurrency(params.row.cash_effect)}
+          </span>
+        );
+      },
     },
     {
       field: "running_balance",
@@ -174,9 +200,9 @@ export default function CashDetails() {
       case "Withdrawal":
         return "error";
       case "Buy":
-        return "warning";
-      case "Sell":
         return "info";
+      case "Sell":
+        return "warning";
       case "Dividend":
         return "primary";
       case "Interest":
@@ -185,6 +211,8 @@ export default function CashDetails() {
         return "secondary";
       case "Rental":
         return "secondary";
+      case "Transfer":
+        return "default";
       default:
         return "default";
     }

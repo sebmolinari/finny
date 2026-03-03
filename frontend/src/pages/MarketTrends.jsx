@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Typography, Chip } from "@mui/material";
+import React, { useState, useEffect, useCallback } from "react";
+import { Typography, Chip, Box, Paper } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { analyticsAPI } from "../api/api";
@@ -15,11 +15,7 @@ export default function MarketTrends() {
 
   const theme = useTheme();
 
-  useEffect(() => {
-    loadMarketTrends();
-  }, []);
-
-  const loadMarketTrends = async () => {
+  const loadMarketTrends = useCallback(async () => {
     try {
       // Calculate YTD days
       const now = new Date();
@@ -39,7 +35,11 @@ export default function MarketTrends() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadMarketTrends();
+  }, [loadMarketTrends]);
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
@@ -87,6 +87,32 @@ export default function MarketTrends() {
       if (typeCompare !== 0) return typeCompare;
       return (a.symbol || "").localeCompare(b.symbol || "");
     });
+
+  // ── Heatmap: group rows by asset type, compute average change ──────────
+  // Only include assets that actually have price data in the 30D window;
+  // assets without price history would contribute 0% and skew averages.
+  const heatmapData = Object.values(
+    rows.reduce((acc, r) => {
+      // Skip if no price history in the 30D window
+      if (!r.price_history_30d || r.price_history_30d.length === 0) return acc;
+      const type = r.asset_type || "other";
+      if (!acc[type]) acc[type] = { type, total: 0, count: 0 };
+      acc[type].total += r.price_change_percent_30d || 0;
+      acc[type].count += 1;
+      return acc;
+    }, {}),
+  )
+    .map((g) => ({ type: g.type, avg: g.count > 0 ? g.total / g.count : 0 }))
+    .sort((a, b) => b.avg - a.avg);
+
+  const absMax = Math.max(...heatmapData.map((g) => Math.abs(g.avg)), 1);
+
+  const heatColor = (val) => {
+    const ratio = Math.min(Math.abs(val) / absMax, 1);
+    return val >= 0
+      ? `rgba(46, 125, 50, ${0.25 + ratio * 0.75})` // green
+      : `rgba(198, 40, 40, ${0.25 + ratio * 0.75})`; // red
+  };
 
   const columns = [
     {
@@ -146,12 +172,6 @@ export default function MarketTrends() {
           />
         );
       },
-    },
-    {
-      field: "currency",
-      headerName: "Currency",
-      headerAlign: "center",
-      width: 100,
     },
     {
       field: "current_price",
@@ -310,7 +330,43 @@ export default function MarketTrends() {
   ];
 
   return (
-    <PageContainer>
+    <PageContainer sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {/* ── Asset-Class Heatmap ── */}
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
+          Asset-Class Heatmap (30-Day Avg)
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+          {heatmapData.map((g) => (
+            <Box
+              key={g.type}
+              sx={{
+                px: 2,
+                py: 1.5,
+                borderRadius: 1,
+                bgcolor: heatColor(g.avg),
+                minWidth: 100,
+                textAlign: "center",
+                cursor: "default",
+              }}
+            >
+              <Typography variant="caption" fontWeight={700} display="block">
+                {g.type.toUpperCase()}
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                color={g.avg >= 0 ? "success.dark" : "error.dark"}
+              >
+                {g.avg >= 0 ? "+" : ""}
+                {g.avg.toFixed(2)}%
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+      {/* ── Market Data Grid ── */}
       <StyledDataGrid
         rows={rows}
         columns={columns}

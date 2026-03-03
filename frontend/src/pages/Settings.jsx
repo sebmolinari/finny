@@ -14,7 +14,12 @@ import {
   Switch,
   Divider,
 } from "@mui/material";
-import { Save as SaveIcon, Email as EmailIcon } from "@mui/icons-material";
+import {
+  Save as SaveIcon,
+  Email as EmailIcon,
+  AccountBalance as AccountBalanceIcon,
+  Notifications as NotificationsIcon,
+} from "@mui/icons-material";
 import { settingsAPI, assetAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
@@ -35,6 +40,10 @@ export default function Settings() {
     email_frequency: "daily",
     validate_cash_balance: true,
     validate_sell_balance: true,
+    marginal_tax_rate: 25,
+    lt_holding_period_days: 365,
+    notification_polling_enabled: 1,
+    notification_polling_interval: 60,
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingAssets, setLoadingAssets] = useState(true);
@@ -63,7 +72,10 @@ export default function Settings() {
   const loadSettings = async () => {
     try {
       const response = await settingsAPI.get();
-      setSettings(response.data);
+      setSettings({
+        ...response.data,
+        marginal_tax_rate: (response.data.marginal_tax_rate ?? 0.25) * 100,
+      });
     } catch (error) {
       handleApiError(error, "Failed to load settings");
     } finally {
@@ -82,7 +94,10 @@ export default function Settings() {
     e.preventDefault();
 
     try {
-      await settingsAPI.update(settings);
+      await settingsAPI.update({
+        ...settings,
+        marginal_tax_rate: settings.marginal_tax_rate / 100,
+      });
       toast.success("Settings saved successfully");
     } catch (error) {
       handleApiError(error, "Failed to save settings");
@@ -378,6 +393,126 @@ export default function Settings() {
                 <MenuItem value="weekly">Weekly</MenuItem>
                 <MenuItem value="monthly">Monthly</MenuItem>
               </TextField>
+            </Grid>
+
+            <Grid size={12}>
+              <Divider sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  <NotificationsIcon
+                    sx={{ fontSize: 16, verticalAlign: "middle", mr: 1 }}
+                  />
+                  In-App Notifications
+                </Typography>
+              </Divider>
+            </Grid>
+
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={
+                      settings.notification_polling_enabled === 1 ||
+                      settings.notification_polling_enabled === true
+                    }
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        notification_polling_enabled: e.target.checked ? 1 : 0,
+                      })
+                    }
+                    name="notification_polling_enabled"
+                  />
+                }
+                label="Enable Notification Polling"
+              />
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mt: 1 }}
+              >
+                Automatically poll the server for new notifications in the
+                background
+              </Typography>
+            </Grid>
+
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <TextField
+                fullWidth
+                select
+                label="Notification Polling Interval"
+                name="notification_polling_interval"
+                value={settings.notification_polling_interval}
+                onChange={handleChange}
+                disabled={
+                  !settings.notification_polling_enabled &&
+                  settings.notification_polling_enabled !== 1
+                }
+                helperText="How often to check for new notifications"
+              >
+                <MenuItem value={30}>30 seconds</MenuItem>
+                <MenuItem value={60}>1 minute</MenuItem>
+                <MenuItem value={300}>5 minutes</MenuItem>
+                <MenuItem value={900}>15 minutes</MenuItem>
+                <MenuItem value={3600}>1 hour</MenuItem>
+                <MenuItem value={86400}>1 day</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid size={12}>
+              <Divider sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  <AccountBalanceIcon
+                    sx={{ fontSize: 16, verticalAlign: "middle", mr: 1 }}
+                  />
+                  Tax Settings
+                </Typography>
+              </Divider>
+            </Grid>
+
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <TextField
+                fullWidth
+                type="number"
+                label="Marginal Tax Rate (%)"
+                name="marginal_tax_rate"
+                value={settings.marginal_tax_rate}
+                onChange={handleChange}
+                slotProps={{ min: 0, max: 100, step: 1 }}
+                helperText="Your marginal income tax rate used for tax-loss harvesting estimates (default: 25%)"
+              />
+            </Grid>
+
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <TextField
+                fullWidth
+                type="number"
+                label="Long-Term Holding Period (days)"
+                name="lt_holding_period_days"
+                value={settings.lt_holding_period_days}
+                onChange={handleChange}
+                slotProps={{ min: 1, step: 1 }}
+                helperText="Minimum days held to qualify as long-term capital gain (default: 365)"
+              />
             </Grid>
 
             <Grid size={12}>

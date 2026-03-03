@@ -19,6 +19,7 @@ class Transaction {
     const {
       asset_id,
       broker_id,
+      destination_broker_id,
       date,
       transaction_type,
       quantity,
@@ -36,14 +37,15 @@ class Transaction {
 
     const stmt = db.prepare(`
       INSERT INTO transactions 
-      (user_id, asset_id, broker_id, date, transaction_type, quantity, price, fee, total_amount, notes, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (user_id, asset_id, broker_id, destination_broker_id, date, transaction_type, quantity, price, fee, total_amount, notes, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
       userId,
       asset_id,
       broker_id,
+      destination_broker_id || null,
       date,
       transaction_type,
       _qty.value,
@@ -126,10 +128,12 @@ class Transaction {
         a.symbol,
         a.name as asset_name,
         a.asset_type,
-        b.name as broker_name
+        b.name as broker_name,
+        db2.name as destination_broker_name
       FROM transactions it
       LEFT JOIN assets a ON it.asset_id = a.id
       LEFT JOIN brokers b ON it.broker_id = b.id
+      LEFT JOIN brokers db2 ON it.destination_broker_id = db2.id
       WHERE it.id = ? AND it.user_id = ?
     `);
     const row = stmt.get(id, userId);
@@ -144,10 +148,12 @@ class Transaction {
         a.symbol,
         a.name as asset_name,
         a.asset_type,
-        b.name as broker_name
+        b.name as broker_name,
+        db2.name as destination_broker_name
       FROM transactions it
       LEFT JOIN assets a ON it.asset_id = a.id
       LEFT JOIN brokers b ON it.broker_id = b.id
+      LEFT JOIN brokers db2 ON it.destination_broker_id = db2.id
       WHERE it.user_id = ?
       ORDER BY it.date DESC, it.id DESC
     `);
@@ -160,41 +166,63 @@ class Transaction {
   }
 
   // Calculate FIFO cost basis for portfolio holdings and realized gains in a single pass
-  static getPortfolioHoldings(userId, hideZeroQuantity = true) {
-    // Get all asset-broker combinations with transactions
+  static getPortfolioHoldings(userId, hideZeroQuantity = true, asOf = null) {
+    const dateFilter = asOf ? "AND it.date <= ?" : "";
+    const dateFilterPlain = asOf ? "AND date <= ?" : "";
+    // Get all asset-broker combinations with transactions (including transfer destinations)
     const assetBrokerStmt = db.prepare(`
       SELECT DISTINCT 
         a.id as asset_id, 
         a.symbol, 
         a.name, 
         a.asset_type,
-        it.broker_id,
+        it.broker_id as broker_id,
         b.name as broker_name
       FROM transactions it
       JOIN assets a ON it.asset_id = a.id
       LEFT JOIN brokers b ON it.broker_id = b.id
-      WHERE it.user_id = ?
+      WHERE it.user_id = ? ${dateFilter}
+      UNION
+      SELECT DISTINCT 
+        a.id as asset_id, 
+        a.symbol, 
+        a.name, 
+        a.asset_type,
+        it.destination_broker_id as broker_id,
+        b.name as broker_name
+      FROM transactions it
+      JOIN assets a ON it.asset_id = a.id
+      LEFT JOIN brokers b ON it.destination_broker_id = b.id
+      WHERE it.user_id = ? ${dateFilter} AND it.transaction_type = 'transfer' AND it.destination_broker_id IS NOT NULL
     `);
-    const assetBrokers = assetBrokerStmt.all(userId);
+    const assetBrokerArgs = asOf
+      ? [userId, asOf, userId, asOf]
+      : [userId, userId];
+    const assetBrokers = assetBrokerStmt.all(...assetBrokerArgs);
 
     const holdings = [];
 
     for (const ab of assetBrokers) {
-      // Get all buy and sell transactions for this asset-broker combination in chronological order
+      // Get all buy, sell, and transfer transactions for this asset-broker combination in chronological order
       const transStmt = db.prepare(`
-        SELECT transaction_type, quantity, price, total_amount, date
+        SELECT transaction_type, quantity, price, total_amount, date, broker_id, destination_broker_id
         FROM transactions
-        WHERE user_id = ? AND asset_id = ? AND broker_id = ? AND transaction_type IN ('buy', 'sell')
+        WHERE user_id = ? AND asset_id = ? ${dateFilterPlain} AND (
+          (broker_id = ? AND transaction_type IN ('buy', 'sell'))
+          OR (broker_id = ? AND transaction_type = 'transfer')
+          OR (destination_broker_id = ? AND transaction_type = 'transfer')
+        )
         ORDER BY date ASC, id ASC
       `);
-      const transactions = transStmt.all(userId, ab.asset_id, ab.broker_id);
+      const transArgs = asOf
+        ? [userId, ab.asset_id, asOf, ab.broker_id, ab.broker_id, ab.broker_id]
+        : [userId, ab.asset_id, ab.broker_id, ab.broker_id, ab.broker_id];
+      const transactions = transStmt.all(...transArgs);
 
       // Calculate FIFO: both remaining holdings and realized gains from sales
       // Use integer arithmetic throughout, convert to float only for final results
       const fifoLots = []; // Queue of {quantityValue, pricePerUnitValue, totalCostValue} in integer form
       let realizedGainValue = 0;
-      let costBasisSoldValue = 0;
-      let proceedsFromSalesValue = 0;
 
       for (const txn of transactions) {
         // Keep values as integers
@@ -215,8 +243,6 @@ class Transaction {
 
           while (remainingToSellValue > 0 && fifoLots.length > 0) {
             const oldestLot = fifoLots[0];
-            // Calculate cost per share in integer space: (totalCost * QUANTITY_SCALE) / quantity
-            // This preserves precision
 
             if (oldestLot.quantityValue <= remainingToSellValue) {
               // Sell entire lot
@@ -225,8 +251,6 @@ class Transaction {
               fifoLots.shift(); // Remove the lot
             } else {
               // Partial sale from this lot
-              // Cost of partial sale = (soldFromLot / totalQuantity) * totalCost
-              // In integer: (soldFromLot * totalCost) / totalQuantity
               const soldFromLotValue = remainingToSellValue;
               const costOfPartialSaleValue = Math.round(
                 (soldFromLotValue * oldestLot.totalCostValue) /
@@ -243,8 +267,39 @@ class Transaction {
           // Track realized gains (integer arithmetic)
           const saleProceedsValue = totalAmountValue;
           realizedGainValue += saleProceedsValue - costOfSoldValue;
-          costBasisSoldValue += costOfSoldValue;
-          proceedsFromSalesValue += saleProceedsValue;
+        } else if (txn.transaction_type === "transfer") {
+          if (
+            txn.broker_id === ab.broker_id &&
+            txn.destination_broker_id !== ab.broker_id
+          ) {
+            // Outgoing transfer: deduct from FIFO lots at cost (no realized gain)
+            let remainingToTransferValue = quantityValue;
+
+            while (remainingToTransferValue > 0 && fifoLots.length > 0) {
+              const oldestLot = fifoLots[0];
+
+              if (oldestLot.quantityValue <= remainingToTransferValue) {
+                remainingToTransferValue -= oldestLot.quantityValue;
+                fifoLots.shift();
+              } else {
+                const transferredFromLotValue = remainingToTransferValue;
+                const costOfPartialTransferValue = Math.round(
+                  (transferredFromLotValue * oldestLot.totalCostValue) /
+                    oldestLot.quantityValue,
+                );
+                oldestLot.quantityValue -= transferredFromLotValue;
+                oldestLot.totalCostValue -= costOfPartialTransferValue;
+                remainingToTransferValue = 0;
+              }
+            }
+          } else if (txn.destination_broker_id === ab.broker_id) {
+            // Incoming transfer: add lot at transferred cost basis
+            fifoLots.push({
+              quantityValue: quantityValue,
+              pricePerUnitValue: priceValue,
+              totalCostValue: totalAmountValue,
+            });
+          }
         }
       }
 
@@ -264,8 +319,6 @@ class Transaction {
       const realizedGain = fromValueScale(realizedGainValue, AMOUNT_SCALE);
 
       // Apply quantity filter based on hideZeroQuantity parameter
-      // If hideZeroQuantity is true, filter to show only quantity > MINIMUM_HOLDING_QUANTITY
-      // If hideZeroQuantity is false, show everything (no filtering)
       const shouldInclude = hideZeroQuantity
         ? totalQuantity > MINIMUM_HOLDING_QUANTITY
         : true;
@@ -291,15 +344,205 @@ class Transaction {
     return holdings;
   }
 
+  // Replays FIFO tracking acquisition dates per lot to produce a realized gains report
+  // Returns an array of closed-position records optionally filtered by disposal year
+  static getRealizedGainsReport(userId, year = null) {
+    // Get all asset-broker pairs for this user
+    const assetBrokerStmt = db.prepare(`
+      SELECT DISTINCT 
+        a.id as asset_id, a.symbol, a.name, a.asset_type,
+        it.broker_id as broker_id, b.name as broker_name
+      FROM transactions it
+      JOIN assets a ON it.asset_id = a.id
+      LEFT JOIN brokers b ON it.broker_id = b.id
+      WHERE it.user_id = ? AND it.broker_id IS NOT NULL
+      UNION
+      SELECT DISTINCT 
+        a.id as asset_id, a.symbol, a.name, a.asset_type,
+        it.destination_broker_id as broker_id, b.name as broker_name
+      FROM transactions it
+      JOIN assets a ON it.asset_id = a.id
+      LEFT JOIN brokers b ON it.destination_broker_id = b.id
+      WHERE it.user_id = ? AND it.transaction_type = 'transfer' AND it.destination_broker_id IS NOT NULL
+    `);
+    const assetBrokers = assetBrokerStmt.all(userId, userId);
+
+    // Pre-fetch buy dates per asset (for wash sale detection across all brokers)
+    const allBuysStmt = db.prepare(`
+      SELECT asset_id, date FROM transactions
+      WHERE user_id = ? AND transaction_type = 'buy'
+      ORDER BY date ASC
+    `);
+    const allBuysByAsset = {};
+    for (const row of allBuysStmt.all(userId)) {
+      if (!allBuysByAsset[row.asset_id]) allBuysByAsset[row.asset_id] = [];
+      allBuysByAsset[row.asset_id].push(row.date);
+    }
+
+    const closedPositions = [];
+
+    for (const ab of assetBrokers) {
+      const transStmt = db.prepare(`
+        SELECT transaction_type, quantity, price, total_amount, date, broker_id, destination_broker_id
+        FROM transactions
+        WHERE user_id = ? AND asset_id = ? AND (
+          (broker_id = ? AND transaction_type IN ('buy', 'sell'))
+          OR (broker_id = ? AND transaction_type = 'transfer')
+          OR (destination_broker_id = ? AND transaction_type = 'transfer')
+        )
+        ORDER BY date ASC, id ASC
+      `);
+      const transactions = transStmt.all(
+        userId,
+        ab.asset_id,
+        ab.broker_id,
+        ab.broker_id,
+        ab.broker_id,
+      );
+
+      // FIFO lots include acquisition date
+      const fifoLots = []; // {quantityValue, totalCostValue, acquisitionDate}
+
+      for (const txn of transactions) {
+        const quantityValue = txn.quantity;
+        const totalAmountValue = txn.total_amount;
+
+        if (txn.transaction_type === "buy") {
+          fifoLots.push({
+            quantityValue,
+            totalCostValue: totalAmountValue,
+            acquisitionDate: txn.date,
+          });
+        } else if (txn.transaction_type === "sell") {
+          let remainingToSellValue = quantityValue;
+          const disposalDate = txn.date;
+          const totalSaleProceeds = totalAmountValue;
+
+          // Collect proportional proceeds per lot match
+          while (remainingToSellValue > 0 && fifoLots.length > 0) {
+            const lot = fifoLots[0];
+            let soldQtyValue;
+            let lotCostValue;
+
+            if (lot.quantityValue <= remainingToSellValue) {
+              soldQtyValue = lot.quantityValue;
+              lotCostValue = lot.totalCostValue;
+              remainingToSellValue -= lot.quantityValue;
+              fifoLots.shift();
+            } else {
+              soldQtyValue = remainingToSellValue;
+              lotCostValue = Math.round(
+                (soldQtyValue * lot.totalCostValue) / lot.quantityValue,
+              );
+              lot.quantityValue -= soldQtyValue;
+              lot.totalCostValue -= lotCostValue;
+              remainingToSellValue = 0;
+            }
+
+            // Proportional sale proceeds for this lot
+            const lotProceedsValue = Math.round(
+              (soldQtyValue * totalSaleProceeds) / quantityValue,
+            );
+            const gainLossValue = lotProceedsValue - lotCostValue;
+
+            const quantity = fromValueScale(soldQtyValue, QUANTITY_SCALE);
+            const costBasis = fromValueScale(lotCostValue, AMOUNT_SCALE);
+            const saleProceeds = fromValueScale(lotProceedsValue, AMOUNT_SCALE);
+            const gainLoss = fromValueScale(gainLossValue, AMOUNT_SCALE);
+
+            // Calculate holding period
+            const acqMs = new Date(lot.acquisitionDate).getTime();
+            const dispMs = new Date(disposalDate).getTime();
+            const holdingDays = Math.round((dispMs - acqMs) / 86400000);
+
+            // Wash sale detection: loss sale + repurchase within 30 days
+            let isWashSale = false;
+            if (gainLoss < 0) {
+              const buyDates = allBuysByAsset[ab.asset_id] || [];
+              const sellTime = new Date(disposalDate).getTime();
+              const window30 = 30 * 86400000;
+              isWashSale = buyDates.some((d) => {
+                const t = new Date(d).getTime();
+                return (
+                  Math.abs(t - sellTime) <= window30 &&
+                  d !== lot.acquisitionDate
+                );
+              });
+            }
+
+            // Filter by year if provided
+            const disposalYear = disposalDate.substring(0, 4);
+            if (!year || String(year) === disposalYear) {
+              closedPositions.push({
+                symbol: ab.symbol,
+                name: ab.name,
+                asset_type: ab.asset_type,
+                broker_name: ab.broker_name,
+                acquisition_date: lot.acquisitionDate,
+                disposal_date: disposalDate,
+                quantity,
+                cost_basis: costBasis,
+                sale_proceeds: saleProceeds,
+                gain_loss: gainLoss,
+                holding_days: holdingDays,
+                is_wash_sale: isWashSale,
+              });
+            }
+          }
+        } else if (txn.transaction_type === "transfer") {
+          if (
+            txn.broker_id === ab.broker_id &&
+            txn.destination_broker_id !== ab.broker_id
+          ) {
+            // Outgoing: deduct FIFO lots
+            let remaining = quantityValue;
+            while (remaining > 0 && fifoLots.length > 0) {
+              const lot = fifoLots[0];
+              if (lot.quantityValue <= remaining) {
+                remaining -= lot.quantityValue;
+                fifoLots.shift();
+              } else {
+                const costPart = Math.round(
+                  (remaining * lot.totalCostValue) / lot.quantityValue,
+                );
+                lot.quantityValue -= remaining;
+                lot.totalCostValue -= costPart;
+                remaining = 0;
+              }
+            }
+          } else if (txn.destination_broker_id === ab.broker_id) {
+            // Incoming: add lot at transferred cost basis
+            fifoLots.push({
+              quantityValue,
+              totalCostValue: totalAmountValue,
+              acquisitionDate: txn.date,
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by disposal date descending
+    closedPositions.sort((a, b) =>
+      b.disposal_date.localeCompare(a.disposal_date),
+    );
+
+    return closedPositions;
+  }
+
   static getAssetBrokerBalance(userId, assetId, brokerId) {
     const stmt = db.prepare(`
       SELECT 
         transaction_type,
-        quantity
+        quantity,
+        broker_id,
+        destination_broker_id
       FROM transactions
-      WHERE user_id = ? AND asset_id = ? AND broker_id = ?
+      WHERE user_id = ? AND asset_id = ? AND (
+        broker_id = ? OR (transaction_type = 'transfer' AND destination_broker_id = ?)
+      )
     `);
-    const transactions = stmt.all(userId, assetId, brokerId);
+    const transactions = stmt.all(userId, assetId, brokerId, brokerId);
 
     // Do arithmetic with integers, not floats
     let balanceValue = 0;
@@ -310,12 +553,27 @@ class Transaction {
         balanceValue += qty;
       } else if (t.transaction_type === "sell") {
         balanceValue -= qty;
+      } else if (t.transaction_type === "transfer") {
+        if (t.broker_id === brokerId) {
+          balanceValue -= qty; // outgoing transfer
+        } else if (t.destination_broker_id === brokerId) {
+          balanceValue += qty; // incoming transfer
+        }
       }
     }
 
     // Convert to float only at the end
     const balance = fromValueScale(balanceValue, QUANTITY_SCALE);
     return balance;
+  }
+
+  // Get the date of the first transaction for a user
+  static getFirstTransactionDate(userId) {
+    const stmt = db.prepare(
+      "SELECT MIN(date) as first_date FROM transactions WHERE user_id = ?",
+    );
+    const row = stmt.get(userId);
+    return row?.first_date || null;
   }
 
   // Net invested reflects portfolio exposure funded by buys minus sells.
@@ -788,10 +1046,12 @@ class Transaction {
         t.notes,
         a.symbol,
         a.name as asset_name,
-        b.name as broker_name
+        b.name as broker_name,
+        db2.name as destination_broker_name
       FROM transactions t
       LEFT JOIN assets a ON t.asset_id = a.id
       LEFT JOIN brokers b ON t.broker_id = b.id
+      LEFT JOIN brokers db2 ON t.destination_broker_id = db2.id
       WHERE t.user_id = ?
       ORDER BY t.date ASC, t.id ASC
     `);
@@ -863,6 +1123,10 @@ class Transaction {
           flowType = "Coupon";
           summary.total_coupons += amount;
           break;
+        case "transfer":
+          cashEffect = 0;
+          flowType = "Transfer";
+          break;
       }
 
       runningBalance += cashEffect;
@@ -874,6 +1138,7 @@ class Transaction {
         symbol: t.symbol,
         asset_name: t.asset_name,
         broker_name: t.broker_name,
+        destination_broker_name: t.destination_broker_name || null,
         quantity: quantity,
         price: price,
         amount: amount,

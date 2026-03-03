@@ -12,6 +12,7 @@ const VALID_VALUES = {
     "deposit",
     "withdraw",
     "rental",
+    "transfer",
   ],
 
   USER_ROLES: ["user", "admin"],

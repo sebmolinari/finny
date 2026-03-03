@@ -165,6 +165,7 @@ router.post(
       const {
         asset_id,
         broker_id,
+        destination_broker_id,
         date,
         transaction_type,
         quantity,
@@ -179,6 +180,7 @@ router.post(
         {
           asset_id,
           broker_id,
+          destination_broker_id,
           date,
           transaction_type,
           quantity,
@@ -594,6 +596,168 @@ router.post("/bulk", authMiddleware, (req, res) => {
       message: `Bulk import completed: ${results.success.length} succeeded, ${results.errors.length} failed`,
       results,
     });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /transactions/transfer:
+ *   post:
+ *     summary: Create a broker-to-broker transfer for an asset at cost basis
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - asset_id
+ *               - broker_id
+ *               - destination_broker_id
+ *               - quantity
+ *               - date
+ *             properties:
+ *               asset_id:
+ *                 type: integer
+ *                 description: Asset ID to transfer
+ *               broker_id:
+ *                 type: integer
+ *                 description: Source broker ID
+ *               destination_broker_id:
+ *                 type: integer
+ *                 description: Destination broker ID
+ *               quantity:
+ *                 type: number
+ *                 description: Quantity to transfer
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 description: Transfer date (YYYY-MM-DD)
+ *               notes:
+ *                 type: string
+ *                 description: Optional notes
+ *     responses:
+ *       201:
+ *         description: Transfer transaction created
+ *       400:
+ *         description: Insufficient holdings or invalid input
+ *       404:
+ *         description: Asset or broker not found
+ *       500:
+ *         description: Server error
+ */
+router.post("/transfer", authMiddleware, (req, res) => {
+  try {
+    const {
+      asset_id,
+      broker_id,
+      destination_broker_id,
+      quantity,
+      date,
+      notes,
+    } = req.body;
+
+    if (
+      !asset_id ||
+      !broker_id ||
+      !destination_broker_id ||
+      !quantity ||
+      !date
+    ) {
+      return res.status(400).json({
+        message:
+          "asset_id, broker_id, destination_broker_id, quantity, and date are required",
+      });
+    }
+    if (broker_id === destination_broker_id) {
+      return res
+        .status(400)
+        .json({ message: "Source and destination brokers must be different" });
+    }
+
+    // Validate that asset and both brokers exist and belong to user's context
+    const asset = Asset.findById(asset_id);
+    if (!asset) return res.status(404).json({ message: "Asset not found" });
+
+    const sourceBroker = Broker.findById(broker_id, req.user.id);
+    if (!sourceBroker)
+      return res.status(404).json({ message: "Source broker not found" });
+
+    const destBroker = Broker.findById(destination_broker_id, req.user.id);
+    if (!destBroker)
+      return res.status(404).json({ message: "Destination broker not found" });
+
+    // Check source broker has sufficient holdings
+    const availableQuantity = Transaction.getAssetBrokerBalance(
+      req.user.id,
+      asset_id,
+      broker_id,
+    );
+    if (quantity > availableQuantity) {
+      return res.status(400).json({
+        message: `Insufficient holdings at source broker. Available: ${availableQuantity}, attempted to transfer: ${quantity}`,
+      });
+    }
+
+    // Get current FIFO cost basis at source to preserve cost basis in transfer
+    const AnalyticsService = require("../services/analytics");
+    const sourceHoldings = AnalyticsService.getPortfolioHoldings(
+      req.user.id,
+    ).filter(
+      (h) =>
+        h.asset_id === parseInt(asset_id) &&
+        h.broker_id === parseInt(broker_id),
+    );
+
+    const sourceholding = sourceHoldings[0];
+    const costPerUnit =
+      sourceholding && sourceholding.total_quantity > 0
+        ? sourceholding.cost_basis / sourceholding.total_quantity
+        : 0;
+    const totalCostTransferred = costPerUnit * quantity;
+
+    const id = Transaction.create(
+      req.user.id,
+      {
+        asset_id: parseInt(asset_id),
+        broker_id: parseInt(broker_id),
+        destination_broker_id: parseInt(destination_broker_id),
+        date,
+        transaction_type: "transfer",
+        quantity,
+        price: costPerUnit,
+        fee: 0,
+        total_amount: totalCostTransferred,
+        notes:
+          notes || `Transfer from ${sourceBroker.name} to ${destBroker.name}`,
+      },
+      req.user.id,
+    );
+
+    const transaction = Transaction.findById(id, req.user.id);
+
+    AuditLog.logCreate(
+      req.user.id,
+      req.user.username,
+      "transactions",
+      id,
+      {
+        transaction_type: "transfer",
+        asset_id,
+        broker_id,
+        destination_broker_id,
+        quantity,
+      },
+      req.ip,
+      req.get("user-agent"),
+    );
+
+    res.status(201).json(transaction);
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }

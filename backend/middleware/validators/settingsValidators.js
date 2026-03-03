@@ -76,6 +76,32 @@ const updateSettingsValidation = [
       "Validate sell balance must be a boolean (0, 1, true, or false)",
     )
     .toInt(),
+
+  body("marginal_tax_rate")
+    .optional()
+    .isFloat({ min: 0, max: 1 })
+    .withMessage("Marginal tax rate must be between 0 and 1")
+    .toFloat(),
+
+  body("lt_holding_period_days")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Long-term holding period must be a positive integer")
+    .toInt(),
+
+  body("notification_polling_enabled")
+    .optional()
+    .isIn([0, 1, true, false])
+    .withMessage(
+      "Notification polling enabled must be a boolean (0, 1, true, or false)",
+    )
+    .toInt(),
+
+  body("notification_polling_interval")
+    .optional()
+    .isInt({ min: 10 })
+    .withMessage("Notification polling interval must be at least 10 seconds")
+    .toInt(),
 ];
 
 module.exports = {

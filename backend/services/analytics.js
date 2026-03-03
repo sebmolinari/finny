@@ -309,7 +309,14 @@ class AnalyticsService {
     };
   }
 
-  static getPortfolioPerformance(userId, days = 30, excludeAssetTypes = []) {
+  static getPortfolioPerformance(
+    userId,
+    days = 30,
+    excludeAssetTypes = [],
+    startDate = null,
+    endDate = null,
+    debug = false,
+  ) {
     const db = require("../config/database");
     const userSettings = UserSettings.findByUserId(userId);
     const today = getTodayInTimezone(userSettings.timezone);
@@ -328,21 +335,39 @@ class AnalyticsService {
 
     // --- Build date range (ASC)
     const dates = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      dates.push(d.toISOString().split("T")[0]);
+    if (startDate && endDate) {
+      // Explicit start/end date range
+      const sdObj = new Date(startDate);
+      const edObj = new Date(endDate);
+      for (let d = new Date(sdObj); d <= edObj; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split("T")[0]);
+      }
+    } else {
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().split("T")[0]);
+      }
+    }
+
+    const queryEndDate = endDate || today;
+
+    // --- Load asset symbols (for debug mode)
+    const assetMap = {};
+    if (debug) {
+      const assets = db.prepare(`SELECT id, symbol FROM assets`).all();
+      for (const a of assets) assetMap[a.id] = a.symbol;
     }
 
     // --- Load transactions (ASC)
     const txStmt = db.prepare(`
-    SELECT date, transaction_type, asset_id, quantity, total_amount
+    SELECT id, date, transaction_type, asset_id, broker_id, quantity, total_amount, notes
     FROM transactions
     WHERE user_id = ?
       AND date <= ?
     ORDER BY date ASC, id ASC
   `);
-    const transactions = txStmt.all(userId, today);
+    const transactions = txStmt.all(userId, queryEndDate);
 
     // --- Load prices (ASC)
     const priceStmt = db.prepare(`
@@ -351,7 +376,7 @@ class AnalyticsService {
     WHERE date <= ?
     ORDER BY asset_id ASC, date ASC
   `);
-    const prices = priceStmt.all(today);
+    const prices = priceStmt.all(queryEndDate);
 
     // --- Group prices by asset
     const priceStreams = {};
@@ -373,6 +398,7 @@ class AnalyticsService {
     // --- Walk forward in time
     for (const date of dates) {
       // Apply transactions up to this date
+      const txsAppliedToday = [];
       while (
         txIndex < transactions.length &&
         transactions[txIndex].date <= date
@@ -403,15 +429,40 @@ class AnalyticsService {
             tx.transaction_type === "buy" ? qtyValue : -qtyValue;
         }
 
+        if (debug) {
+          txsAppliedToday.push({
+            id: tx.id,
+            date: tx.date,
+            type: tx.transaction_type,
+            asset_id: tx.asset_id,
+            symbol: assetMap[tx.asset_id] || null,
+            quantity:
+              tx.quantity != null
+                ? fromValueScale(tx.quantity, QUANTITY_SCALE)
+                : null,
+            total_amount:
+              tx.total_amount != null
+                ? fromValueScale(tx.total_amount, AMOUNT_SCALE)
+                : null,
+            notes: tx.notes || null,
+          });
+        }
+
         txIndex++;
       }
 
       // Update prices up to this date
+      const priceChangesToday = {};
       for (const assetId of Object.keys(priceStreams)) {
         const stream = priceStreams[assetId];
         let idx = priceIndex[assetId];
 
         while (idx < stream.length && stream[idx].date <= date) {
+          if (debug)
+            priceChangesToday[assetId] = fromValueScale(
+              stream[idx].price,
+              PRICE_SCALE,
+            );
           lastPrice[assetId] = stream[idx].price;
           idx++;
         }
@@ -421,6 +472,7 @@ class AnalyticsService {
 
       // Value holdings
       let holdingsValue = 0;
+      const holdingsBreakdown = [];
       for (const [assetId, qtyValue] of Object.entries(holdings)) {
         if (qtyValue <= 0) continue;
         if (excludedAssetIds.has(assetId)) continue;
@@ -429,13 +481,36 @@ class AnalyticsService {
 
         const quantity = fromValueScale(qtyValue, QUANTITY_SCALE);
         const price = fromValueScale(priceValue, PRICE_SCALE);
-        holdingsValue += quantity * price;
+        const value = quantity * price;
+        holdingsValue += value;
+
+        if (debug) {
+          holdingsBreakdown.push({
+            asset_id: Number(assetId),
+            symbol: assetMap[assetId] || null,
+            quantity,
+            price,
+            price_updated_today: priceChangesToday[assetId] !== undefined,
+            value,
+          });
+        }
       }
 
-      performance.push({
+      const entry = {
         date,
         total_value: fromValueScale(cashValue, AMOUNT_SCALE) + holdingsValue,
-      });
+      };
+
+      if (debug) {
+        entry.cash_balance = fromValueScale(cashValue, AMOUNT_SCALE);
+        entry.holdings_value = holdingsValue;
+        entry.transactions_applied = txsAppliedToday;
+        entry.holdings_breakdown = holdingsBreakdown.sort(
+          (a, b) => b.value - a.value,
+        );
+      }
+
+      performance.push(entry);
     }
 
     return performance;
@@ -905,6 +980,440 @@ class AnalyticsService {
       );
       throw error;
     }
+  }
+  /**
+   * Compute NAV, MWRR, and simple return for an arbitrary date range.
+   */
+  static getDateRangeMetrics(userId, startDate, endDate) {
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const DAYS_PER_YEAR = 365.2425;
+    const db = require("../config/database");
+
+    // Get portfolio value on startDate and endDate using the performance series
+    const startSeries = this.getPortfolioPerformance(
+      userId,
+      1,
+      [],
+      startDate,
+      startDate,
+    );
+    const endSeries = this.getPortfolioPerformance(
+      userId,
+      1,
+      [],
+      endDate,
+      endDate,
+    );
+
+    const startNav = startSeries[0]?.total_value || 0;
+    const endNav = endSeries[0]?.total_value || 0;
+    const navChange = endNav - startNav;
+    const navChangePct = startNav > 0 ? (navChange / startNav) * 100 : 0;
+
+    // Get cash flows (deposits/withdrawals) strictly within the range
+    const { fromValueScale, AMOUNT_SCALE } = require("../utils/valueScale");
+    const cfStmt = db.prepare(`
+      SELECT date, transaction_type, total_amount
+      FROM transactions
+      WHERE user_id = ? AND date > ? AND date <= ?
+        AND transaction_type IN ('deposit', 'withdraw')
+      ORDER BY date ASC
+    `);
+    const cashFlows = cfStmt.all(userId, startDate, endDate);
+
+    // Build IRR cash flows for sub-period MWRR
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    const totalYears =
+      (endDateObj - startDateObj) / (MS_PER_DAY * DAYS_PER_YEAR);
+
+    const irrFlows = [{ years: 0, amount: -startNav }];
+
+    for (const cf of cashFlows) {
+      const cfDate = new Date(cf.date);
+      const years = (cfDate - startDateObj) / (MS_PER_DAY * DAYS_PER_YEAR);
+      const amount = fromValueScale(cf.total_amount, AMOUNT_SCALE);
+      const signed = cf.transaction_type === "deposit" ? -amount : amount;
+      irrFlows.push({ years, amount: signed });
+    }
+
+    irrFlows.push({ years: totalYears, amount: endNav });
+
+    // Newton-Raphson IRR
+    let rate = 0.1;
+    if (startNav > 0) {
+      for (let i = 0; i < 100; i++) {
+        let npv = 0;
+        let dnpv = 0;
+        for (const cf of irrFlows) {
+          const factor = Math.pow(1 + rate, cf.years);
+          npv += cf.amount / factor;
+          dnpv -= (cf.years * cf.amount) / (factor * (1 + rate));
+        }
+        if (Math.abs(npv) < 0.0001) break;
+        if (dnpv === 0) break;
+        rate -= npv / dnpv;
+        if (rate < -0.99) rate = -0.99;
+        if (rate > 10) rate = 10;
+      }
+    }
+
+    return {
+      start_date: startDate,
+      end_date: endDate,
+      start_nav: startNav,
+      end_nav: endNav,
+      nav_change: navChange,
+      nav_change_pct: navChangePct,
+      mwrr: startNav > 0 ? rate * 100 : 0,
+    };
+  }
+
+  /**
+   * Return the date of the earliest transaction for a user.
+   */
+  static getFirstTransactionDate(userId) {
+    const db = require("../config/database");
+    const row = db
+      .prepare(
+        "SELECT MIN(date) as first_date FROM transactions WHERE user_id = ?",
+      )
+      .get(userId);
+    return row?.first_date || null;
+  }
+
+  /**
+   * Simulate investing a deposit to move toward target allocations.
+   * Returns a projection of how to split the deposit.
+   */
+  static simulateRebalancing(userId, depositAmount, excludeAssetTypes = []) {
+    const rebalancing = this.getRebalancingRecommendations(
+      userId,
+      excludeAssetTypes,
+    );
+
+    if (!rebalancing.has_targets) {
+      return {
+        error: "No allocation targets defined",
+        deposit_amount: depositAmount,
+      };
+    }
+
+    const totalPortfolioValue = rebalancing.total_portfolio_value;
+
+    // Use the filtered portfolio total (sum of included asset types only) as the
+    // basis for deficit calculations so it is consistent with current_percentage.
+    const typeRecs = (rebalancing.recommendations || []).filter(
+      (r) => r.level === "type",
+    );
+    const filteredCurrentTotal = typeRecs.reduce(
+      (sum, r) => sum + r.current_value,
+      0,
+    );
+    const filteredProjectedTotal = filteredCurrentTotal + depositAmount;
+
+    // Determine deficits: only invest in types that are underweight after
+    // accounting for the deposit (current_value < target share of projected total).
+    const allTypeDeficits = typeRecs.map((r) => {
+      const targetValue = (r.target_percentage / 100) * filteredProjectedTotal;
+      const deficit = Math.max(0, targetValue - r.current_value);
+      return {
+        ...r,
+        projected_target_value: targetValue,
+        deficit_in_projected: deficit,
+      };
+    });
+
+    const totalDeficit = allTypeDeficits.reduce(
+      (sum, r) => sum + r.deficit_in_projected,
+      0,
+    );
+
+    // Allocate deposit proportionally to deficits, capped at each asset's deficit
+    const allTypeAllocation = allTypeDeficits.map((r) => {
+      const proportion =
+        totalDeficit > 0 ? r.deficit_in_projected / totalDeficit : 0;
+      const rawAllocation = proportion * depositAmount;
+      const capped = Math.min(rawAllocation, r.deficit_in_projected);
+      return { ...r, allocated_deposit: capped };
+    });
+
+    const allocatedTotal = allTypeAllocation.reduce(
+      (sum, r) => sum + r.allocated_deposit,
+      0,
+    );
+    const unallocated = depositAmount - allocatedTotal;
+
+    // Split into buy vs. no-allocation buckets for the simulation output
+    const buyAllocation = allTypeAllocation.filter(
+      (r) => r.allocated_deposit > 0,
+    );
+    const holdRecs = allTypeAllocation.filter((r) => r.allocated_deposit === 0);
+
+    const allSimulated = [
+      ...buyAllocation.map((r) => ({
+        asset_type: r.asset_type,
+        current_value: r.current_value,
+        current_percentage: r.current_percentage,
+        target_percentage: r.target_percentage,
+        allocated_deposit: r.allocated_deposit,
+        projected_value: r.current_value + r.allocated_deposit,
+        projected_percentage: 0, // computed below
+        projected_target_value: r.projected_target_value,
+        action: r.action,
+      })),
+      ...holdRecs.map((r) => ({
+        asset_type: r.asset_type,
+        current_value: r.current_value,
+        current_percentage: r.current_percentage,
+        target_percentage: r.target_percentage,
+        allocated_deposit: 0,
+        projected_value: r.current_value,
+        projected_percentage: 0, // computed below
+        projected_target_value: r.projected_target_value,
+        action: r.action,
+      })),
+    ];
+
+    // Use the sum of all projected values (filtered portfolio + allocated deposit)
+    // as the denominator so projected_percentage is on the same basis as current_percentage.
+    const projectedFilteredTotal = allSimulated.reduce(
+      (sum, r) => sum + r.projected_value,
+      0,
+    );
+    allSimulated.forEach((r) => {
+      r.projected_percentage =
+        projectedFilteredTotal > 0
+          ? (r.projected_value / projectedFilteredTotal) * 100
+          : 0;
+    });
+
+    allSimulated.sort((a, b) => b.projected_value - a.projected_value);
+
+    return {
+      deposit_amount: depositAmount,
+      current_portfolio_value: totalPortfolioValue,
+      projected_portfolio_value: totalPortfolioValue + depositAmount,
+      total_allocated: allocatedTotal,
+      remaining_unallocated: unallocated,
+      simulation: allSimulated,
+    };
+  }
+
+  // Realized gains / losses report with ST/LT classification and wash sale flag
+  static getRealizedGainsReport(userId, year = null, ltDays = 365) {
+    const positions = Transaction.getRealizedGainsReport(userId, year);
+
+    let totalGain = 0;
+    let shortTermGain = 0;
+    let longTermGain = 0;
+    let washSaleCount = 0;
+
+    const enriched = positions.map((p) => {
+      const isLongTerm = p.holding_days >= ltDays;
+      totalGain += p.gain_loss;
+      if (isLongTerm) longTermGain += p.gain_loss;
+      else shortTermGain += p.gain_loss;
+      if (p.is_wash_sale) washSaleCount++;
+      return { ...p, is_long_term: isLongTerm };
+    });
+
+    return {
+      positions: enriched,
+      summary: {
+        total_gain_loss: totalGain,
+        short_term_gain_loss: shortTermGain,
+        long_term_gain_loss: longTermGain,
+        wash_sale_count: washSaleCount,
+        position_count: enriched.length,
+      },
+    };
+  }
+
+  // Tax-loss harvesting suggestions: holdings with unrealized losses
+  static getTaxHarvestingSuggestions(userId, marginalRate = 0.25, year = null) {
+    const settings = UserSettings.findByUserId(userId);
+    const effectiveRate = marginalRate ?? settings?.marginal_tax_rate ?? 0.25;
+
+    const asOf = year ? `${year}-12-31` : null;
+    const holdings = Transaction.getPortfolioHoldings(userId, true, asOf);
+
+    // Get prices as-of year-end (or latest if no year specified)
+    const suggestions = [];
+    for (const h of holdings) {
+      if (h.cost_basis <= 0 || h.total_quantity <= 0) continue;
+
+      // Get price as of the specified date (or latest)
+      const priceRow = asOf
+        ? PriceData.getLatestPriceAsOf(h.asset_id, asOf)
+        : PriceData.getLatestPrice(h.asset_id);
+      if (!priceRow) continue;
+
+      const currentPrice = priceRow.price;
+      const marketValue = currentPrice * h.total_quantity;
+      const unrealizedGain = marketValue - h.cost_basis;
+
+      if (unrealizedGain < 0) {
+        const potentialTaxSaving = Math.abs(unrealizedGain) * effectiveRate;
+        suggestions.push({
+          asset_id: h.asset_id,
+          symbol: h.symbol,
+          name: h.name,
+          asset_type: h.asset_type,
+          broker_name: h.broker_name,
+          quantity: h.total_quantity,
+          cost_basis: h.cost_basis,
+          current_price: currentPrice,
+          market_value: marketValue,
+          unrealized_gain_loss: unrealizedGain,
+          potential_tax_saving: potentialTaxSaving,
+          marginal_rate: effectiveRate,
+        });
+      }
+    }
+    suggestions.sort((a, b) => a.unrealized_gain_loss - b.unrealized_gain_loss);
+    return suggestions;
+  }
+
+  // Check for allocation drift alerts
+  static getDriftAlerts(userId) {
+    const settings = UserSettings.findByUserId(userId);
+    if (!settings || !settings.rebalancing_tolerance) return [];
+
+    const tolerance = settings.rebalancing_tolerance;
+    const holdings = Transaction.getPortfolioHoldings(userId);
+    if (!holdings.length) return [];
+
+    // Load targets
+    const db = require("../config/database");
+    const targets = db
+      .prepare(
+        `SELECT asset_type, target_percentage FROM asset_allocation_targets WHERE user_id = ?`,
+      )
+      .all(userId);
+    if (!targets.length) return [];
+
+    // Get latest prices and compute current allocation
+    let totalValue = 0;
+    const holdingValues = [];
+    for (const h of holdings) {
+      const priceRow = PriceData.getLatestPrice(h.asset_id);
+      const price = priceRow ? priceRow.price : 0;
+      const mv = price * h.total_quantity;
+      totalValue += mv;
+      holdingValues.push({ ...h, market_value: mv });
+    }
+    if (totalValue === 0) return [];
+
+    // Group by asset_type
+    const byType = {};
+    for (const h of holdingValues) {
+      byType[h.asset_type] = (byType[h.asset_type] || 0) + h.market_value;
+    }
+
+    const alerts = [];
+    for (const t of targets) {
+      const actual = ((byType[t.asset_type] || 0) / totalValue) * 100;
+      const drift = Math.abs(actual - t.target_percentage);
+      if (drift > tolerance) {
+        alerts.push({
+          asset_type: t.asset_type,
+          target_percentage: t.target_percentage,
+          actual_percentage: actual,
+          drift,
+        });
+      }
+    }
+    return alerts;
+  }
+  /**
+   * Find buy/sell transactions where price data is missing or stale on the trade date.
+   * Returns:
+   *   status='no_price'    — no price row exists for this asset at all
+   *   status='stale_price' — closest available price is from an earlier date
+   *   status='ok'          — an exact price exists on the trade date
+   * Only 'no_price' and 'stale_price' rows are returned.
+   */
+  static getMissingPrices(userId) {
+    const db = require("../config/database");
+
+    const rows = db
+      .prepare(
+        `
+      SELECT
+        t.id          AS transaction_id,
+        t.date        AS trade_date,
+        t.transaction_type,
+        t.asset_id,
+        a.symbol,
+        a.name,
+        a.asset_type,
+        b.name        AS broker_name,
+        (
+          SELECT MAX(pd.date)
+          FROM price_data pd
+          WHERE pd.asset_id = t.asset_id
+            AND pd.date <= t.date
+        ) AS closest_price_date,
+        (
+          SELECT pd.price
+          FROM price_data pd
+          WHERE pd.asset_id = t.asset_id
+            AND pd.date <= t.date
+          ORDER BY pd.date DESC
+          LIMIT 1
+        ) AS closest_price_raw
+      FROM transactions t
+      JOIN assets a ON a.id = t.asset_id
+      LEFT JOIN brokers b ON b.id = t.broker_id
+      WHERE t.user_id = ?
+        AND t.transaction_type IN ('buy', 'sell')
+        AND t.asset_id IS NOT NULL
+      ORDER BY t.date DESC, t.id DESC
+    `,
+      )
+      .all(userId);
+
+    const issues = [];
+    for (const row of rows) {
+      let status;
+      if (!row.closest_price_date) {
+        status = "no_price";
+      } else if (row.closest_price_date < row.trade_date) {
+        status = "stale_price";
+      } else {
+        status = "ok";
+      }
+
+      if (status !== "no_price") continue;
+
+      issues.push({
+        transaction_id: row.transaction_id,
+        trade_date: row.trade_date,
+        transaction_type: row.transaction_type,
+        asset_id: row.asset_id,
+        symbol: row.symbol,
+        name: row.name,
+        asset_type: row.asset_type,
+        broker_name: row.broker_name,
+        status,
+        closest_price_date: row.closest_price_date || null,
+        closest_price: row.closest_price_raw
+          ? fromValueScale(row.closest_price_raw, PRICE_SCALE)
+          : null,
+        days_without_price: row.closest_price_date
+          ? Math.round(
+              (new Date(row.trade_date) - new Date(row.closest_price_date)) /
+                (1000 * 60 * 60 * 24),
+            )
+          : null,
+      });
+    }
+
+    return {
+      total_issues: issues.length,
+      issues,
+    };
   }
 }
 

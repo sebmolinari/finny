@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const AnalyticsService = require("../services/analytics");
+const Notification = require("../models/Notification");
+const UserSettings = require("../models/UserSettings");
 const authMiddleware = require("../middleware/auth");
 const { validate } = require("../utils/validationMiddleware");
 const {
@@ -353,7 +355,37 @@ router.get(
        *         name: days
        *         schema:
        *           type: integer
-       *         description: Number of days to include in the performance history
+       *           default: 30
+       *         description: Number of days to include in the performance history. Ignored when start_date/end_date are provided.
+       *       - in: query
+       *         name: start_date
+       *         schema:
+       *           type: string
+       *           format: date
+       *         description: Start date (YYYY-MM-DD). When provided together with end_date, overrides days.
+       *       - in: query
+       *         name: end_date
+       *         schema:
+       *           type: string
+       *           format: date
+       *         description: End date (YYYY-MM-DD). When provided together with start_date, overrides days.
+       *       - in: query
+       *         name: exclude
+       *         schema:
+       *           type: string
+       *         description: >
+       *           Comma-separated list of asset types to exclude from the portfolio value calculation
+       *           (e.g. `realestate,crypto`). Valid values: crypto, currency, equity, fixedincome, realestate.
+       *       - in: query
+       *         name: debug
+       *         schema:
+       *           type: boolean
+       *           default: false
+       *         description: >
+       *           When true, each day entry includes cash_balance, holdings_value,
+       *           transactions_applied (list of transactions applied on that day), and
+       *           holdings_breakdown (per-asset quantity, price, value, price_updated_today flag).
+       *           Useful for diagnosing unexpected value changes.
        *     responses:
        *       200:
        *         description: Portfolio performance data
@@ -373,7 +405,7 @@ router.get(
        *       500:
        *         description: Server error
        */
-      const { days, exclude } = req.query;
+      const { days, exclude, start_date, end_date, debug } = req.query;
       const excludeTypes = exclude
         ? exclude
             .split(",")
@@ -384,6 +416,9 @@ router.get(
         req.user.id,
         parseInt(days) || 30,
         excludeTypes,
+        start_date || null,
+        end_date || null,
+        debug === "true",
       );
       res.json(performance);
     } catch (error) {
@@ -630,5 +665,457 @@ router.get(
     }
   },
 );
+
+/**
+ * @swagger
+ * /analytics/portfolio/performance/range:
+ *   get:
+ *     summary: Get date-range performance metrics (MWRR, NAV change) for a custom period
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: end_date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Performance metrics for the specified date range
+ *       400:
+ *         description: start_date and end_date are required
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
+// Get date-range performance metrics (MWRR, NAV change) for a custom period
+router.get("/portfolio/performance/range", authMiddleware, (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    if (!start_date || !end_date) {
+      return res
+        .status(400)
+        .json({ message: "start_date and end_date are required" });
+    }
+    const metrics = AnalyticsService.getDateRangeMetrics(
+      req.user.id,
+      start_date,
+      end_date,
+    );
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /analytics/portfolio/inception-date:
+ *   get:
+ *     summary: Get the date of the first transaction (portfolio inception date)
+ *     description: Returns the date of the earliest transaction for the authenticated user, used to set the "Since Inception" date range.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Inception date
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 inception_date:
+ *                   type: string
+ *                   format: date
+ *                   nullable: true
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
+// Get the date of the first transaction for the current user (for "Since Inception" range)
+router.get("/portfolio/inception-date", authMiddleware, (req, res) => {
+  try {
+    const firstDate = AnalyticsService.getFirstTransactionDate(req.user.id);
+    res.json({ inception_date: firstDate });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get realized gains/losses report with ST/LT classification and wash sale flags
+/**
+ * @swagger
+ * /analytics/realized-gains:
+ *   get:
+ *     summary: Get realized gains/losses report
+ *     description: Returns all closed positions with FIFO cost basis, ST/LT classification, and wash sale flags.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         description: Filter by tax year (e.g. 2025). Omit for all years.
+ *       - in: query
+ *         name: lt_days
+ *         schema:
+ *           type: integer
+ *           default: 365
+ *         description: Minimum holding days to qualify as long-term.
+ *     responses:
+ *       200:
+ *         description: Realized gains report
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 positions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       symbol:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       asset_type:
+ *                         type: string
+ *                       broker_name:
+ *                         type: string
+ *                       acquisition_date:
+ *                         type: string
+ *                         format: date
+ *                       disposal_date:
+ *                         type: string
+ *                         format: date
+ *                       quantity:
+ *                         type: number
+ *                       cost_basis:
+ *                         type: number
+ *                       sale_proceeds:
+ *                         type: number
+ *                       gain_loss:
+ *                         type: number
+ *                       holding_days:
+ *                         type: integer
+ *                       is_long_term:
+ *                         type: boolean
+ *                       is_wash_sale:
+ *                         type: boolean
+ *                 summary:
+ *                   type: object
+ *                   properties:
+ *                     total_gain_loss:
+ *                       type: number
+ *                     short_term_gain_loss:
+ *                       type: number
+ *                     long_term_gain_loss:
+ *                       type: number
+ *                     wash_sale_count:
+ *                       type: integer
+ *                     position_count:
+ *                       type: integer
+ *       401:
+ *         description: Authentication required
+ */
+router.get("/realized-gains", authMiddleware, (req, res) => {
+  try {
+    const year = req.query.year ? parseInt(req.query.year) : null;
+    const ltDays = req.query.lt_days ? parseInt(req.query.lt_days) : 365;
+    const report = AnalyticsService.getRealizedGainsReport(
+      req.user.id,
+      year,
+      ltDays,
+    );
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get tax-loss harvesting suggestions based on current unrealized losses
+/**
+ * @swagger
+ * /analytics/tax-harvesting:
+ *   get:
+ *     summary: Get tax-loss harvesting suggestions
+ *     description: Returns positions with unrealized losses, sorted by loss, with estimated tax savings based on the user's marginal rate.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: marginal_rate
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Override marginal tax rate (0–1). Defaults to user setting (or 0.25).
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         description: Tax year to evaluate holdings as of Dec 31 of that year. Omit for current holdings.
+ *     responses:
+ *       200:
+ *         description: List of tax-loss harvesting candidates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   asset_id:
+ *                     type: integer
+ *                   symbol:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   asset_type:
+ *                     type: string
+ *                   broker_name:
+ *                     type: string
+ *                   quantity:
+ *                     type: number
+ *                   cost_basis:
+ *                     type: number
+ *                   current_price:
+ *                     type: number
+ *                   market_value:
+ *                     type: number
+ *                   unrealized_gain_loss:
+ *                     type: number
+ *                   potential_tax_saving:
+ *                     type: number
+ *                   marginal_rate:
+ *                     type: number
+ *       401:
+ *         description: Authentication required
+ */
+router.get("/tax-harvesting", authMiddleware, (req, res) => {
+  try {
+    const marginalRate = req.query.marginal_rate
+      ? parseFloat(req.query.marginal_rate)
+      : null;
+    const year = req.query.year ? parseInt(req.query.year, 10) : null;
+    const suggestions = AnalyticsService.getTaxHarvestingSuggestions(
+      req.user.id,
+      marginalRate,
+      year,
+    );
+    res.json(suggestions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get allocation drift alerts
+/**
+ * @swagger
+ * /analytics/drift-alerts:
+ *   get:
+ *     summary: Get allocation drift alerts
+ *     description: Returns asset types whose actual allocation deviates from the target by more than the user's configured rebalancing tolerance. Also creates in-app notifications for new alerts.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of drift alerts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   asset_type:
+ *                     type: string
+ *                   target_percentage:
+ *                     type: number
+ *                   actual_percentage:
+ *                     type: number
+ *                   drift:
+ *                     type: number
+ *                     description: Absolute deviation from target in percentage points
+ *       401:
+ *         description: Authentication required
+ */
+router.get("/drift-alerts", authMiddleware, (req, res) => {
+  try {
+    const alerts = AnalyticsService.getDriftAlerts(req.user.id);
+
+    // Dedup window = user's notification polling interval in seconds (default 1 day)
+    const settings = UserSettings.findByUserId(req.user.id);
+    const dedupSeconds = settings?.notification_polling_interval || 86400;
+
+    // Feature 8.4 — create in-app notifications for new drift alerts
+    for (const alert of alerts) {
+      const title = `Allocation drift: ${alert.asset_type}`;
+      const alreadyNotified = Notification.hasRecent(
+        req.user.id,
+        "drift_alert",
+        title,
+        dedupSeconds,
+      );
+      if (!alreadyNotified) {
+        const drift = alert.drift.toFixed(1);
+        const actual = alert.actual_percentage.toFixed(1);
+        const target = alert.target_percentage.toFixed(1);
+        Notification.create(
+          req.user.id,
+          "drift_alert",
+          title,
+          `${alert.asset_type} is at ${actual}% (target ${target}%, drift ${drift}%). Consider rebalancing.`,
+          {
+            asset_type: alert.asset_type,
+            drift: alert.drift,
+            actual: alert.actual_percentage,
+            target: alert.target_percentage,
+          },
+        );
+      }
+    }
+
+    res.json(alerts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /analytics/missing-prices:
+ *   get:
+ *     summary: Find transactions with missing or stale price data on the trade date
+ *     description: >
+ *       Returns buy/sell transactions where no price exists for the asset on the trade date.
+ *       status='no_price' means no price data exists at all for this asset as of the trade date.
+ *       status='stale_price' means the closest available price is from an earlier date.
+ *       Use this to identify which assets need price data entries added.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [json, csv]
+ *           default: json
+ *         description: Response format. Use 'csv' to download a spreadsheet-ready file.
+ *     responses:
+ *       200:
+ *         description: List of transactions with missing or stale prices
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total_issues:
+ *                   type: integer
+ *                 issues:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                       trade_date:
+ *                         type: string
+ *                         format: date
+ *                       transaction_type:
+ *                         type: string
+ *                         enum: [buy, sell]
+ *                       asset_id:
+ *                         type: integer
+ *                       symbol:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       asset_type:
+ *                         type: string
+ *                       broker_name:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [no_price]
+ *                         description: no price data exists for this asset on or before the trade date
+ *                       closest_price_date:
+ *                         type: string
+ *                         format: date
+ *                         nullable: true
+ *                         description: Date of the closest available price (null if no_price)
+ *                       closest_price:
+ *                         type: number
+ *                         nullable: true
+ *                         description: Value of the closest available price (null if no_price)
+ *                       days_without_price:
+ *                         type: integer
+ *                         nullable: true
+ *                         description: Days between closest price and trade date (null if no_price)
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
+router.get("/missing-prices", authMiddleware, (req, res) => {
+  try {
+    const result = AnalyticsService.getMissingPrices(req.user.id);
+
+    if (req.query.format === "csv") {
+      const headers = [
+        "transaction_id",
+        "trade_date",
+        "transaction_type",
+        "symbol",
+        "name",
+        "asset_type",
+        "broker_name",
+        "status",
+        "closest_price_date",
+        "closest_price",
+        "days_without_price",
+      ];
+      const escape = (v) => {
+        if (v == null) return "";
+        const s = String(v);
+        return s.includes(",") || s.includes('"') || s.includes("\n")
+          ? `"${s.replace(/"/g, '""')}"`
+          : s;
+      };
+      const rows = result.issues.map((i) =>
+        headers.map((h) => escape(i[h])).join(","),
+      );
+      const csv = [headers.join(","), ...rows].join("\r\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="missing-prices.csv"',
+      );
+      return res.send(csv);
+    }
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

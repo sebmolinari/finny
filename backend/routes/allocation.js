@@ -302,4 +302,80 @@ router.get("/rebalancing", auth, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /allocation/simulate:
+ *   post:
+ *     summary: Simulate how to invest a deposit to move toward allocation targets
+ *     tags: [Allocation]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - deposit
+ *             properties:
+ *               deposit:
+ *                 type: number
+ *                 description: Amount to invest
+ *               include_asset_types:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Asset types to include in simulation
+ *     responses:
+ *       200:
+ *         description: Simulation result with recommended buy amounts
+ *       400:
+ *         description: Invalid deposit amount
+ *       500:
+ *         description: Server error
+ */
+router.post("/simulate", auth, async (req, res) => {
+  try {
+    const { deposit, include_asset_types } = req.body;
+    if (
+      deposit === undefined ||
+      deposit === null ||
+      isNaN(parseFloat(deposit))
+    ) {
+      return res.status(400).json({ message: "deposit amount is required" });
+    }
+    const depositAmount = parseFloat(deposit);
+    if (depositAmount <= 0) {
+      return res
+        .status(400)
+        .json({ message: "deposit must be a positive number" });
+    }
+
+    let excludeAssetTypes = [];
+    if (
+      include_asset_types &&
+      Array.isArray(include_asset_types) &&
+      include_asset_types.length > 0
+    ) {
+      const db = require("../config/database");
+      const rows = db.prepare("SELECT DISTINCT asset_type FROM assets").all();
+      const allTypes = rows
+        .map((r) => (r.asset_type || "").toLowerCase())
+        .filter(Boolean);
+      const included = include_asset_types.map((t) => t.toLowerCase());
+      excludeAssetTypes = allTypes.filter((t) => !included.includes(t));
+    }
+
+    const result = AnalyticsService.simulateRebalancing(
+      req.user.id,
+      depositAmount,
+      excludeAssetTypes,
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

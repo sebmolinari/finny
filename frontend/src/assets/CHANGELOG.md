@@ -2,11 +2,23 @@
 
 All notable changes to this project are documented below.
 
-## [1.0.0] – 2026-03-01
+## [1.0.0] – 2026-03-06
+
+### Added
+
+- **New Look & Feel** - Redesig UI for better user experience
+- **Tax Reporting** – Tax Report page rebuilt with four tabs: Year-End Holdings, Realized Gains/Losses (FIFO, short-term vs. long-term classification), Tax-Loss Harvesting Suggestions, and Wash Sale Detection (30-day window)
+- **Tax Settings** – New Settings fields for marginal tax rate and long-term holding period (used by harvesting estimates)
+- **Sector Heatmap** – Asset-class performance heatmap on the Market Trends page (color-coded by 30-day average return)
+- **In-App Notification Center** – Bell icon in the header with unread badge, notification feed, mark-as-read and mark-all-read actions; polls every 60 seconds
+- **Drift Alerts** – Automatic in-app notifications when any asset class drifts beyond the configured rebalancing tolerance
+- **Confirmation Dialogs** – Destructive actions (delete asset, delete broker, delete transaction, delete user) now require typing a confirmation phrase before proceeding
+- **Rebalancing Simulation** – New Simulation tab on the Asset Allocation page: enter a deposit amount and see exactly how it should be split across underweight asset types to move toward targets, with current %, allocated amount, projected value and projected % columns
+- **Asset Type Filter in Allocation** – Rebalancing and simulation views can be scoped to a subset of asset types, allowing partial-portfolio analysis
 
 ### Changed
 
-- New Look & Feel
+- Notification center pings the drift-alerts endpoint on each poll cycle to keep alerts current
 
 ## [0.1.0] – 2026-01-23
 

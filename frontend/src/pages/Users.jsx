@@ -8,21 +8,15 @@ import {
   MenuItem,
   FormControl,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   Chip,
-  IconButton,
 } from "@mui/material";
-import { CloseRounded as CloseIcon } from "@mui/icons-material";
 import { userAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
+import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
 
 const Users = () => {
   const { user: currentUser } = useAuth();
@@ -211,39 +205,14 @@ const Users = () => {
         />
       </Box>
 
-      <Dialog open={deleteDialog.open} onClose={handleDeleteCancel}>
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pr: 1,
-          }}
-        >
-          Confirm Delete
-          <IconButton size="small" onClick={handleDeleteCancel}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete user "{deleteDialog.username}"? This
-            action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button color="inherit" onClick={handleDeleteCancel}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmPhraseDialog
+        open={deleteDialog.open}
+        title="Delete User"
+        phrase={deleteDialog.username}
+        description={`This will permanently delete user "${deleteDialog.username}" and all their data. Type the username to confirm.`}
+        onConfirm={handleDeleteConfirm}
+        onClose={handleDeleteCancel}
+      />
     </PageContainer>
   );
 };

@@ -91,6 +91,10 @@ router.put(
         email_frequency,
         validate_cash_balance,
         validate_sell_balance,
+        marginal_tax_rate,
+        lt_holding_period_days,
+        notification_polling_enabled,
+        notification_polling_interval,
       } = req.body;
 
       const existingSettings = UserSettings.findByUserId(req.user.id);
@@ -114,6 +118,10 @@ router.put(
         validate_cash_balance,
         validate_sell_balance,
         req.user.id,
+        marginal_tax_rate,
+        lt_holding_period_days,
+        notification_polling_enabled,
+        notification_polling_interval,
       );
 
       // Log settings change
@@ -136,6 +144,12 @@ router.put(
           email_frequency: existingSettings.email_frequency,
           validate_cash_balance: existingSettings.validate_cash_balance,
           validate_sell_balance: existingSettings.validate_sell_balance,
+          marginal_tax_rate: existingSettings.marginal_tax_rate,
+          lt_holding_period_days: existingSettings.lt_holding_period_days,
+          notification_polling_enabled:
+            existingSettings.notification_polling_enabled,
+          notification_polling_interval:
+            existingSettings.notification_polling_interval,
         },
         new_values: {
           theme: theme,
@@ -149,6 +163,10 @@ router.put(
           email_frequency: email_frequency,
           validate_cash_balance: validate_cash_balance,
           validate_sell_balance: validate_sell_balance,
+          marginal_tax_rate: marginal_tax_rate,
+          lt_holding_period_days: lt_holding_period_days,
+          notification_polling_enabled: notification_polling_enabled,
+          notification_polling_interval: notification_polling_interval,
         },
       });
 

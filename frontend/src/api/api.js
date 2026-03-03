@@ -136,6 +136,8 @@ export const transactionAPI = {
 
   delete: (id) => api.delete(`/transactions/${id}`),
 
+  transfer: (data) => api.post("/transactions/transfer", data),
+
   bulkImport: (transactions) =>
     api.post("/transactions/bulk", { transactions }),
 };
@@ -146,13 +148,28 @@ export const analyticsAPI = {
       params: excludeTypes.length ? { exclude: excludeTypes.join(",") } : {},
     }),
 
-  getPortfolioPerformance: (days = 30, excludeTypes = []) =>
-    api.get("/analytics/portfolio/performance", {
-      params: {
-        days,
-        ...(excludeTypes.length ? { exclude: excludeTypes.join(",") } : {}),
-      },
+  getPortfolioPerformance: (
+    days = 30,
+    excludeTypes = [],
+    startDate = null,
+    endDate = null,
+  ) => {
+    const params = {};
+    // Only send `days` when not using explicit date bounds (backend ignores it either way,
+    // but omitting avoids misleading query strings in logs)
+    if (!startDate || !endDate) params.days = days;
+    if (excludeTypes.length) params.exclude = excludeTypes.join(",");
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return api.get("/analytics/portfolio/performance", { params });
+  },
+
+  getDateRangeMetrics: (startDate, endDate) =>
+    api.get("/analytics/portfolio/performance/range", {
+      params: { start_date: startDate, end_date: endDate },
     }),
+
+  getInceptionDate: () => api.get("/analytics/portfolio/inception-date"),
 
   getReturnDetails: () => api.get("/analytics/portfolio/returns/details"),
 
@@ -173,10 +190,36 @@ export const analyticsAPI = {
     }
     return api.get("/analytics/tax-report", { params });
   },
+
+  getRealizedGains: (year = null, ltDays = 365) => {
+    const params = { lt_days: ltDays };
+    if (year) params.year = year;
+    return api.get("/analytics/realized-gains", { params });
+  },
+
+  getTaxHarvesting: (marginalRate = null, year = null) => {
+    const params = {};
+    if (marginalRate !== null) params.marginal_rate = marginalRate;
+    if (year !== null) params.year = year;
+    return api.get("/analytics/tax-harvesting", { params });
+  },
+
+  getDriftAlerts: () => api.get("/analytics/drift-alerts"),
 };
 
 export const emailAPI = {
   sendPortfolioSummary: () => api.post("/email/summary"),
+};
+
+export const notificationsAPI = {
+  getAll: (unreadOnly = false) =>
+    api.get("/notifications", {
+      params: unreadOnly ? { unread_only: true } : {},
+    }),
+
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+
+  markAllRead: () => api.patch("/notifications/read-all"),
 };
 
 export const settingsAPI = {
@@ -227,6 +270,12 @@ export const allocationAPI = {
         includeAssetTypes && includeAssetTypes.length > 0
           ? { include_asset_types: includeAssetTypes.join(",") }
           : {},
+    }),
+
+  simulate: (deposit, includeAssetTypes = []) =>
+    api.post("/allocation/simulate", {
+      deposit,
+      include_asset_types: includeAssetTypes,
     }),
 };
 
