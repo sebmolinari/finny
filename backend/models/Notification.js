@@ -56,6 +56,11 @@ class Notification {
     return stmt.run(userId, `-${keepDays} days`).changes;
   }
 
+  static deleteAll(userId) {
+    const stmt = db.prepare(`DELETE FROM notifications WHERE user_id = ?`);
+    return stmt.run(userId).changes;
+  }
+
   // Check if a recent notification of same type+title already exists (dedup)
   // Intentionally includes read notifications — reading a notification should not
   // re-arm the alert within the same time window.

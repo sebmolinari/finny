@@ -18,6 +18,43 @@ const path = require("path");
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5000/api/v1";
 const MIGRATIONS_DIR = path.join(__dirname, "../migrations");
+const PRICE_SCALE = 6; // must match backend/utils/valueScale.js
+
+/**
+ * Try to fetch the closing price for `symbol` on `dateStr` (YYYY-MM-DD)
+ * from Yahoo Finance.  Returns the raw float price on success, or null.
+ */
+async function fetchYahooHistoricalPrice(symbol, dateStr) {
+  try {
+    const date = new Date(dateStr + "T00:00:00Z");
+    const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    const period1 = Math.floor(date.getTime() / 1000);
+    const period2 = Math.floor(nextDate.getTime() / 1000);
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`;
+    const response = await axios.get(url, {
+      params: { interval: "1d", period1, period2 },
+      timeout: 8000,
+      headers: { "User-Agent": "Mozilla/5.0" },
+    });
+
+    const result = response.data?.chart?.result?.[0];
+    if (!result) return null;
+
+    // Prefer the closes array; fall back to meta.previousClose
+    const closes = result.indicators?.quote?.[0]?.close;
+    if (closes && closes.length > 0) {
+      const close = closes.find((c) => c != null);
+      if (close != null) return close;
+    }
+
+    const fallback =
+      result.meta?.regularMarketPrice ?? result.meta?.previousClose;
+    return fallback ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function nextMigrationNumber() {
   const files = fs.existsSync(MIGRATIONS_DIR)
@@ -82,6 +119,7 @@ async function main() {
       byAsset[key] = {
         asset_id: issue.asset_id,
         symbol: issue.symbol,
+        price_symbol: issue.price_symbol || null,
         name: issue.name,
         dates: [],
       };
@@ -97,9 +135,12 @@ async function main() {
   lines.push(`-- Migration ${migrationNum}: add missing price data`);
   lines.push(`-- Generated: ${new Date().toISOString()}`);
   lines.push(
-    "-- ⚠️  EDIT BEFORE RUNNING: replace every 0 placeholder with the",
+    "-- Prices fetched automatically from Yahoo Finance where possible.",
   );
-  lines.push("--    correct closing price × 100000 (e.g. $312.47 → 31247000).");
+  lines.push(
+    `-- Prices are stored as integer (float × 10^${PRICE_SCALE}, e.g. $1.23 → ${Math.round(1.23 * Math.pow(10, PRICE_SCALE))}).`,
+  );
+  lines.push("-- ⚠️  Lines ending with '-- ?' still need a manual price.");
   lines.push("--    Then apply via the migration runner (server startup) or:");
   lines.push("--      node scripts/migrationRunner.js");
   lines.push(
@@ -107,13 +148,29 @@ async function main() {
   );
   lines.push("");
 
+  let fetched = 0;
+  let missing = 0;
+
   for (const group of Object.values(byAsset)) {
     lines.push(
       `-- ${group.symbol} (asset_id=${group.asset_id}) — ${group.name}`,
     );
     for (const date of group.dates) {
+      const fetchSymbol = group.price_symbol || group.symbol;
+      const yahooPrice = await fetchYahooHistoricalPrice(fetchSymbol, date);
+      let priceValue;
+      let suffix;
+      if (yahooPrice != null) {
+        priceValue = Math.round(yahooPrice * Math.pow(10, PRICE_SCALE));
+        suffix = `-- yahoo(${fetchSymbol}): $${yahooPrice.toFixed(6)}`;
+        fetched++;
+      } else {
+        priceValue = "?";
+        suffix = "-- ?";
+        missing++;
+      }
       lines.push(
-        `INSERT OR IGNORE INTO price_data (asset_id, date, price) VALUES (${group.asset_id}, '${date}', ?);`,
+        `INSERT OR IGNORE INTO price_data (asset_id, date, price) VALUES (${group.asset_id}, '${date}', ${priceValue}); ${suffix}`,
       );
     }
     lines.push("");
@@ -130,6 +187,10 @@ async function main() {
   console.log(
     `Generated ${issues.length} INSERT(s) across ${Object.keys(byAsset).length} asset(s).`,
   );
+  console.log(`  Prices resolved from Yahoo: ${fetched}`);
+  if (missing > 0) {
+    console.log(`  Still needs manual entry:   ${missing} (marked with -- ?)`);
+  }
   console.log(`Output: ${outPath}`);
 }
 

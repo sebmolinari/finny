@@ -1275,56 +1275,58 @@ class AnalyticsService {
     return suggestions;
   }
 
-  // Check for allocation drift alerts
+  // Check for allocation drift alerts.
+  // Delegates to getRebalancingRecommendations so allocations are computed
+  // with the exact same logic used on the Asset Allocation screen.
   static getDriftAlerts(userId) {
     const settings = UserSettings.findByUserId(userId);
     if (!settings || !settings.rebalancing_tolerance) return [];
 
-    const tolerance = settings.rebalancing_tolerance;
-    const holdings = Transaction.getPortfolioHoldings(userId);
-    if (!holdings.length) return [];
-
-    // Load targets
     const db = require("../config/database");
-    const targets = db
+
+    // Fetch the explicitly targeted asset types for this user
+    const targetedTypes = db
       .prepare(
-        `SELECT asset_type, target_percentage FROM asset_allocation_targets WHERE user_id = ?`,
+        `SELECT asset_type FROM asset_allocation_targets WHERE user_id = ? AND asset_type IS NOT NULL AND asset_id IS NULL`,
       )
-      .all(userId);
-    if (!targets.length) return [];
+      .all(userId)
+      .map((r) => r.asset_type);
 
-    // Get latest prices and compute current allocation
-    let totalValue = 0;
-    const holdingValues = [];
-    for (const h of holdings) {
-      const priceRow = PriceData.getLatestPrice(h.asset_id);
-      const price = priceRow ? priceRow.price : 0;
-      const mv = price * h.total_quantity;
-      totalValue += mv;
-      holdingValues.push({ ...h, market_value: mv });
-    }
-    if (totalValue === 0) return [];
+    if (!targetedTypes.length) return [];
 
-    // Group by asset_type
-    const byType = {};
-    for (const h of holdingValues) {
-      byType[h.asset_type] = (byType[h.asset_type] || 0) + h.market_value;
-    }
+    // Exclude every asset type that has no target, so the total portfolio
+    // value denominator matches exactly what the Asset Allocation screen uses
+    // (which also filters to the included/targeted types only).
+    const allTypeRows = db
+      .prepare(
+        `SELECT DISTINCT asset_type FROM assets WHERE asset_type IS NOT NULL`,
+      )
+      .all();
+    const targetedSet = new Set(targetedTypes.map((t) => t.toLowerCase()));
+    const excludeAssetTypes = allTypeRows
+      .map((r) => r.asset_type)
+      .filter((t) => !targetedSet.has(t.toLowerCase()));
 
-    const alerts = [];
-    for (const t of targets) {
-      const actual = ((byType[t.asset_type] || 0) / totalValue) * 100;
-      const drift = Math.abs(actual - t.target_percentage);
-      if (drift > tolerance) {
-        alerts.push({
-          asset_type: t.asset_type,
-          target_percentage: t.target_percentage,
-          actual_percentage: actual,
-          drift,
-        });
-      }
-    }
-    return alerts;
+    const rebalancing = this.getRebalancingRecommendations(
+      userId,
+      excludeAssetTypes,
+    );
+    if (!rebalancing.has_targets) return [];
+
+    // Only alert on types with an explicit target that are out of tolerance
+    return rebalancing.recommendations
+      .filter(
+        (r) =>
+          r.level === "type" &&
+          !r.is_balanced &&
+          targetedSet.has(r.asset_type.toLowerCase()),
+      )
+      .map((r) => ({
+        asset_type: r.asset_type,
+        target_percentage: r.target_percentage,
+        actual_percentage: r.current_percentage,
+        drift: Math.abs(r.difference_percentage),
+      }));
   }
   /**
    * Find buy/sell transactions where price data is missing or stale on the trade date.
@@ -1348,6 +1350,7 @@ class AnalyticsService {
         a.symbol,
         a.name,
         a.asset_type,
+        a.price_symbol,
         b.name        AS broker_name,
         (
           SELECT MAX(pd.date)
@@ -1393,6 +1396,7 @@ class AnalyticsService {
         transaction_type: row.transaction_type,
         asset_id: row.asset_id,
         symbol: row.symbol,
+        price_symbol: row.price_symbol || null,
         name: row.name,
         asset_type: row.asset_type,
         broker_name: row.broker_name,
@@ -1413,6 +1417,335 @@ class AnalyticsService {
     return {
       total_issues: issues.length,
       issues,
+    };
+  }
+
+  // ── 1.3 Volatility & Drawdown Metrics ──────────────────────────────────────
+  static getVolatilityAndDrawdown(
+    userId,
+    days = 365,
+    startDate = null,
+    endDate = null,
+  ) {
+    const performance = this.getPortfolioPerformance(
+      userId,
+      days,
+      [],
+      startDate,
+      endDate,
+    );
+
+    if (performance.length < 2) {
+      return {
+        nav_series: [],
+        rolling_volatility: [],
+        max_drawdown: null,
+        recovery_days: null,
+        recovery_date: null,
+      };
+    }
+
+    // Daily returns
+    const returns = [];
+    for (let i = 1; i < performance.length; i++) {
+      const prev = performance[i - 1].total_value;
+      const curr = performance[i].total_value;
+      const ret = prev > 0 ? (curr - prev) / prev : 0;
+      returns.push({ date: performance[i].date, return: ret });
+    }
+
+    // Rolling 30-day annualised volatility
+    const ROLLING_WINDOW = 30;
+    const rolling_volatility = [];
+    for (let i = ROLLING_WINDOW - 1; i < returns.length; i++) {
+      const window = returns
+        .slice(i - ROLLING_WINDOW + 1, i + 1)
+        .map((r) => r.return);
+      const mean = window.reduce((s, r) => s + r, 0) / window.length;
+      const variance =
+        window.reduce((s, r) => s + Math.pow(r - mean, 2), 0) /
+        (window.length - 1);
+      const annualisedVol = Math.sqrt(variance) * Math.sqrt(252) * 100;
+      rolling_volatility.push({
+        date: returns[i].date,
+        volatility: annualisedVol,
+      });
+    }
+
+    // Max drawdown
+    let peak = performance[0].total_value;
+    let peakDate = performance[0].date;
+    let maxDrawdown = 0;
+    let maxDrawdownStart = performance[0].date;
+    let maxDrawdownEnd = performance[0].date;
+    let maxDrawdownPeak = performance[0].total_value;
+    let maxDrawdownTrough = performance[0].total_value;
+
+    for (let i = 1; i < performance.length; i++) {
+      const nav = performance[i].total_value;
+      const date = performance[i].date;
+      if (nav > peak) {
+        peak = nav;
+        peakDate = date;
+      }
+      const drawdown = peak > 0 ? (peak - nav) / peak : 0;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+        maxDrawdownStart = peakDate;
+        maxDrawdownEnd = date;
+        maxDrawdownPeak = peak;
+        maxDrawdownTrough = nav;
+      }
+    }
+
+    // Recovery: first date after trough where NAV >= peak
+    let recoveryDate = null;
+    let recoveryDays = null;
+    for (let i = 0; i < performance.length; i++) {
+      if (
+        performance[i].date > maxDrawdownEnd &&
+        performance[i].total_value >= maxDrawdownPeak
+      ) {
+        recoveryDate = performance[i].date;
+        const endObj = new Date(maxDrawdownEnd);
+        const recObj = new Date(recoveryDate);
+        recoveryDays = Math.round((recObj - endObj) / (1000 * 60 * 60 * 24));
+        break;
+      }
+    }
+
+    const nav_series = performance.map((p) => ({
+      date: p.date,
+      value: p.total_value,
+    }));
+
+    return {
+      nav_series,
+      rolling_volatility,
+      max_drawdown: {
+        value: maxDrawdown * 100,
+        start_date: maxDrawdownStart,
+        end_date: maxDrawdownEnd,
+        peak_value: maxDrawdownPeak,
+        trough_value: maxDrawdownTrough,
+      },
+      recovery_days: recoveryDays,
+      recovery_date: recoveryDate,
+    };
+  }
+
+  // ── 2.1 Historical Holdings ─────────────────────────────────────────────────
+  static getHistoricalHoldings(userId, asOfDate) {
+    const db = require("../config/database");
+    const holdings = Transaction.getPortfolioHoldings(userId, true, asOfDate);
+
+    const enrichedHoldings = holdings.map((holding) => {
+      const stmt = db.prepare(`
+        SELECT price FROM price_data
+        WHERE asset_id = ? AND date <= ?
+        ORDER BY date DESC
+        LIMIT 1
+      `);
+      const priceRow = stmt.get(holding.asset_id, asOfDate);
+      const marketPrice = priceRow
+        ? fromValueScale(priceRow.price, PRICE_SCALE)
+        : 0;
+      const marketValue = holding.total_quantity * marketPrice;
+      const unrealizedGain = marketValue - holding.cost_basis;
+      const unrealizedGainPct =
+        holding.cost_basis > 0
+          ? (unrealizedGain / holding.cost_basis) * 100
+          : 0;
+      return {
+        ...holding,
+        market_price: marketPrice,
+        market_value: marketValue,
+        unrealized_gain: unrealizedGain,
+        unrealized_gain_percent: unrealizedGainPct,
+        average_cost:
+          holding.total_quantity > 0
+            ? holding.cost_basis / holding.total_quantity
+            : 0,
+      };
+    });
+
+    enrichedHoldings.sort((a, b) => b.market_value - a.market_value);
+
+    const totalMarketValue = enrichedHoldings.reduce(
+      (s, h) => s + h.market_value,
+      0,
+    );
+    const totalCostBasis = enrichedHoldings.reduce(
+      (s, h) => s + h.cost_basis,
+      0,
+    );
+    const totalUnrealizedGain = enrichedHoldings.reduce(
+      (s, h) => s + h.unrealized_gain,
+      0,
+    );
+
+    return {
+      as_of_date: asOfDate,
+      holdings: enrichedHoldings,
+      summary: {
+        total_market_value: totalMarketValue,
+        total_cost_basis: totalCostBasis,
+        total_unrealized_gain: totalUnrealizedGain,
+        total_unrealized_gain_percent:
+          totalCostBasis > 0 ? (totalUnrealizedGain / totalCostBasis) * 100 : 0,
+      },
+    };
+  }
+
+  // ── 10.3 Admin Overview ─────────────────────────────────────────────────────
+  static getAdminOverview() {
+    const db = require("../config/database");
+
+    const userStats = db
+      .prepare(
+        `SELECT COUNT(*) as total_users,
+          SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) as active_users
+         FROM users`,
+      )
+      .get();
+
+    const txStats = db
+      .prepare(
+        `SELECT COUNT(*) as total_transactions,
+          COUNT(DISTINCT user_id) as users_with_transactions
+         FROM transactions`,
+      )
+      .get();
+
+    const assetStats = db
+      .prepare(`SELECT COUNT(*) as total_assets FROM assets WHERE active = 1`)
+      .get();
+
+    const brokerStats = db
+      .prepare(`SELECT COUNT(*) as total_brokers FROM brokers`)
+      .get();
+
+    const priceStats = db
+      .prepare(
+        `SELECT MAX(date) as last_price_date, COUNT(*) as total_price_records
+         FROM price_data`,
+      )
+      .get();
+
+    const recentPriceRefreshes = db
+      .prepare(
+        `SELECT action_type, username, created_at, success, error_message
+         FROM audit_logs
+         WHERE action_type IN ('price_refresh', 'price_refresh_all', 'refresh_prices')
+         ORDER BY created_at DESC
+         LIMIT 10`,
+      )
+      .all();
+
+    // Per-asset failure info from error_message field in recent failed refreshes
+    const failedRefreshes = db
+      .prepare(
+        `SELECT username, error_message, created_at
+         FROM audit_logs
+         WHERE action_type IN ('price_refresh', 'price_refresh_all', 'refresh_prices')
+           AND success = 0
+         ORDER BY created_at DESC
+         LIMIT 20`,
+      )
+      .all();
+
+    // Users with no transactions
+    const usersNoTx = db
+      .prepare(
+        `SELECT COUNT(*) as count
+         FROM users
+         WHERE id NOT IN (SELECT DISTINCT user_id FROM transactions)`,
+      )
+      .get();
+
+    // Price coverage: how many active assets have at least one price record
+    const priceCoverage = db
+      .prepare(
+        `SELECT
+           COUNT(DISTINCT pd.asset_id) as assets_with_prices
+         FROM price_data pd
+         JOIN assets a ON a.id = pd.asset_id AND a.active = 1`,
+      )
+      .get();
+
+    // Top users by transaction count
+    const topUsers = db
+      .prepare(
+        `SELECT u.username, u.role, COUNT(t.id) as tx_count
+         FROM users u
+         LEFT JOIN transactions t ON t.user_id = u.id
+         GROUP BY u.id, u.username, u.role
+         ORDER BY tx_count DESC
+         LIMIT 5`,
+      )
+      .all();
+
+    // Recent user registrations
+    const recentRegistrations = db
+      .prepare(
+        `SELECT username, email, role, active, created_at
+         FROM users
+         ORDER BY created_at DESC
+         LIMIT 5`,
+      )
+      .all();
+
+    // Recent general audit activity (all types)
+    const recentAudit = db
+      .prepare(
+        `SELECT action_type, username, table_name, record_id, ip_address, success, error_message, created_at
+         FROM audit_logs
+         ORDER BY created_at DESC
+         LIMIT 10`,
+      )
+      .all();
+
+    // Stale assets: active assets with no price data in the last 7 days
+    const staleAssets = db
+      .prepare(
+        `SELECT a.symbol, a.name, a.asset_type, MAX(pd.date) as last_price_date
+         FROM assets a
+         LEFT JOIN price_data pd ON pd.asset_id = a.id
+         WHERE a.active = 1
+         GROUP BY a.id, a.symbol, a.name, a.asset_type
+         HAVING last_price_date IS NULL OR last_price_date < date('now', '-7 days')
+         ORDER BY last_price_date ASC
+         LIMIT 20`,
+      )
+      .all();
+
+    return {
+      users: {
+        total: userStats.total_users,
+        active: userStats.active_users,
+        no_transactions: usersNoTx.count,
+      },
+      transactions: {
+        total: txStats.total_transactions,
+        users_with_transactions: txStats.users_with_transactions,
+      },
+      assets: {
+        total: assetStats.total_assets,
+        with_prices: priceCoverage.assets_with_prices,
+      },
+      brokers: {
+        total: brokerStats.total_brokers,
+      },
+      price_data: {
+        last_price_date: priceStats.last_price_date,
+        total_records: priceStats.total_price_records,
+      },
+      recent_price_refreshes: recentPriceRefreshes,
+      failed_refreshes: failedRefreshes,
+      top_users: topUsers,
+      recent_registrations: recentRegistrations,
+      recent_audit: recentAudit,
+      stale_assets: staleAssets,
     };
   }
 }

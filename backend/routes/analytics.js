@@ -1,9 +1,13 @@
 const express = require("express");
 const router = express.Router();
+const axios = require("axios");
+const logger = require("../config/logger");
 const AnalyticsService = require("../services/analytics");
 const Notification = require("../models/Notification");
 const UserSettings = require("../models/UserSettings");
 const authMiddleware = require("../middleware/auth");
+const adminMiddleware = require("../middleware/admin");
+const Asset = require("../models/Asset");
 const { validate } = require("../utils/validationMiddleware");
 const {
   marketTrendsValidation,
@@ -961,35 +965,39 @@ router.get("/drift-alerts", authMiddleware, (req, res) => {
   try {
     const alerts = AnalyticsService.getDriftAlerts(req.user.id);
 
-    // Dedup window = user's notification polling interval in seconds (default 1 day)
     const settings = UserSettings.findByUserId(req.user.id);
-    const dedupSeconds = settings?.notification_polling_interval || 86400;
 
-    // Feature 8.4 — create in-app notifications for new drift alerts
-    for (const alert of alerts) {
-      const title = `Allocation drift: ${alert.asset_type}`;
-      const alreadyNotified = Notification.hasRecent(
-        req.user.id,
-        "drift_alert",
-        title,
-        dedupSeconds,
-      );
-      if (!alreadyNotified) {
-        const drift = alert.drift.toFixed(1);
-        const actual = alert.actual_percentage.toFixed(1);
-        const target = alert.target_percentage.toFixed(1);
-        Notification.create(
+    // Only create notifications when the user has polling enabled
+    if (settings?.notification_polling_enabled !== 0) {
+      // Dedup window is fixed at 24 h — notifications should not repeat more often than once per day
+      const dedupSeconds = 86400;
+
+      // Feature 8.4 — create in-app notifications for new drift alerts
+      for (const alert of alerts) {
+        const title = `Allocation drift: ${alert.asset_type}`;
+        const alreadyNotified = Notification.hasRecent(
           req.user.id,
           "drift_alert",
           title,
-          `${alert.asset_type} is at ${actual}% (target ${target}%, drift ${drift}%). Consider rebalancing.`,
-          {
-            asset_type: alert.asset_type,
-            drift: alert.drift,
-            actual: alert.actual_percentage,
-            target: alert.target_percentage,
-          },
+          dedupSeconds,
         );
+        if (!alreadyNotified) {
+          const drift = alert.drift.toFixed(1);
+          const actual = alert.actual_percentage.toFixed(1);
+          const target = alert.target_percentage.toFixed(1);
+          Notification.create(
+            req.user.id,
+            "drift_alert",
+            title,
+            `${alert.asset_type} is at ${actual}% (target ${target}%, drift ${drift}%). Consider rebalancing.`,
+            {
+              asset_type: alert.asset_type,
+              drift: alert.drift,
+              actual: alert.actual_percentage,
+              target: alert.target_percentage,
+            },
+          );
+        }
       }
     }
 
@@ -1112,6 +1120,234 @@ router.get("/missing-prices", authMiddleware, (req, res) => {
       return res.send(csv);
     }
 
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 1.3 Risk Metrics: Volatility & Drawdown ─────────────────────────────────
+router.get("/portfolio/risk-metrics", authMiddleware, (req, res) => {
+  try {
+    const { days = 365, start_date, end_date } = req.query;
+    const result = AnalyticsService.getVolatilityAndDrawdown(
+      req.user.id,
+      parseInt(days),
+      start_date || null,
+      end_date || null,
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 2.1 Historical Holdings ──────────────────────────────────────────────────
+router.get("/portfolio/historical-holdings", authMiddleware, (req, res) => {
+  try {
+    const { as_of } = req.query;
+    if (!as_of) {
+      return res
+        .status(400)
+        .json({ message: "as_of query parameter is required (YYYY-MM-DD)" });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(as_of)) {
+      return res
+        .status(400)
+        .json({ message: "as_of must be in YYYY-MM-DD format" });
+    }
+    const result = AnalyticsService.getHistoricalHoldings(req.user.id, as_of);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 7.2 Economic Calendar ────────────────────────────────────────────────────
+// Helper: obtain a Yahoo Finance session cookie + crumb required by v11 API
+// (kept as no-op — replaced by yahoo-finance2 which handles auth internally)
+
+router.get("/economic-calendar", authMiddleware, async (req, res) => {
+  try {
+    const YahooFinance = require("yahoo-finance2").default;
+    const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
+
+    // Get the user's held assets (grouped so each asset appears once)
+    const holdings = AnalyticsService.getPortfolioHoldings(
+      req.user.id,
+      true,
+      [],
+      true,
+    );
+
+    // Build a deduplicated list: { symbol, yahooSymbol }
+    // Use price_symbol override when set (e.g. "VWRA.L" for LSE-listed ETFs).
+    const seenAssets = new Map();
+    for (const h of holdings) {
+      if (!seenAssets.has(h.asset_id)) {
+        const asset = Asset.findById(h.asset_id);
+        // Skip assets with no meaningful calendar data on Yahoo Finance
+        if (!asset) continue;
+        if (["manual", "coingecko", "dolarapi"].includes(asset.price_source))
+          continue;
+        if (["crypto", "currency"].includes(asset.asset_type)) continue;
+        const yahooSymbol = asset?.price_symbol?.trim() || h.symbol;
+        seenAssets.set(h.asset_id, { symbol: h.symbol, yahooSymbol });
+      }
+    }
+    const assetList = [...seenAssets.values()];
+
+    logger.info(
+      `[EconCal] Querying calendar for ${assetList.length} asset(s): ` +
+        assetList
+          .map(
+            (a) =>
+              `${a.symbol}${a.yahooSymbol !== a.symbol ? ` (${a.yahooSymbol})` : ""}`,
+          )
+          .join(", "),
+    );
+
+    const events = [];
+    const fundStats = [];
+
+    await Promise.allSettled(
+      assetList.map(async ({ symbol, yahooSymbol }) => {
+        try {
+          logger.info(
+            `[EconCal] Requesting quoteSummary for ${symbol} using Yahoo symbol "${yahooSymbol}"`,
+          );
+          const result = await yahooFinance.quoteSummary(yahooSymbol, {
+            modules: [
+              "calendarEvents",
+              "summaryDetail",
+              "defaultKeyStatistics",
+            ],
+          });
+
+          const cal = result?.calendarEvents;
+          const summary = result?.summaryDetail;
+          const stats = result?.defaultKeyStatistics;
+          logger.info(
+            `[EconCal] ${yahooSymbol}: calendarEvents = ${JSON.stringify(cal)}`,
+          );
+
+          // Collect fund/ETF key statistics when available
+          if (stats && (stats.totalAssets || stats.ytdReturn != null)) {
+            fundStats.push({
+              symbol: yahooSymbol,
+              legal_type: stats.legalType ?? null,
+              fund_family: stats.fundFamily ?? null,
+              inception_date: stats.fundInceptionDate
+                ? (stats.fundInceptionDate instanceof Date
+                    ? stats.fundInceptionDate
+                    : new Date(stats.fundInceptionDate)
+                  )
+                    .toISOString()
+                    .split("T")[0]
+                : null,
+              total_assets: stats.totalAssets ?? null,
+              nav_price: summary?.navPrice ?? null,
+              yield: summary?.yield ?? null,
+              ytd_return: stats.ytdReturn ?? null,
+              three_year_avg_return: stats.threeYearAverageReturn ?? null,
+              five_year_avg_return: stats.fiveYearAverageReturn ?? null,
+              fifty_two_week_low: summary?.fiftyTwoWeekLow ?? null,
+              fifty_two_week_high: summary?.fiftyTwoWeekHigh ?? null,
+              fifty_day_avg: summary?.fiftyDayAverage ?? null,
+              two_hundred_day_avg: summary?.twoHundredDayAverage ?? null,
+            });
+          }
+
+          const toDate = (v) => {
+            if (!v) return null;
+            const d = v instanceof Date ? v : new Date(v);
+            return isNaN(d) ? null : d.toISOString().split("T")[0];
+          };
+
+          // Earnings date(s)
+          const earningsDates = cal?.earnings?.earningsDate;
+          if (Array.isArray(earningsDates) && earningsDates.length > 0) {
+            const date = toDate(earningsDates[0]);
+            if (date) {
+              events.push({
+                symbol: yahooSymbol,
+                type: "earnings",
+                date,
+                description: `${yahooSymbol} earnings report`,
+                is_estimate: cal.earnings.isEarningsDateEstimate ?? false,
+                eps_estimate: cal.earnings.earningsAverage ?? null,
+                eps_low: cal.earnings.earningsLow ?? null,
+                eps_high: cal.earnings.earningsHigh ?? null,
+                revenue_estimate: cal.earnings.revenueAverage ?? null,
+              });
+            }
+          }
+
+          // Earnings call date
+          const earningsCallDates = cal?.earnings?.earningsCallDate;
+          if (
+            Array.isArray(earningsCallDates) &&
+            earningsCallDates.length > 0
+          ) {
+            const date = toDate(earningsCallDates[0]);
+            if (date) {
+              events.push({
+                symbol: yahooSymbol,
+                type: "earnings_call",
+                date,
+                description: `${yahooSymbol} earnings call`,
+              });
+            }
+          }
+
+          // Dividend ex-date
+          const exDivDate = toDate(cal?.exDividendDate);
+          if (exDivDate) {
+            events.push({
+              symbol: yahooSymbol,
+              type: "dividend_ex_date",
+              date: exDivDate,
+              description: `${yahooSymbol} ex-dividend date`,
+              amount: summary?.dividendRate ?? null,
+            });
+          }
+
+          // Dividend payment date
+          const divDate = toDate(cal?.dividendDate);
+          if (divDate) {
+            events.push({
+              symbol: yahooSymbol,
+              type: "dividend_payment",
+              date: divDate,
+              description: `${yahooSymbol} dividend payment`,
+            });
+          }
+        } catch (err) {
+          logger.warn(`[EconCal] ${yahooSymbol}: skipped — ${err.message}`);
+        }
+      }),
+    );
+
+    // Sort by date ascending, then by symbol
+    events.sort((a, b) => {
+      const d = a.date.localeCompare(b.date);
+      return d !== 0 ? d : a.symbol.localeCompare(b.symbol);
+    });
+
+    res.json({
+      events,
+      fund_stats: fundStats,
+      symbols_queried: assetList.map((a) => a.yahooSymbol),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 10.3 Admin Overview ──────────────────────────────────────────────────────
+router.get("/admin/overview", authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const result = AnalyticsService.getAdminOverview();
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });

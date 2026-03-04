@@ -459,9 +459,7 @@ export default function Settings() {
                 }
                 helperText="How often to check for new notifications"
               >
-                <MenuItem value={30}>30 seconds</MenuItem>
                 <MenuItem value={60}>1 minute</MenuItem>
-                <MenuItem value={300}>5 minutes</MenuItem>
                 <MenuItem value={900}>15 minutes</MenuItem>
                 <MenuItem value={3600}>1 hour</MenuItem>
                 <MenuItem value={86400}>1 day</MenuItem>

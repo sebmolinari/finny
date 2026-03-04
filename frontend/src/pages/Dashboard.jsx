@@ -309,7 +309,7 @@ const Dashboard = () => {
         : rangeMode === "12m"
           ? "Last 12 Months"
           : rangeMode === "inception"
-            ? "Since Inception"
+            ? "All Time"
             : "Custom Range";
 
   return (
@@ -502,108 +502,107 @@ const Dashboard = () => {
         </Grid>
       </Grid>
       {/* Portfolio Performance Chart with Date Range Selector */}
-      <Box sx={{ mt: 2.5 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 1.5,
-            mb: 1,
-          }}
-        >
-          <ToggleButtonGroup
-            value={rangeMode}
-            exclusive
-            onChange={(_, v) => v && setRangeMode(v)}
-            size="small"
+      <PortfolioValueChart
+        data={performanceData}
+        title={`Portfolio Performance — ${rangeLabel}`}
+        height={300}
+        controls={
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 1.5,
+            }}
           >
-            <ToggleButton value="ytd">YTD</ToggleButton>
-            <ToggleButton value="30d">Last 30 Days</ToggleButton>
-            <ToggleButton value="12m">Last 12 Months</ToggleButton>
-            <ToggleButton value="inception" disabled={!inceptionDate}>
-              Since Inception
-            </ToggleButton>
-            <ToggleButton value="custom">Custom</ToggleButton>
-          </ToggleButtonGroup>
+            <ToggleButtonGroup
+              value={rangeMode}
+              exclusive
+              onChange={(_, v) => v && setRangeMode(v)}
+              size="small"
+            >
+              <ToggleButton value="ytd">YTD</ToggleButton>
+              <ToggleButton value="30d">1M</ToggleButton>
+              <ToggleButton value="12m">1Y</ToggleButton>
+              <ToggleButton value="inception" disabled={!inceptionDate}>
+                All
+              </ToggleButton>
+              <ToggleButton value="custom">Custom</ToggleButton>
+            </ToggleButtonGroup>
 
-          {rangeMode === "custom" && (
-            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-              <TextField
-                type="date"
-                label="Start"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                size="small"
-                InputLabelProps={{ shrink: true }}
-                sx={{ width: 150 }}
-              />
-              <TextField
-                type="date"
-                label="End"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                size="small"
-                InputLabelProps={{ shrink: true }}
-                sx={{ width: 150 }}
-              />
-            </Box>
-          )}
+            {rangeMode === "custom" && (
+              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                <TextField
+                  type="date"
+                  label="Start"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: 150 }}
+                />
+                <TextField
+                  type="date"
+                  label="End"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: 150 }}
+                />
+              </Box>
+            )}
 
-          {rangeMetricsLoading ? (
-            <CircularProgress size={18} sx={{ ml: "auto" }} />
-          ) : rangeMetrics ? (
-            <Box sx={{ display: "flex", gap: 2.5, ml: "auto" }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  NAV Change
-                </Typography>
-                <Typography
-                  variant="body2"
-                  fontWeight={600}
-                  color={
-                    rangeMetrics.nav_change_pct >= 0
-                      ? theme.palette.success.main
-                      : theme.palette.error.main
-                  }
-                >
-                  {rangeMetrics.nav_change_pct >= 0 ? "+" : ""}
-                  {rangeMetrics.nav_change_pct.toFixed(2)}%{" "}
-                  <Typography
-                    component="span"
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    ({formatCurrency(rangeMetrics.nav_change, 0)})
+            {rangeMetricsLoading ? (
+              <CircularProgress size={18} sx={{ ml: "auto" }} />
+            ) : rangeMetrics ? (
+              <Box sx={{ display: "flex", gap: 2.5, ml: "auto" }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    NAV Change
                   </Typography>
-                </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    color={
+                      rangeMetrics.nav_change_pct >= 0
+                        ? theme.palette.success.main
+                        : theme.palette.error.main
+                    }
+                  >
+                    {rangeMetrics.nav_change_pct >= 0 ? "+" : ""}
+                    {rangeMetrics.nav_change_pct.toFixed(2)}%{" "}
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      ({formatCurrency(rangeMetrics.nav_change, 0)})
+                    </Typography>
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Period MWRR
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    color={
+                      rangeMetrics.mwrr >= 0
+                        ? theme.palette.success.main
+                        : theme.palette.error.main
+                    }
+                  >
+                    {rangeMetrics.mwrr >= 0 ? "+" : ""}
+                    {rangeMetrics.mwrr.toFixed(2)}%
+                  </Typography>
+                </Box>
               </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Period MWRR
-                </Typography>
-                <Typography
-                  variant="body2"
-                  fontWeight={600}
-                  color={
-                    rangeMetrics.mwrr >= 0
-                      ? theme.palette.success.main
-                      : theme.palette.error.main
-                  }
-                >
-                  {rangeMetrics.mwrr >= 0 ? "+" : ""}
-                  {rangeMetrics.mwrr.toFixed(2)}%
-                </Typography>
-              </Box>
-            </Box>
-          ) : null}
-        </Box>
-        <PortfolioValueChart
-          data={performanceData}
-          title={`Portfolio Performance — ${rangeLabel}`}
-          height={300}
-        />
-      </Box>
+            ) : null}
+          </Box>
+        }
+      />
       <MTMEvolutionChart
         data={mtmEvolution}
         title="Net Asset Value Evolution"
@@ -612,7 +611,7 @@ const Dashboard = () => {
 
       {/* Best & Worst Performers */}
       {holdingsWithCost.length > 0 && (
-        <Grid container spacing={2.5} sx={{ mt: 0 }}>
+        <Grid container spacing={2.5} sx={{ mt: 2.5 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <StyledCard animIndex={9}>
               <CardContent>

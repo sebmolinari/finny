@@ -9,6 +9,7 @@ import { fadeInUpSx } from "../utils/animations";
  *   title         (string)   — chart title
  *   subtitle      (string)   — optional subtitle / caption
  *   actions       (node)     — optional controls rendered top-right
+ *   controls      (node)     — optional row of controls rendered between header and chart
  *   height        (number)   — chart area height (default 300)
  *   animIndex     (number)   — stagger animation index (default 1)
  *   children      (node)     — the chart itself
@@ -18,6 +19,7 @@ export default function ChartCard({
   title,
   subtitle,
   actions,
+  controls,
   height = 300,
   animIndex = 1,
   children,
@@ -34,7 +36,7 @@ export default function ChartCard({
             sx={{
               justifyContent: "space-between",
               alignItems: "flex-start",
-              mb: 2,
+              mb: controls ? 1.5 : 2,
             }}
           >
             <Box>
@@ -52,6 +54,9 @@ export default function ChartCard({
             </Box>
             {actions && <Box sx={{ flexShrink: 0 }}>{actions}</Box>}
           </Stack>
+        )}
+        {controls && (
+          <Box sx={{ mb: 1.5 }}>{controls}</Box>
         )}
         <Box sx={{ height }}>{children}</Box>
       </CardContent>

@@ -26,7 +26,9 @@ import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import ManageHistoryRoundedIcon from "@mui/icons-material/ManageHistoryRounded";
 import SpeedRoundedIcon from "@mui/icons-material/SpeedRounded";
 import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
-
+import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
+import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -42,14 +44,15 @@ const portfolioItems = [
     path: "/holdings",
   },
   {
-    text: "Market Trends",
-    icon: <TrendingUpRoundedIcon fontSize="small" />,
-    path: "/market-trends",
-  },
-  {
     text: "Blotter",
     icon: <ReceiptLongRoundedIcon fontSize="small" />,
     path: "/blotter",
+  },
+  { text: "Assets", icon: <AssetsIcon fontSize="small" />, path: "/assets" },
+  {
+    text: "Brokers",
+    icon: <BusinessRoundedIcon fontSize="small" />,
+    path: "/brokers",
   },
   {
     text: "Asset Allocation",
@@ -59,11 +62,15 @@ const portfolioItems = [
 ];
 
 const analysisItems = [
-  { text: "Assets", icon: <AssetsIcon fontSize="small" />, path: "/assets" },
   {
-    text: "Brokers",
-    icon: <BusinessRoundedIcon fontSize="small" />,
-    path: "/brokers",
+    text: "Market Trends",
+    icon: <TrendingUpRoundedIcon fontSize="small" />,
+    path: "/market-trends",
+  },
+  {
+    text: "Risk Metrics",
+    icon: <ShowChartRoundedIcon fontSize="small" />,
+    path: "/risk-metrics",
   },
   {
     text: "Return Details",
@@ -80,9 +87,19 @@ const analysisItems = [
     icon: <ArticleRoundedIcon fontSize="small" />,
     path: "/tax-report",
   },
+  {
+    text: "Economic Calendar",
+    icon: <CalendarMonthRoundedIcon fontSize="small" />,
+    path: "/economic-calendar",
+  },
 ];
 
 const adminItems = [
+  {
+    text: "Overview",
+    icon: <DashboardCustomizeRoundedIcon fontSize="small" />,
+    path: "/admin/overview",
+  },
   {
     text: "Users",
     icon: <PeopleAltRoundedIcon fontSize="small" />,

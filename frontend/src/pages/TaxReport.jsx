@@ -126,7 +126,7 @@ export default function TaxReport() {
   const [userSettings, setUserSettings] = useState(null);
 
   // ── realized gains state ─────────────────────────────────────────────────
-  const [gainsYear, setGainsYear] = useState(new Date().getFullYear());
+  const [gainsYear, setGainsYear] = useState(new Date().getFullYear() - 1);
   const [gainsData, setGainsData] = useState(null);
   const [loadingGains, setLoadingGains] = useState(false);
   const [gainsError, setGainsError] = useState(null);
@@ -232,7 +232,6 @@ export default function TaxReport() {
 
   const handleTabChange = (_e, newValue) => {
     setTabValue(newValue);
-    if (newValue === 1 && !gainsData && !loadingGains) loadRealizedGains();
   };
 
   if (userSettingsLoading) {

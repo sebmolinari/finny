@@ -26,7 +26,7 @@ export default function PageContainer({
           direction={{ xs: "column", sm: "row" }}
           sx={{
             alignItems: { sm: "flex-end" },
-            justifyContent: "space-between",
+            justifyContent: title ? "space-between" : "flex-end",
             mb: 3,
             gap: 1.5,
             ...fadeInUpSx(0),

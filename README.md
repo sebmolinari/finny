@@ -38,6 +38,23 @@ A professional-grade finance management application designed to help you track t
 - Per-transaction cash effect and running balance
 - Summary totals: net inflow, net trading activity and current balance
 
+### 📉 Risk Metrics
+
+- Rolling annualized volatility chart (standard deviation of daily returns, annualized to σ × √252)
+- 30-day rolling volatility overlay on NAV chart
+- Maximum drawdown: largest peak-to-trough NAV decline with start/end dates, peak and trough values
+- Recovery time metric (days from trough back to prior peak)
+- Running drawdown chart showing the decline from the rolling peak over time
+- Configurable lookback period (1Y, 2Y, 3Y, All, or custom date range)
+
+### 🗂️ Historical Holdings
+
+- View portfolio holdings as of any past date by replaying transactions up to that point
+- Toggle between live view and historical snapshot with an inline date picker
+- As-of-date market value, cost basis and unrealized P&L per position
+- Summary totals: total market value, total cost basis, total unrealized gain/loss as of the selected date
+- Useful for reconciliation, tax purposes and comparing past vs. current composition
+
 ### 🎯 Asset Allocation & Rebalancing
 
 - **Hierarchical Allocation System**: Set targets at both asset-type level and individual asset level
@@ -60,6 +77,14 @@ A professional-grade finance management application designed to help you track t
 - Price change percentage for both 30D and YTD periods
 - Current price and last price date per asset
 - **Asset-Class Heatmap**: color-coded tiles showing 30-day average return by asset type (green = positive, red = negative)
+
+### 📅 Economic Calendar
+
+- Upcoming earnings dates, dividend ex-dates and payment dates for all currently held assets
+- Data sourced from Yahoo Finance quoteSummary API
+- Color-coded event type chips (Earnings, Ex-Dividend, Dividend Payment)
+- Past events visually dimmed; upcoming event count surfaced as a summary badge
+- Displays symbol, event date, event type, description and amount where available
 
 ### 🧾 Tax Report
 
@@ -150,6 +175,14 @@ A professional-grade finance management application designed to help you track t
 - CPU temperature (Linux/Raspberry Pi)
 - System uptime, platform, architecture and hostname
 
+### 🖥️ Admin System Overview
+
+- Aggregate platform stats: total users, active vs. inactive breakdown, total transactions, active assets and brokers
+- Last price data date and total price records across the database
+- Recent price refresh activity log with success/failure status chips
+- Surface errors from recent price refresh runs with per-asset error messages
+- Admin-only access enforced via role-based access control
+
 ### 📋 Changelog
 
 - In-app version history rendered from CHANGELOG.md
@@ -168,6 +201,8 @@ A professional-grade finance management application designed to help you track t
 - Toast notifications (react-toastify) for user feedback
 - Fade-in animations for page transitions
 - Responsive design for mobile and desktop
+- Bottom navigation bar on mobile for quick access to key pages
+- Slide-out hamburger drawer on mobile with full navigation menu
 - Vite 7 for fast development and optimized builds
 
 ### 🔧 Backend Technologies

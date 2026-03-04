@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Notification = require("../models/Notification");
 const authMiddleware = require("../middleware/auth");
+const adminMiddleware = require("../middleware/admin");
 
 router.use(authMiddleware);
 
@@ -132,6 +133,40 @@ router.patch("/:id/read", (req, res) => {
       return res.status(404).json({ message: "Notification not found" });
     }
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /notifications/admin/purge:
+ *   delete:
+ *     summary: (Admin) Delete all notifications for the authenticated user
+ *     description: Permanently removes every notification (read and unread) for the requesting user. Useful for resetting notification state so fresh alerts are generated on the next poll cycle.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deleted:
+ *                   type: integer
+ *                   description: Number of notifications deleted
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin privileges required
+ */
+router.delete("/admin/purge", adminMiddleware, (req, res) => {
+  try {
+    const deleted = Notification.deleteAll(req.user.id);
+    res.json({ deleted });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

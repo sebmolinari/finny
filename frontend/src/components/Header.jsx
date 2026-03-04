@@ -10,14 +10,16 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import ColorModeIconDropdown from "./ColorModeIconDropdown";
 import NavbarBreadcrumbs from "./NavbarBreadcrumbs";
 import MenuButton from "./MenuButton";
 import Today from "./Today";
 import { notificationsAPI, analyticsAPI, settingsAPI } from "../api/api";
 
-export default function Header() {
+export default function Header({ onOpenMobileNav }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -42,8 +44,6 @@ export default function Header() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      // Ping drift-alerts so the backend creates notifications for any new drift (8.4)
-      analyticsAPI.getDriftAlerts().catch(() => {});
       const res = await notificationsAPI.getAll();
       setNotifications(res.data.notifications || []);
       setUnreadCount(res.data.unreadCount || 0);
@@ -52,13 +52,24 @@ export default function Header() {
     }
   }, []);
 
+  // Poll cycle: ping drift-alerts (which creates new notifications if needed) then refresh the list.
+  // Only called from the polling interval (and the initial tick when polling is enabled).
+  const pollCycle = useCallback(async () => {
+    analyticsAPI.getDriftAlerts().catch(() => {});
+    await fetchNotifications();
+  }, [fetchNotifications]);
+
   useEffect(() => {
     if (pollingEnabled === null) return; // wait for settings to load
-    fetchNotifications();
-    if (!pollingEnabled) return;
-    const interval = setInterval(fetchNotifications, pollingInterval);
-    return () => clearInterval(interval);
-  }, [fetchNotifications, pollingEnabled, pollingInterval]);
+    if (pollingEnabled) {
+      pollCycle(); // initial tick with drift check
+      const interval = setInterval(pollCycle, pollingInterval);
+      return () => clearInterval(interval);
+    } else {
+      // Polling disabled: load existing notifications once, but do NOT ping drift-alerts
+      fetchNotifications();
+    }
+  }, [pollCycle, fetchNotifications, pollingEnabled, pollingInterval]);
 
   const handleOpen = (e) => {
     setAnchorEl(e.currentTarget);
@@ -90,7 +101,7 @@ export default function Header() {
     <Stack
       direction="row"
       sx={{
-        display: { xs: "none", md: "flex" },
+        display: "flex",
         width: "100%",
         alignItems: "center",
         justifyContent: "space-between",
@@ -105,9 +116,21 @@ export default function Header() {
         zIndex: 100,
       }}
     >
+      {/* Hamburger — mobile only */}
+      {onOpenMobileNav && (
+        <IconButton
+          onClick={onOpenMobileNav}
+          sx={{ display: { xs: "flex", md: "none" }, mr: 0.5 }}
+          aria-label="Open navigation"
+        >
+          <MenuRoundedIcon />
+        </IconButton>
+      )}
       <NavbarBreadcrumbs />
       <Stack direction="row" sx={{ gap: 0.5, alignItems: "center" }}>
-        <Today />
+        <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center" }}>
+          <Today />
+        </Box>
         <Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 0.5 }} />
 
         <MenuButton aria-label="Open notifications" onClick={handleOpen}>

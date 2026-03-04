@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Grid, Tooltip, Chip } from "@mui/material";
+import {
+  Box,
+  Grid,
+  Tooltip,
+  Chip,
+  Switch,
+  FormControlLabel,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { AttachMoney as AttachMoneyIcon } from "@mui/icons-material";
+import {
+  AttachMoney as AttachMoneyIcon,
+  History as HistoryIcon,
+} from "@mui/icons-material";
 import { MetricCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StyledDataGrid from "../components/StyledDataGrid";
@@ -15,11 +27,21 @@ import {
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
+function toDateInput(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function Holdings() {
   const [holdings, setHoldings] = useState(null);
   const [analytics, setAnalytics] = useState(null);
-
   const [loading, setLoading] = useState(true);
+
+  // Historical mode
+  const [isHistorical, setIsHistorical] = useState(false);
+  const [asOfDate, setAsOfDate] = useState(toDateInput(new Date()));
+  const [historicalData, setHistoricalData] = useState(null);
+  const [historicalLoading, setHistoricalLoading] = useState(false);
 
   const theme = useTheme();
 
@@ -28,7 +50,6 @@ export default function Holdings() {
       setLoading(true);
       const response = await analyticsAPI.getPortfolioAnalytics();
       setAnalytics(response.data);
-      // Portfolio holdings are in response.data.transactions.holdings
       setHoldings(response.data.transactions.holdings);
       setLoading(false);
     } catch (error) {
@@ -37,14 +58,72 @@ export default function Holdings() {
     }
   }, []);
 
+  const loadHistoricalData = useCallback(async (date) => {
+    if (!date) return;
+    try {
+      setHistoricalLoading(true);
+      const response = await analyticsAPI.getHistoricalHoldings(date);
+      setHistoricalData(response.data);
+    } catch (error) {
+      console.error("Error loading historical holdings:", error);
+      setHistoricalData(null);
+    } finally {
+      setHistoricalLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (isHistorical && asOfDate) {
+      loadHistoricalData(asOfDate);
+    }
+  }, [isHistorical, asOfDate, loadHistoricalData]);
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
   }
 
+  // Determine which data to show
+  const activeHoldings = isHistorical
+    ? (historicalData?.holdings ?? [])
+    : (holdings ?? []);
+
+  const historicalControls = (
+    <Box
+      sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}
+    >
+      <FormControlLabel
+        control={
+          <Switch
+            checked={isHistorical}
+            onChange={(e) => setIsHistorical(e.target.checked)}
+            size="small"
+          />
+        }
+        label={
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <HistoryIcon fontSize="small" />
+            <Typography variant="body2">Historical View</Typography>
+          </Box>
+        }
+        sx={{ mr: 0 }}
+      />
+      {isHistorical && (
+        <TextField
+          label="As of Date"
+          type="date"
+          size="small"
+          value={asOfDate}
+          onChange={(e) => setAsOfDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 160 }}
+        />
+      )}
+    </Box>
+  );
   const columns = [
     {
       field: "symbol",
@@ -175,89 +254,134 @@ export default function Holdings() {
     },
   ];
 
+  // Hide daily_pnl in historical mode (not available for past dates)
+  const visibleColumns = isHistorical
+    ? columns.filter((c) => c.field !== "daily_pnl")
+    : columns;
+
   return (
-    <PageContainer>
-      {/* Cash & Liquidity Metrics */}
+    <PageContainer actions={historicalControls}>
+      {/* Metrics */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid
-          size={{
-            xs: 12,
-            md: 4,
-          }}
-        >
-          <Tooltip
-            title="Cash Balance: Total cash available in the portfolio, including uninvested funds from deposits, withdrawals, and trading activity."
-            arrow
-          >
-            <Box sx={{ ...fadeInUpSx(1) }}>
-              <MetricCard
-                label="Cash Balance"
-                value={formatCurrency(
-                  analytics?.transactions?.cash_balance || 0,
-                  0,
-                )}
-                valueColor={theme.palette.primary.main}
-                valueFontWeight={400}
-                icon={<AttachMoneyIcon color="warning" />}
-              />
-            </Box>
-          </Tooltip>
-        </Grid>
-
-        <Grid
-          size={{
-            xs: 12,
-            md: 4,
-          }}
-        >
-          <Tooltip
-            title="Liquidity: Total liquid assets including cash and money market equivalents. Represents immediately available funds. Calculation: Cash Balance + Liquidity Assets."
-            arrow
-          >
-            <Box sx={{ ...fadeInUpSx(2) }}>
-              <MetricCard
-                label="Liquidity"
-                value={formatCurrency(
-                  analytics?.transactions?.liquidity_balance || 0,
-                  0,
-                )}
-                valueColor={theme.palette.primary.main}
-                valueFontWeight={400}
-                icon={<AttachMoneyIcon color="warning" />}
-              />
-            </Box>
-          </Tooltip>
-        </Grid>
-
-        <Grid
-          size={{
-            xs: 12,
-            md: 4,
-          }}
-        >
-          <Tooltip
-            title="Liquidity %: Percentage of portfolio that is liquid (cash + liquidity assets like money market funds). Higher percentage means more readily available funds. Calculation: Liquidity Balance / NAV × 100."
-            arrow
-          >
-            <Box sx={{ ...fadeInUpSx(3) }}>
-              <MetricCard
-                label="Liquidity %"
-                value={formatPercent(
-                  analytics?.transactions?.liquidity_percent || 0,
-                )}
-                valueColor={theme.palette.primary.main}
-                valueFontWeight={400}
-                icon={<AttachMoneyIcon color="warning" />}
-              />
-            </Box>
-          </Tooltip>
-        </Grid>
+        {isHistorical ? (
+          // Historical summary metrics
+          <>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Box sx={{ ...fadeInUpSx(1) }}>
+                <MetricCard
+                  label="Market Value (as of)"
+                  value={formatCurrency(
+                    historicalData?.summary?.total_market_value || 0,
+                    0,
+                  )}
+                  valueColor={theme.palette.primary.main}
+                  valueFontWeight={400}
+                  icon={<AttachMoneyIcon color="warning" />}
+                />
+              </Box>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Box sx={{ ...fadeInUpSx(2) }}>
+                <MetricCard
+                  label="Cost Basis (as of)"
+                  value={formatCurrency(
+                    historicalData?.summary?.total_cost_basis || 0,
+                    0,
+                  )}
+                  valueColor={theme.palette.primary.main}
+                  valueFontWeight={400}
+                  icon={<AttachMoneyIcon color="warning" />}
+                />
+              </Box>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Box sx={{ ...fadeInUpSx(3) }}>
+                <MetricCard
+                  label="Unrealized P&L (as of)"
+                  value={`${formatCurrency(
+                    historicalData?.summary?.total_unrealized_gain || 0,
+                    0,
+                  )} (${formatPercent(
+                    historicalData?.summary?.total_unrealized_gain_percent || 0,
+                  )})`}
+                  valueColor={
+                    (historicalData?.summary?.total_unrealized_gain || 0) >= 0
+                      ? theme.palette.success.main
+                      : theme.palette.error.main
+                  }
+                  valueFontWeight={400}
+                  icon={<AttachMoneyIcon color="warning" />}
+                />
+              </Box>
+            </Grid>
+          </>
+        ) : (
+          // Live metrics
+          <>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Tooltip
+                title="Cash Balance: Total cash available in the portfolio, including uninvested funds from deposits, withdrawals, and trading activity."
+                arrow
+              >
+                <Box sx={{ ...fadeInUpSx(1) }}>
+                  <MetricCard
+                    label="Cash Balance"
+                    value={formatCurrency(
+                      analytics?.transactions?.cash_balance || 0,
+                      0,
+                    )}
+                    valueColor={theme.palette.primary.main}
+                    valueFontWeight={400}
+                    icon={<AttachMoneyIcon color="warning" />}
+                  />
+                </Box>
+              </Tooltip>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Tooltip
+                title="Liquidity: Total liquid assets including cash and money market equivalents. Represents immediately available funds. Calculation: Cash Balance + Liquidity Assets."
+                arrow
+              >
+                <Box sx={{ ...fadeInUpSx(2) }}>
+                  <MetricCard
+                    label="Liquidity"
+                    value={formatCurrency(
+                      analytics?.transactions?.liquidity_balance || 0,
+                      0,
+                    )}
+                    valueColor={theme.palette.primary.main}
+                    valueFontWeight={400}
+                    icon={<AttachMoneyIcon color="warning" />}
+                  />
+                </Box>
+              </Tooltip>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Tooltip
+                title="Liquidity %: Percentage of portfolio that is liquid (cash + liquidity assets like money market funds). Higher percentage means more readily available funds. Calculation: Liquidity Balance / NAV × 100."
+                arrow
+              >
+                <Box sx={{ ...fadeInUpSx(3) }}>
+                  <MetricCard
+                    label="Liquidity %"
+                    value={formatPercent(
+                      analytics?.transactions?.liquidity_percent || 0,
+                    )}
+                    valueColor={theme.palette.primary.main}
+                    valueFontWeight={400}
+                    icon={<AttachMoneyIcon color="warning" />}
+                  />
+                </Box>
+              </Tooltip>
+            </Grid>
+          </>
+        )}
       </Grid>
       {/* Holdings Table */}
       <StyledDataGrid
-        rows={holdings}
-        columns={columns}
-        loading={loading}
+        rows={activeHoldings}
+        columns={visibleColumns}
+        loading={isHistorical ? historicalLoading : loading}
         getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
         pageSize={25}
         rowsPerPageOptions={[10, 25, 50]}

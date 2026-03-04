@@ -15,6 +15,11 @@ All notable changes to this project are documented below.
 - **Confirmation Dialogs** – Destructive actions (delete asset, delete broker, delete transaction, delete user) now require typing a confirmation phrase before proceeding
 - **Rebalancing Simulation** – New Simulation tab on the Asset Allocation page: enter a deposit amount and see exactly how it should be split across underweight asset types to move toward targets, with current %, allocated amount, projected value and projected % columns
 - **Asset Type Filter in Allocation** – Rebalancing and simulation views can be scoped to a subset of asset types, allowing partial-portfolio analysis
+- **Risk Metrics** – New page with rolling annualized volatility chart (30-day rolling overlay on NAV), maximum drawdown with start/end dates and peak/trough values, recovery time metric, and running drawdown chart; configurable lookback period (1Y, 2Y, 3Y, All, or custom range)
+- **Historical Holdings** – Toggle on the Holdings page to view portfolio positions as of any past date by replaying transactions up to that point; shows as-of-date market value, cost basis and unrealized P&L with summary totals
+- **Economic Calendar** – New page showing upcoming earnings dates, dividend ex-dates and dividend payment dates for held assets, sourced from Yahoo Finance; color-coded event chips and past-event dimming
+- **Admin System Overview** – New admin-only page with aggregate platform stats (users, transactions, assets, brokers), last price data date, recent price refresh activity log, and per-asset error surfacing from failed refresh runs
+- **Mobile-Responsive Layout** – Bottom navigation bar on mobile for quick access to key pages; slide-out hamburger drawer with full navigation menu on narrow screens
 
 ### Changed
 

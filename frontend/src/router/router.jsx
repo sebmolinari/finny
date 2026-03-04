@@ -22,6 +22,9 @@ import TaxReport from "../pages/TaxReport";
 import ChangePassword from "../pages/ChangePassword";
 import AssetAllocation from "../pages/AssetAllocation";
 import Changelog from "../pages/Changelog";
+import RiskMetrics from "../pages/RiskMetrics";
+import EconomicCalendar from "../pages/EconomicCalendar";
+import AdminOverview from "../pages/AdminOverview";
 
 export const router = createBrowserRouter([
   {
@@ -100,6 +103,14 @@ export const router = createBrowserRouter([
             element: <Changelog />,
           },
           {
+            path: "risk-metrics",
+            element: <RiskMetrics />,
+          },
+          {
+            path: "economic-calendar",
+            element: <EconomicCalendar />,
+          },
+          {
             path: "users",
             element: (
               <ProtectedRoute role="admin">
@@ -120,6 +131,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute role="admin">
                 <HostMetrics />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "admin/overview",
+            element: (
+              <ProtectedRoute role="admin">
+                <AdminOverview />
               </ProtectedRoute>
             ),
           },

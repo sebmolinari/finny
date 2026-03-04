@@ -205,6 +205,23 @@ export const analyticsAPI = {
   },
 
   getDriftAlerts: () => api.get("/analytics/drift-alerts"),
+
+  getRiskMetrics: (days = 365, startDate = null, endDate = null) => {
+    const params = {};
+    if (!startDate || !endDate) params.days = days;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return api.get("/analytics/portfolio/risk-metrics", { params });
+  },
+
+  getHistoricalHoldings: (asOf) =>
+    api.get("/analytics/portfolio/historical-holdings", {
+      params: { as_of: asOf },
+    }),
+
+  getEconomicCalendar: () => api.get("/analytics/economic-calendar"),
+
+  getAdminOverview: () => api.get("/analytics/admin/overview"),
 };
 
 export const emailAPI = {
@@ -220,6 +237,8 @@ export const notificationsAPI = {
   markRead: (id) => api.patch(`/notifications/${id}/read`),
 
   markAllRead: () => api.patch("/notifications/read-all"),
+
+  purgeAll: () => api.delete("/notifications/admin/purge"),
 };
 
 export const settingsAPI = {

@@ -37,12 +37,6 @@
 - Configurable risk-free rate (stored in settings or derived from a short-term bond asset).
 - Display alongside MWRR/CAGR on the dashboard and Return Details page.
 
-### 1.3 Volatility & Drawdown Metrics
-
-- Rolling annualized volatility (standard deviation of daily returns) chart.
-- Maximum drawdown: the largest peak-to-trough decline in NAV, with start/end dates.
-- Recovery time metric (days to recover from max drawdown).
-
 ### 1.4 Custom Date-Range Performance
 
 - Let users pick an arbitrary start/end date on the dashboard and recompute MWRR, CAGR, and NAV change for that window.
@@ -68,11 +62,6 @@
 ---
 
 ## 2. Portfolio & Holdings
-
-### 2.1 Snapshot / Historical Holdings View
-
-- Show holdings as of any past date (not just today), by replaying transactions up to that point.
-- Useful for reconciliation, tax purposes, and comparing past vs. current composition.
 
 ### 2.2 Additional Cost Basis Methods
 
@@ -218,11 +207,6 @@
 
 ## 7. Market Trends & Research
 
-### 7.2 Economic Calendar
-
-- Show upcoming dividend ex-dates, earnings dates, and macro events for held assets.
-- Source: Yahoo Finance earnings calendar or Alpha Vantage.
-
 ### 7.4 Configurable Trend Periods
 
 - Currently 30-day and YTD. Add user-configurable periods (7d, 90d, 1y, 5y) on the Market Trends page.
@@ -303,11 +287,6 @@
 - Admin panel input for the cron expression that drives daily price refresh (see §4.4).
 - Toggle the scheduler on/off without restarting the server.
 
-### 10.3 Admin Dashboard / System Overview
-
-- Aggregate stats for admins: number of users, total transactions across all users, last price refresh time, scheduler health.
-- Surface errors from the last price refresh run (which assets failed and why).
-
 ### 10.4 Rate Limiting & Abuse Protection
 
 - Apply per-IP and per-user rate limiting on sensitive endpoints (login, register, price refresh).
@@ -355,11 +334,6 @@
 ---
 
 ## 12. UI / UX Improvements
-
-### 12.1 Mobile-Responsive Layout
-
-- Audit and improve responsiveness on narrow screens (phones/tablets).
-- Consider a bottom navigation bar on mobile as an alternative to the sidebar.
 
 ### 12.2 Keyboard Shortcuts
 

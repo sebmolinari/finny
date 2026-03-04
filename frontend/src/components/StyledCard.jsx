@@ -41,6 +41,7 @@ export const MetricCard = ({
             variant="body2"
             sx={{
               fontWeight: 600,
+              flex: 1,
             }}
           >
             {label}

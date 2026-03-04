@@ -26,8 +26,7 @@ async function restoreDatabase() {
 
   // Step 1: Confirm with user
   console.log("⚠️  WARNING: This operation will DESTROY the current database!");
-  console.log("⚠️  All existing data will be permanently lost!");
-  console.log("⚠️  Make sure you have a backup before proceeding.\n");
+  console.log("⚠️  All existing data will be permanently lost!\n");
 
   const confirmation = await question(
     "Do you want to proceed? Type 'yes' to continue: ",
@@ -109,14 +108,21 @@ async function restoreDatabase() {
       fs.unlinkSync(tempPath);
     }
 
-    // Create a backup of current database if it exists
+    // Optionally create a backup of current database if it exists
     if (fs.existsSync(targetDbPath)) {
-      const backupTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const currentBackupPath = `${targetDbPath}.backup-${backupTimestamp}`;
-      console.log(
-        `📦 Backing up current database to: ${path.basename(currentBackupPath)}`,
+      const backupConfirm = await question(
+        "\nDo you want to back up the current database before replacing it? (yes/no): ",
       );
-      fs.copyFileSync(targetDbPath, currentBackupPath);
+      if (backupConfirm.toLowerCase() === "yes") {
+        const backupTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const currentBackupPath = `${targetDbPath}.backup-${backupTimestamp}`;
+        console.log(
+          `📦 Backing up current database to: ${path.basename(currentBackupPath)}`,
+        );
+        fs.copyFileSync(targetDbPath, currentBackupPath);
+      } else {
+        console.log("⏭️  Skipping backup of current database.");
+      }
     }
 
     // Copy backup to temp location

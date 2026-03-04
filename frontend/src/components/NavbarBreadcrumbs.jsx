@@ -23,6 +23,9 @@ const routeTitles = {
   "/profile": "Profile",
   "/metrics": "Metrics",
   "/change-password": "Change Password",
+  "/risk-metrics": "Risk Metrics",
+  "/economic-calendar": "Economic Calendar",
+  "/admin/overview": "Admin Overview",
 };
 
 export default function NavbarBreadcrumbs() {
