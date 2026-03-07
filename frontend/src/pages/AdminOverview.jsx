@@ -113,7 +113,7 @@ export default function AdminOverview() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Box sx={fadeInUpSx(1)}>
             <MetricCard
-              label="Total Users"
+              title="Total Users"
               value={formatNumber(data.users.total, 0, false)}
               icon={<PeopleIcon color="primary" fontSize="small" />}
               subtitle={
@@ -129,7 +129,7 @@ export default function AdminOverview() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Box sx={fadeInUpSx(2)}>
             <MetricCard
-              label="Total Transactions"
+              title="Total Transactions"
               value={formatNumber(data.transactions.total, 0, false)}
               icon={<ReceiptIcon color="secondary" fontSize="small" />}
               subtitle={
@@ -152,7 +152,7 @@ export default function AdminOverview() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Box sx={fadeInUpSx(3)}>
             <MetricCard
-              label="Active Assets"
+              title="Active Assets"
               value={formatNumber(data.assets.total, 0, false)}
               icon={<InventoryIcon color="success" fontSize="small" />}
               subtitle={
@@ -169,7 +169,7 @@ export default function AdminOverview() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Box sx={fadeInUpSx(4)}>
             <MetricCard
-              label="Users w/o Transactions"
+              title="Users w/o Transactions"
               value={formatNumber(data.users.no_transactions, 0, false)}
               icon={<PersonOffIcon color="warning" fontSize="small" />}
               subtitle={
@@ -185,7 +185,7 @@ export default function AdminOverview() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Box sx={fadeInUpSx(5)}>
             <MetricCard
-              label="Last Price Date"
+              title="Last Price Date"
               value={data.price_data.last_price_date ?? "—"}
               icon={<PriceChangeIcon color="warning" fontSize="small" />}
               subtitle={
@@ -202,7 +202,7 @@ export default function AdminOverview() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Box sx={fadeInUpSx(6)}>
             <MetricCard
-              label="Price Coverage"
+              title="Price Coverage"
               value={`${priceCoveragePct}%`}
               icon={<DataUsageIcon color="info" fontSize="small" />}
               subtitle={
@@ -374,7 +374,7 @@ export default function AdminOverview() {
       {staleAssets.length > 0 && (
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid size={{ xs: 12 }}>
-            <Box sx={fadeInUpSx(10)}>
+            <Box sx={fadeInUpSx(9)}>
               <StyledCard>
                 <Box sx={{ p: 2 }}>
                   <Box
@@ -455,7 +455,7 @@ export default function AdminOverview() {
       {/* ── Recent price refresh activity ── */}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={fadeInUpSx(5)}>
+          <Box sx={fadeInUpSx(10)}>
             <StyledCard>
               <Box sx={{ p: 2 }}>
                 <Typography
@@ -527,7 +527,7 @@ export default function AdminOverview() {
 
         {/* ── Failed refreshes / errors ── */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={fadeInUpSx(6)}>
+          <Box sx={fadeInUpSx(11)}>
             <StyledCard>
               <Box sx={{ p: 2 }}>
                 <Box
@@ -613,7 +613,7 @@ export default function AdminOverview() {
       {/* ── Recent audit activity ── */}
       <Grid container spacing={2} sx={{ mt: 2 }}>
         <Grid size={{ xs: 12 }}>
-          <Box sx={fadeInUpSx(9)}>
+          <Box sx={fadeInUpSx(12)}>
             <StyledCard>
               <Box sx={{ p: 2 }}>
                 <Box
@@ -743,7 +743,7 @@ export default function AdminOverview() {
       {/* ── Admin Tools ── */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 12 }}>
-          <Box sx={fadeInUpSx(12)}>
+          <Box sx={fadeInUpSx(13)}>
             <StyledCard>
               <Box sx={{ p: 2 }}>
                 <Box

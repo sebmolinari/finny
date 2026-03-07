@@ -269,7 +269,7 @@ export default function Holdings() {
             <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={{ ...fadeInUpSx(1) }}>
                 <MetricCard
-                  label="Market Value (as of)"
+                  title="Market Value (as of)"
                   value={formatCurrency(
                     historicalData?.summary?.total_market_value || 0,
                     0,
@@ -283,7 +283,7 @@ export default function Holdings() {
             <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={{ ...fadeInUpSx(2) }}>
                 <MetricCard
-                  label="Cost Basis (as of)"
+                  title="Cost Basis (as of)"
                   value={formatCurrency(
                     historicalData?.summary?.total_cost_basis || 0,
                     0,
@@ -297,7 +297,7 @@ export default function Holdings() {
             <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={{ ...fadeInUpSx(3) }}>
                 <MetricCard
-                  label="Unrealized P&L (as of)"
+                  title="Unrealized P&L (as of)"
                   value={`${formatCurrency(
                     historicalData?.summary?.total_unrealized_gain || 0,
                     0,
@@ -323,9 +323,9 @@ export default function Holdings() {
                 title="Cash Balance: Total cash available in the portfolio, including uninvested funds from deposits, withdrawals, and trading activity."
                 arrow
               >
-                <Box sx={{ ...fadeInUpSx(1) }}>
+                <Box sx={{ ...fadeInUpSx(4) }}>
                   <MetricCard
-                    label="Cash Balance"
+                    title="Cash Balance"
                     value={formatCurrency(
                       analytics?.transactions?.cash_balance || 0,
                       0,
@@ -342,9 +342,9 @@ export default function Holdings() {
                 title="Liquidity: Total liquid assets including cash and money market equivalents. Represents immediately available funds. Calculation: Cash Balance + Liquidity Assets."
                 arrow
               >
-                <Box sx={{ ...fadeInUpSx(2) }}>
+                <Box sx={{ ...fadeInUpSx(5) }}>
                   <MetricCard
-                    label="Liquidity"
+                    title="Liquidity"
                     value={formatCurrency(
                       analytics?.transactions?.liquidity_balance || 0,
                       0,
@@ -361,9 +361,9 @@ export default function Holdings() {
                 title="Liquidity %: Percentage of portfolio that is liquid (cash + liquidity assets like money market funds). Higher percentage means more readily available funds. Calculation: Liquidity Balance / NAV × 100."
                 arrow
               >
-                <Box sx={{ ...fadeInUpSx(3) }}>
+                <Box sx={{ ...fadeInUpSx(6) }}>
                   <MetricCard
-                    label="Liquidity %"
+                    title="Liquidity %"
                     value={formatPercent(
                       analytics?.transactions?.liquidity_percent || 0,
                     )}

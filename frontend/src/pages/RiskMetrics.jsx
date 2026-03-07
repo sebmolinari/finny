@@ -190,7 +190,7 @@ export default function RiskMetrics() {
           >
             <Box sx={fadeInUpSx(2)}>
               <MetricCard
-                label="Max Drawdown"
+                title="Max Drawdown"
                 value={maxDD ? formatPercent(maxDD.value, 2) : "—"}
                 valueColor={maxDD ? theme.palette.error.main : undefined}
                 icon={<TrendingDownIcon color="error" fontSize="small" />}
@@ -212,7 +212,7 @@ export default function RiskMetrics() {
           >
             <Box sx={fadeInUpSx(3)}>
               <MetricCard
-                label="Drawdown Peak"
+                title="Drawdown Peak"
                 value={maxDD ? formatCurrency(maxDD.peak_value) : "—"}
                 icon={<ShowChartIcon color="primary" fontSize="small" />}
                 subtitle={
@@ -233,7 +233,7 @@ export default function RiskMetrics() {
           >
             <Box sx={fadeInUpSx(4)}>
               <MetricCard
-                label="Recovery Time"
+                title="Recovery Time"
                 value={
                   recoveryDays !== null
                     ? `${recoveryDays} days`
@@ -263,7 +263,7 @@ export default function RiskMetrics() {
           >
             <Box sx={fadeInUpSx(5)}>
               <MetricCard
-                label="Latest 30-Day Volatility"
+                title="Latest 30-Day Volatility"
                 value={
                   rollingVol.length > 0
                     ? formatPercent(

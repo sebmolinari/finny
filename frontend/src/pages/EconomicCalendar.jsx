@@ -234,7 +234,7 @@ export default function EconomicCalendar() {
       ) : (
         <>
           {events.length === 0 && fundStats.length === 0 ? (
-            <Box sx={fadeInUpSx(2)}>
+            <Box sx={fadeInUpSx(1)}>
               <StyledCard>
                 <Box sx={{ p: 4, textAlign: "center" }}>
                   <EventNoteIcon

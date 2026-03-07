@@ -10,9 +10,9 @@ export const StyledCard = ({ children, sx = {}, ...props }) => {
   );
 };
 
-// Metric Card - displays a single key metric with label, icon, and value
+// Metric Card - displays a single key metric with title, icon, and value
 export const MetricCard = ({
-  label,
+  title,
   value,
   icon,
   valueColor,
@@ -44,7 +44,7 @@ export const MetricCard = ({
               flex: 1,
             }}
           >
-            {label}
+            {title}
           </Typography>
         </Box>
         <Typography
@@ -63,9 +63,9 @@ export const MetricCard = ({
   );
 };
 
-// Stat Card - displays label and value in a compact format
-export const StatCard = ({
-  label,
+// Stat Card - displays title and value in a compact format
+export const CompactCard = ({
+  title,
   value,
   valueColor,
   valueFontWeight = 400,
@@ -83,7 +83,7 @@ export const StatCard = ({
           }}
           gutterBottom
         >
-          {label}
+          {title}
         </Typography>
         <Typography
           variant="h5"

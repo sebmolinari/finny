@@ -26,7 +26,7 @@ import AssetAllocationChart from "../components/AssetAllocationChart";
 import PortfolioValueChart from "../components/PortfolioValueChart";
 import MarketValueByBrokerChart from "../components/MarketValueByBrokerChart";
 import MTMEvolutionChart from "../components/MTMEvolutionChart";
-import StatCard from "../components/StatCard";
+import TrendCard from "../components/TrendCard";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -321,7 +321,7 @@ const Dashboard = () => {
             arrow
           >
             <Box sx={{ height: "100%", ...fadeInUpSx(1) }}>
-              <StatCard
+              <TrendCard
                 title="Net Asset Value"
                 icon={<AccountBalanceIcon color="primary" />}
                 value={formatCurrency(dashboard?.nav || 0, 0)}
@@ -346,7 +346,7 @@ const Dashboard = () => {
             arrow
           >
             <Box sx={{ height: "100%", ...fadeInUpSx(2) }}>
-              <StatCard
+              <TrendCard
                 title="Liquid Holdings"
                 icon={<TrendingUpIcon color="primary" />}
                 value={formatCurrency(
@@ -378,7 +378,7 @@ const Dashboard = () => {
             arrow
           >
             <Box sx={{ height: "100%", ...fadeInUpSx(3) }}>
-              <StatCard
+              <TrendCard
                 title="Unrealized P&L"
                 icon={<ShowChartIcon color="primary" />}
                 value={formatCurrency(
@@ -433,9 +433,9 @@ const Dashboard = () => {
             title="Liquidity: Total available cash and liquid assets not invested in holdings. Includes cash balance and liquidity-type assets."
             arrow
           >
-            <Box sx={{ ...fadeInUpSx(5) }}>
+            <Box sx={{ ...fadeInUpSx(4) }}>
               <MetricCard
-                label="Liquidity"
+                title="Liquidity"
                 icon={<AccountBalanceWalletIcon color="primary" />}
                 value={formatCurrency(
                   (dashboard?.transactions?.cash_balance || 0) +
@@ -459,9 +459,9 @@ const Dashboard = () => {
             title="MWRR (IRR): Money-Weighted Rate of Return, also known as Internal Rate of Return. Reflects the annualized return considering the timing and size of cash flows in/out. Calculation: IRR of all portfolio cash flows."
             arrow
           >
-            <Box sx={{ ...fadeInUpSx(6) }}>
+            <Box sx={{ ...fadeInUpSx(5) }}>
               <MetricCard
-                label="MWRR (IRR)"
+                title="MWRR (IRR)"
                 value={formatPercent(dashboard?.transactions?.mwrr || 0)}
                 valueFontWeight={400}
                 valueColor={
@@ -485,9 +485,9 @@ const Dashboard = () => {
             title="CAGR: Compound Annual Growth Rate. Shows the mean annual growth rate of the portfolio over time. Calculation: (Ending Value / Beginning Value)^(1/years) - 1."
             arrow
           >
-            <Box sx={{ ...fadeInUpSx(7) }}>
+            <Box sx={{ ...fadeInUpSx(6) }}>
               <MetricCard
-                label="CAGR"
+                title="CAGR"
                 value={formatPercent(dashboard?.transactions?.cagr || 0)}
                 valueFontWeight={400}
                 valueColor={

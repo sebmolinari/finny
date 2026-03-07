@@ -25,7 +25,7 @@ AreaGradient.propTypes = {
   id: PropTypes.string.isRequired,
 };
 
-function StatCard({
+function TrendCard({
   title,
   icon,
   value,
@@ -149,7 +149,7 @@ function StatCard({
   );
 }
 
-StatCard.propTypes = {
+TrendCard.propTypes = {
   title: PropTypes.string.isRequired,
   icon: PropTypes.node,
   value: PropTypes.string.isRequired,
@@ -163,4 +163,4 @@ StatCard.propTypes = {
   valueColor: PropTypes.string,
 };
 
-export default StatCard;
+export default TrendCard;

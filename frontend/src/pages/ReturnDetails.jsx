@@ -7,7 +7,7 @@ import StyledDataGrid from "../components/StyledDataGrid";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useTheme } from "@mui/material/styles";
-import { StatCard } from "../components/StyledCard";
+import { CompactCard } from "../components/StyledCard";
 import { formatDate } from "../utils/dateUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -166,11 +166,11 @@ export default function ReturnDetails() {
             md: 4,
           }}
         >
-          <StatCard
-            label="Net Asset Value"
+          <CompactCard
+            title="Net Asset Value"
             value={formatCurrency(current_total_value)}
             valueColor={theme.palette.primary.main}
-            sx={{ ...fadeInUpSx(3) }}
+            sx={{ ...fadeInUpSx(1) }}
           />
         </Grid>
         <Grid
@@ -179,8 +179,8 @@ export default function ReturnDetails() {
             md: 4,
           }}
         >
-          <StatCard
-            label="Cash Balance"
+          <CompactCard
+            title="Cash Balance"
             value={formatCurrency(cash_balance)}
             valueColor={theme.palette.primary.main}
             sx={{ ...fadeInUpSx(2) }}
@@ -192,11 +192,11 @@ export default function ReturnDetails() {
             md: 4,
           }}
         >
-          <StatCard
-            label="Holdings Market Value"
+          <CompactCard
+            title="Holdings Market Value"
             value={formatCurrency(holdings_market_value)}
             valueColor={theme.palette.primary.main}
-            sx={{ ...fadeInUpSx(1) }}
+            sx={{ ...fadeInUpSx(3) }}
           />
         </Grid>
       </Grid>
@@ -214,21 +214,21 @@ export default function ReturnDetails() {
         </Typography>
 
         <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-          <StatCard
-            label="MWRR"
+          <CompactCard
+            title="MWRR"
             value={`${formatNumber(mwrr, 2)}%`}
             sx={{ flex: 1, minWidth: 280 }}
             valueColor={
               mwrr >= 0 ? theme.palette.success.main : theme.palette.error.main
             }
           />
-          <StatCard
-            label="Cash Flows Count"
+          <CompactCard
+            title="Cash Flows Count"
             value={mwrr_cash_flows.length}
             sx={{ flex: 1, minWidth: 280 }}
           />
-          <StatCard
-            label="Iterations"
+          <CompactCard
+            title="Iterations"
             value={mwrr_iterations.length}
             sx={{ flex: 1, minWidth: 280 }}
           />
@@ -279,8 +279,8 @@ export default function ReturnDetails() {
               md: 3,
             }}
           >
-            <StatCard
-              label="CAGR"
+            <CompactCard
+              title="CAGR"
               value={`${formatNumber(cagr, 2)}%`}
               valueColor={
                 cagr >= 0
@@ -295,8 +295,8 @@ export default function ReturnDetails() {
               md: 3,
             }}
           >
-            <StatCard
-              label="First Deposit Date"
+            <CompactCard
+              title="First Deposit Date"
               value={cagr_details.firstDate || "—"}
             />
           </Grid>
@@ -306,8 +306,8 @@ export default function ReturnDetails() {
               md: 3,
             }}
           >
-            <StatCard
-              label="Years"
+            <CompactCard
+              title="Years"
               value={formatNumber(cagr_details.years, 4)}
             />
           </Grid>
@@ -317,8 +317,8 @@ export default function ReturnDetails() {
               md: 3,
             }}
           >
-            <StatCard
-              label="Net Deposits"
+            <CompactCard
+              title="Net Deposits"
               value={formatCurrency(cagr_details.netDeposits)}
               valueColor={theme.palette.primary.main}
             />
@@ -329,8 +329,8 @@ export default function ReturnDetails() {
               md: 3,
             }}
           >
-            <StatCard
-              label="Ending Value"
+            <CompactCard
+              title="Ending Value"
               value={formatCurrency(cagr_details.endingValue)}
               valueColor={theme.palette.primary.main}
             />

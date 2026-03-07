@@ -8,7 +8,7 @@ import {
   Chip,
   Tooltip,
 } from "@mui/material";
-import { MetricCard, StatCard } from "../components/StyledCard";
+import { MetricCard, CompactCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { settingsAPI } from "../api/api";
 import { analyticsAPI } from "../api/api";
@@ -228,8 +228,8 @@ export default function CashDetails() {
             md: 3,
           }}
         >
-          <StatCard
-            label="Current Cash Balance"
+          <CompactCard
+            title="Current Cash Balance"
             value={formatCurrency(summary.current_balance)}
             valueColor={theme.palette.primary.main}
             sx={{ ...fadeInUpSx(1) }}
@@ -241,8 +241,8 @@ export default function CashDetails() {
             md: 3,
           }}
         >
-          <StatCard
-            label="Total Transactions"
+          <CompactCard
+            title="Total Transactions"
             value={transaction_count}
             sx={{ ...fadeInUpSx(2) }}
           />
@@ -253,17 +253,22 @@ export default function CashDetails() {
             md: 3,
           }}
         >
-          <MetricCard
-            label="Net Inflow"
-            value={formatCurrency(summary.net_inflow)}
-            subtitle="Deposits - Withdrawals"
-            valueColor={
-              summary.net_inflow >= 0
-                ? theme.palette.success.main
-                : theme.palette.error.main
-            }
-            sx={{ ...fadeInUpSx(3) }}
-          />
+          <Tooltip
+            title="Net Contributions: The total cash flow into your account, calculated as all deposits minus withdrawals. Includes both invested and uninvested cash. Calculation: Deposits - Withdrawals."
+            arrow
+          >
+            <Box sx={{ ...fadeInUpSx(3) }}>
+              <CompactCard
+                title="Net Contributions"
+                value={formatCurrency(summary.net_inflow)}
+                valueColor={
+                  summary.net_inflow >= 0
+                    ? theme.palette.success.main
+                    : theme.palette.error.main
+                }
+              />
+            </Box>
+          </Tooltip>
         </Grid>
         <Grid
           size={{
@@ -271,17 +276,23 @@ export default function CashDetails() {
             md: 3,
           }}
         >
-          <MetricCard
-            label="Net Trading"
-            value={formatCurrency(summary.net_trading)}
-            subtitle="Sells - Buys"
-            valueColor={
-              summary.net_trading >= 0
-                ? theme.palette.success.main
-                : theme.palette.error.main
-            }
-            sx={{ ...fadeInUpSx(4) }}
-          />
+          <Tooltip
+            title="Net Trading: Calculation: Sell transactions - Buy transactions."
+            arrow
+          >
+            <Box sx={{ ...fadeInUpSx(3) }}>
+              <CompactCard
+                title="Net Trading"
+                value={formatCurrency(summary.net_trading)}
+                valueColor={
+                  summary.net_trading >= 0
+                    ? theme.palette.success.main
+                    : theme.palette.error.main
+                }
+                sx={{ ...fadeInUpSx(4) }}
+              />
+            </Box>
+          </Tooltip>
         </Grid>
       </Grid>
       {/* Breakdown by Category */}
