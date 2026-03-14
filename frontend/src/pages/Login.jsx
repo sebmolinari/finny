@@ -173,9 +173,7 @@ const Login = () => {
             <Typography
               variant="caption"
               sx={{ color: "text.disabled", mt: 0.25 }}
-            >
-              Welcome back â€” sign in to your portfolio
-            </Typography>
+            ></Typography>
           </Box>
 
           {error && (
