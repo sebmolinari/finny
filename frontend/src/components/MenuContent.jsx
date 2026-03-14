@@ -115,6 +115,9 @@ const adminItems = [
     icon: <SpeedRoundedIcon fontSize="small" />,
     path: "/host-metrics",
   },
+];
+
+const otherItems = [
   {
     text: "Changelog",
     icon: <UpdateRoundedIcon fontSize="small" />,
@@ -125,21 +128,23 @@ const adminItems = [
 function NavSection({ label, items, pathname }) {
   return (
     <>
-      <Typography
-        variant="caption"
-        sx={{
-          fontWeight: 700,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: "text.disabled",
-          px: 1.5,
-          pt: 1.5,
-          pb: 0.5,
-          display: "block",
-        }}
-      >
-        {label}
-      </Typography>
+      {label && (
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "text.disabled",
+            px: 1.5,
+            pt: 1.5,
+            pb: 0.5,
+            display: "block",
+          }}
+        >
+          {label}
+        </Typography>
+      )}
       <List dense disablePadding>
         {items.map((item) => (
           <ListItem key={item.path} disablePadding sx={{ display: "block" }}>
@@ -196,6 +201,8 @@ export default function MenuContent() {
             pathname={location.pathname}
           />
         )}
+        <Divider sx={{ my: 1 }} />
+        <NavSection label="" items={otherItems} pathname={location.pathname} />
       </div>
     </Stack>
   );
