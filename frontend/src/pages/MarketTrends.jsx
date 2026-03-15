@@ -88,31 +88,31 @@ export default function MarketTrends() {
       return (a.symbol || "").localeCompare(b.symbol || "");
     });
 
-  // ── Heatmap: group rows by asset type, compute average change ──────────
-  // Only include assets that actually have price data in the 30D window;
-  // assets without price history would contribute 0% and skew averages.
-  const heatmapData = Object.values(
-    rows.reduce((acc, r) => {
-      // Skip if no price history in the 30D window
-      if (!r.price_history_30d || r.price_history_30d.length === 0) return acc;
-      const type = r.asset_type || "other";
-      if (!acc[type]) acc[type] = { type, total: 0, count: 0 };
-      acc[type].total += r.price_change_percent_30d || 0;
-      acc[type].count += 1;
-      return acc;
-    }, {}),
-  )
-    .map((g) => ({ type: g.type, avg: g.count > 0 ? g.total / g.count : 0 }))
-    .sort((a, b) => b.avg - a.avg);
+  // // ── Heatmap: group rows by asset type, compute average change ──────────
+  // // Only include assets that actually have price data in the 30D window;
+  // // assets without price history would contribute 0% and skew averages.
+  // const heatmapData = Object.values(
+  //   rows.reduce((acc, r) => {
+  //     // Skip if no price history in the 30D window
+  //     if (!r.price_history_30d || r.price_history_30d.length === 0) return acc;
+  //     const type = r.asset_type || "other";
+  //     if (!acc[type]) acc[type] = { type, total: 0, count: 0 };
+  //     acc[type].total += r.price_change_percent_30d || 0;
+  //     acc[type].count += 1;
+  //     return acc;
+  //   }, {}),
+  // )
+  //   .map((g) => ({ type: g.type, avg: g.count > 0 ? g.total / g.count : 0 }))
+  //   .sort((a, b) => b.avg - a.avg);
 
-  const absMax = Math.max(...heatmapData.map((g) => Math.abs(g.avg)), 1);
+  // const absMax = Math.max(...heatmapData.map((g) => Math.abs(g.avg)), 1);
 
-  const heatColor = (val) => {
-    const ratio = Math.min(Math.abs(val) / absMax, 1);
-    return val >= 0
-      ? `rgba(46, 125, 50, ${0.25 + ratio * 0.75})` // green
-      : `rgba(198, 40, 40, ${0.25 + ratio * 0.75})`; // red
-  };
+  // const heatColor = (val) => {
+  //   const ratio = Math.min(Math.abs(val) / absMax, 1);
+  //   return val >= 0
+  //     ? `rgba(46, 125, 50, ${0.25 + ratio * 0.75})` // green
+  //     : `rgba(198, 40, 40, ${0.25 + ratio * 0.75})`; // red
+  // };
 
   const columns = [
     {
@@ -332,7 +332,7 @@ export default function MarketTrends() {
   return (
     <PageContainer sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {/* ── Asset-Class Heatmap ── */}
-      <Paper sx={{ p: 2 }}>
+      {/* <Paper sx={{ p: 2 }}>
         <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
           Asset-Class Heatmap (30-Day Avg)
         </Typography>
@@ -364,7 +364,7 @@ export default function MarketTrends() {
             </Box>
           ))}
         </Box>
-      </Paper>
+      </Paper> */}
 
       {/* ── Market Data Grid ── */}
       <StyledDataGrid
