@@ -778,7 +778,7 @@ export default function AdminOverview() {
                         onClick={handlePurgeNotifications}
                         disabled={purging}
                       >
-                        Purge My Notifications
+                        Purge All Notifications
                       </Button>
                     </span>
                   </Tooltip>
