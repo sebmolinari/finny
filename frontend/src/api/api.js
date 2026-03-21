@@ -241,6 +241,8 @@ export const notificationsAPI = {
 
 export const databaseAPI = {
   walCheckpoint: () => api.post("/database/wal-checkpoint"),
+  resetAllData: () => api.delete("/database/reset"),
+  seedSampleData: () => api.post("/database/seed"),
 };
 
 export const settingsAPI = {

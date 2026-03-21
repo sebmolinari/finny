@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Button,
   Tooltip,
+  Divider,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -25,9 +26,18 @@ import {
   NotificationsOff as NotificationsOffIcon,
   DeleteSweep as DeleteSweepIcon,
   Storage as StorageIcon,
+  BackupTable as BackupTableIcon,
+  DeleteForever as DeleteForeverIcon,
+  Dataset as DatasetIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
-import { analyticsAPI, notificationsAPI, schedulerAPI, databaseAPI } from "../api/api";
+import {
+  analyticsAPI,
+  notificationsAPI,
+  schedulerAPI,
+  databaseAPI,
+} from "../api/api";
+import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
 import { formatNumber } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/StyledCard";
 import PageContainer from "../components/PageContainer";
@@ -50,13 +60,50 @@ export default function AdminOverview() {
   const [purgeHistoryResult, setPurgeHistoryResult] = useState(null);
   const [checkpointing, setCheckpointing] = useState(false);
   const [checkpointResult, setCheckpointResult] = useState(null);
+  const [seedingData, setSeedingData] = useState(false);
+  const [seedResult, setSeedResult] = useState(null);
+  const [deletingData, setDeletingData] = useState(false);
+  const [deleteDataResult, setDeleteDataResult] = useState(null);
+  const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
+
+  const handleSeedData = useCallback(async () => {
+    setSeedingData(true);
+    setSeedResult(null);
+    try {
+      const res = await databaseAPI.seedSampleData();
+      setSeedResult({ created: res.data.created });
+    } catch (err) {
+      setSeedResult({ error: err.response?.data?.message || "Seed failed." });
+    } finally {
+      setSeedingData(false);
+    }
+  }, []);
+
+  const handleDeleteAllData = useCallback(async () => {
+    setDeletingData(true);
+    setDeleteDataResult(null);
+    setDeleteDataDialogOpen(false);
+    try {
+      const res = await databaseAPI.resetAllData();
+      setDeleteDataResult({ deleted: res.data.deleted });
+    } catch (err) {
+      setDeleteDataResult({
+        error: err.response?.data?.message || "Reset failed.",
+      });
+    } finally {
+      setDeletingData(false);
+    }
+  }, []);
 
   const handleWalCheckpoint = useCallback(async () => {
     setCheckpointing(true);
     setCheckpointResult(null);
     try {
       const res = await databaseAPI.walCheckpoint();
-      setCheckpointResult({ checkpointed: res.data.checkpointed, log: res.data.log });
+      setCheckpointResult({
+        checkpointed: res.data.checkpointed,
+        log: res.data.log,
+      });
     } catch (err) {
       setCheckpointResult({
         error: err.response?.data?.message || "Checkpoint failed.",
@@ -883,7 +930,8 @@ export default function AdminOverview() {
                   {checkpointResult && !checkpointResult.error && (
                     <Alert severity="success" sx={{ py: 0, px: 1 }}>
                       {checkpointResult.checkpointed} page
-                      {checkpointResult.checkpointed !== 1 ? "s" : ""} checkpointed ({checkpointResult.log} in log).
+                      {checkpointResult.checkpointed !== 1 ? "s" : ""}{" "}
+                      checkpointed ({checkpointResult.log} in log).
                     </Alert>
                   )}
                   {checkpointResult?.error && (
@@ -892,11 +940,123 @@ export default function AdminOverview() {
                     </Alert>
                   )}
                 </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1.5,
+                  }}
+                >
+                  <DatasetIcon color="info" fontSize="small" />
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Demo Data
+                  </Typography>
+                </Box>
+
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Use <strong>Load Sample Data</strong> to populate the app with
+                  demo brokers, assets, prices, and transactions. To reset back
+                  to a clean state, use <strong>Delete All Data</strong> — this
+                  permanently removes all user data except the three base
+                  currency assets (USD, USDARS_BNA, USDARS_CCL).
+                </Alert>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Tooltip title="Creates sample brokers, assets, price history, and transactions from the built-in demo dataset. Skips already-existing assets.">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        size="small"
+                        startIcon={
+                          seedingData ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <BackupTableIcon fontSize="small" />
+                          )
+                        }
+                        onClick={handleSeedData}
+                        disabled={seedingData || deletingData}
+                      >
+                        Load Sample Data
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  {seedResult && !seedResult.error && (
+                    <Alert severity="success" sx={{ py: 0, px: 1 }}>
+                      Loaded: {seedResult.created.brokers} brokers,{" "}
+                      {seedResult.created.assets} assets,{" "}
+                      {seedResult.created.priceData} prices,{" "}
+                      {seedResult.created.transactions} transactions,{" "}
+                      {seedResult.created.allocationTargets} allocation targets.
+                    </Alert>
+                  )}
+                  {seedResult?.error && (
+                    <Alert severity="error" sx={{ py: 0, px: 1 }}>
+                      {seedResult.error}
+                    </Alert>
+                  )}
+
+                  <Tooltip title="Permanently deletes all transactions, price data, assets (except USD, USDARS_BNA, USDARS_CCL), brokers, allocation targets, and audit logs.">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        startIcon={
+                          deletingData ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <DeleteForeverIcon fontSize="small" />
+                          )
+                        }
+                        onClick={() => setDeleteDataDialogOpen(true)}
+                        disabled={deletingData || seedingData}
+                      >
+                        Delete All Data
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  {deleteDataResult && !deleteDataResult.error && (
+                    <Alert severity="success" sx={{ py: 0, px: 1 }}>
+                      Deleted: {deleteDataResult.deleted.transactions}{" "}
+                      transactions, {deleteDataResult.deleted.assets} assets,{" "}
+                      {deleteDataResult.deleted.brokers} brokers.
+                    </Alert>
+                  )}
+                  {deleteDataResult?.error && (
+                    <Alert severity="error" sx={{ py: 0, px: 1 }}>
+                      {deleteDataResult.error}
+                    </Alert>
+                  )}
+                </Box>
               </Box>
             </StyledCard>
           </Box>
         </Grid>
       </Grid>
+
+      <ConfirmPhraseDialog
+        open={deleteDataDialogOpen}
+        title="Delete All Data"
+        phrase="delete all data"
+        description="Permanently deletes all transactions, price data, assets (except USD, USDARS_BNA, USDARS_CCL), brokers, allocation targets, and audit logs. This cannot be undone."
+        onConfirm={handleDeleteAllData}
+        onClose={() => setDeleteDataDialogOpen(false)}
+        confirmLabel="Delete All Data"
+        confirmColor="error"
+      />
     </PageContainer>
   );
 }

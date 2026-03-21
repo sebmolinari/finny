@@ -1794,5 +1794,21 @@
       "total_amount": 3921,
       "notes": "Auto-generated transaction"
     }
-  ]
+  ],
+  "allocationTargets": {
+    "byType": [
+      { "asset_type": "equity",       "target_percentage": 60 },
+      { "asset_type": "crypto",       "target_percentage": 20 },
+      { "asset_type": "fixedincome",  "target_percentage": 20 }
+    ],
+    "byAsset": [
+      { "symbol": "AAPL",  "target_percentage": 30 },
+      { "symbol": "MSFT",  "target_percentage": 25 },
+      { "symbol": "GOOGL", "target_percentage": 20 },
+      { "symbol": "SPY",   "target_percentage": 25 },
+      { "symbol": "BTC",   "target_percentage": 60 },
+      { "symbol": "ETH",   "target_percentage": 40 },
+      { "symbol": "TLT",   "target_percentage": 100 }
+    ]
+  }
 }

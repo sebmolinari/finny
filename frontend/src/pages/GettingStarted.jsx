@@ -235,6 +235,20 @@ export default function GettingStarted() {
         </List>
       </Paper>
 
+      {isAdmin && (
+        <Alert
+          severity="info"
+          sx={{ mt: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate("/admin/overview")}>
+              Go
+            </Button>
+          }
+        >
+          <strong>Just exploring?</strong> As an admin you can load sample brokers, assets, prices, and transactions from <strong>Admin Overview → Demo Data</strong> to see Finny in action without entering real data. You can delete it all just as easily when you're ready.
+        </Alert>
+      )}
+
       {error && (
         <Alert severity="error" sx={{ mt: 2 }}>
           {error}
