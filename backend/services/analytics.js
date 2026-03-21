@@ -1275,7 +1275,7 @@ class AnalyticsService {
     return suggestions;
   }
 
-/**
+  /**
    * Find buy/sell transactions where price data is missing or stale on the trade date.
    * Returns:
    *   status='no_price'    — no price row exists for this asset at all
@@ -1666,6 +1666,25 @@ class AnalyticsService {
       )
       .all();
 
+    // Recent scheduler run history
+    const recentSchedulerRuns = db
+      .prepare(
+        `SELECT s.name as scheduler_name, s.type, si.scheduled_run_at, si.executed_at,
+                si.status, si.attempt, si.error_message
+         FROM scheduler_instances si
+         JOIN schedulers s ON s.id = si.scheduler_id
+         ORDER BY si.created_at DESC
+         LIMIT 10`,
+      )
+      .all();
+
+    // Schema migrations applied
+    const schemaMigrations = db
+      .prepare(
+        `SELECT filename, applied_at FROM schema_version ORDER BY applied_at ASC`,
+      )
+      .all();
+
     return {
       users: {
         total: userStats.total_users,
@@ -1693,6 +1712,8 @@ class AnalyticsService {
       recent_registrations: recentRegistrations,
       recent_audit: recentAudit,
       stale_assets: staleAssets,
+      recent_scheduler_runs: recentSchedulerRuns,
+      schema_migrations: schemaMigrations,
     };
   }
 }

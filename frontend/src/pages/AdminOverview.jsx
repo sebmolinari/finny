@@ -29,6 +29,8 @@ import {
   BackupTable as BackupTableIcon,
   DeleteForever as DeleteForeverIcon,
   Dataset as DatasetIcon,
+  Schema as SchemaIcon,
+  Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -182,6 +184,8 @@ export default function AdminOverview() {
   const recentRegistrations = data?.recent_registrations ?? [];
   const recentAudit = data?.recent_audit ?? [];
   const staleAssets = data?.stale_assets ?? [];
+  const schemaMigrations = data?.schema_migrations ?? [];
+  const recentSchedulerRuns = data?.recent_scheduler_runs ?? [];
 
   const priceCoveragePct =
     data?.assets?.total > 0
@@ -823,10 +827,201 @@ export default function AdminOverview() {
         </Grid>
       </Grid>
 
+      {/* ── Recent Scheduler Runs ── */}
+      <Grid container spacing={2} sx={{ mt: 2, mb: 2 }}>
+        <Grid size={{ xs: 12 }}>
+          <Box sx={fadeInUpSx(13)}>
+            <StyledCard>
+              <Box sx={{ p: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1.5,
+                  }}
+                >
+                  <ScheduleIcon fontSize="small" color="secondary" />
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Recent Scheduler Runs
+                  </Typography>
+                </Box>
+                {recentSchedulerRuns.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No scheduler runs recorded.
+                  </Typography>
+                ) : (
+                  <StyledTable size="small">
+                    <TableHead>
+                      <StyledHeaderRow>
+                        <StyledHeaderCell>Scheduler</StyledHeaderCell>
+                        <StyledHeaderCell>Type</StyledHeaderCell>
+                        <StyledHeaderCell>Scheduled</StyledHeaderCell>
+                        <StyledHeaderCell>Executed</StyledHeaderCell>
+                        <StyledHeaderCell>Attempt</StyledHeaderCell>
+                        <StyledHeaderCell>Status</StyledHeaderCell>
+                        <StyledHeaderCell>Error</StyledHeaderCell>
+                      </StyledHeaderRow>
+                    </TableHead>
+                    <TableBody>
+                      {recentSchedulerRuns.map((r, i) => (
+                        <TableRow
+                          key={i}
+                          sx={{ "&:hover": { bgcolor: "action.hover" } }}
+                        >
+                          <TableCell>
+                            <Typography variant="caption" fontWeight={600}>
+                              {r.scheduler_name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={r.type}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {r.scheduled_run_at
+                                ? new Date(r.scheduled_run_at).toLocaleString()
+                                : "—"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {r.executed_at
+                                ? new Date(r.executed_at).toLocaleString()
+                                : "—"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="caption" color="text.secondary">
+                              {r.attempt}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={r.status}
+                              size="small"
+                              color={
+                                r.status === "success"
+                                  ? "success"
+                                  : r.status === "failed"
+                                    ? "error"
+                                    : "default"
+                              }
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 220 }}>
+                            {r.error_message ? (
+                              <Typography
+                                variant="caption"
+                                color="error"
+                                sx={{
+                                  display: "block",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={r.error_message}
+                              >
+                                {r.error_message}
+                              </Typography>
+                            ) : (
+                              <Typography variant="caption" color="text.disabled">
+                                —
+                              </Typography>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </StyledTable>
+                )}
+              </Box>
+            </StyledCard>
+          </Box>
+        </Grid>
+      </Grid>
+
+      {/* ── Schema Migrations ── */}
+      <Grid container spacing={2} sx={{ mt: 2, mb: 2 }}>
+        <Grid size={{ xs: 12 }}>
+          <Box sx={fadeInUpSx(14)}>
+            <StyledCard>
+              <Box sx={{ p: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1.5,
+                  }}
+                >
+                  <SchemaIcon fontSize="small" color="info" />
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Schema Migrations
+                  </Typography>
+                  <Chip
+                    label={schemaMigrations.length}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                  />
+                </Box>
+                {schemaMigrations.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No migrations recorded.
+                  </Typography>
+                ) : (
+                  <StyledTable size="small">
+                    <TableHead>
+                      <StyledHeaderRow>
+                        <StyledHeaderCell>#</StyledHeaderCell>
+                        <StyledHeaderCell>Filename</StyledHeaderCell>
+                        <StyledHeaderCell>Applied At</StyledHeaderCell>
+                      </StyledHeaderRow>
+                    </TableHead>
+                    <TableBody>
+                      {schemaMigrations.map((m, i) => (
+                        <TableRow
+                          key={i}
+                          sx={{ "&:hover": { bgcolor: "action.hover" } }}
+                        >
+                          <TableCell>
+                            <Typography variant="caption" color="text.secondary">
+                              {i + 1}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption" fontWeight={600}>
+                              {m.filename}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {m.applied_at
+                                ? new Date(m.applied_at).toLocaleString()
+                                : "—"}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </StyledTable>
+                )}
+              </Box>
+            </StyledCard>
+          </Box>
+        </Grid>
+      </Grid>
+
       {/* ── Admin Tools ── */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 12 }}>
-          <Box sx={fadeInUpSx(13)}>
+          <Box sx={fadeInUpSx(14)}>
             <StyledCard>
               <Box sx={{ p: 2 }}>
                 <Box
