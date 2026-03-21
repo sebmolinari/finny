@@ -400,7 +400,9 @@ export default function IncomeAnalytics() {
               <Tooltip
                 title={
                   summary.projected_annual !== null
-                    ? "Based on trailing 12 months of income"
+                    ? summary.projected_ttm_months < 12
+                      ? `Extrapolated from ${summary.projected_ttm_months} month${summary.projected_ttm_months !== 1 ? "s" : ""} of data in the past 12 months (avg/month × 12)`
+                      : "Sum of the last 12 months of income"
                     : "Only available for current year or all-time view"
                 }
                 arrow

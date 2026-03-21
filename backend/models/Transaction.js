@@ -1302,6 +1302,8 @@ class Transaction {
         summary.projected_annual = nMonths > 0 && nMonths < 12
           ? (ttmTotal / nMonths) * 12
           : ttmTotal;
+        summary.projected_ttm_months = nMonths;
+        summary.projected_ttm_total = ttmTotal;
       }
     }
 
