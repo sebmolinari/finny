@@ -93,7 +93,7 @@ const SchedulerForm = ({ scheduler, onSubmit, onCancel }) => {
               onChange={handleChange}
             >
               <MenuItem value="asset_refresh">Asset Refresh</MenuItem>
-              <MenuItem value="email_send">Email Send</MenuItem>
+              <MenuItem value="send_report">Send Report</MenuItem>
             </Select>
           </FormControl>
 

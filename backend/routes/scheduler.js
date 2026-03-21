@@ -81,7 +81,7 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
  *                 description: Scheduler name
  *               type:
  *                 type: string
- *                 enum: [email_send, asset_refresh]
+ *                 enum: [send_report, asset_refresh]
  *                 description: Type of scheduler
  *               frequency:
  *                 type: string
@@ -92,7 +92,7 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
  *                 description: Time to execute (HH:MM format)
  *               metadata:
  *                 type: object
- *                 description: Additional configuration (frequency for email_send, day_of_week for weekly, etc.)
+ *                 description: Additional configuration (frequency for send_report, day_of_week for weekly, etc.)
  *     responses:
  *       201:
  *         description: Scheduler created successfully
@@ -115,9 +115,9 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
     }
 
     // Validate enum values
-    if (!["email_send", "asset_refresh"].includes(type)) {
+    if (!["send_report", "asset_refresh"].includes(type)) {
       return res.status(400).json({
-        message: "Invalid type. Must be 'email_send' or 'asset_refresh'",
+        message: "Invalid type. Must be 'send_report' or 'asset_refresh'",
       });
     }
 
@@ -233,7 +233,7 @@ router.get("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *                 type: string
  *               type:
  *                 type: string
- *                 enum: [email_send, asset_refresh]
+ *                 enum: [send_report, asset_refresh]
  *               frequency:
  *                 type: string
  *                 enum: [daily, weekly, monthly]
@@ -281,9 +281,9 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
     }
 
     // Validate enum values
-    if (!["email_send", "asset_refresh"].includes(type)) {
+    if (!["send_report", "asset_refresh"].includes(type)) {
       return res.status(400).json({
-        message: "Invalid type. Must be 'email_send' or 'asset_refresh'",
+        message: "Invalid type. Must be 'send_report' or 'asset_refresh'",
       });
     }
 

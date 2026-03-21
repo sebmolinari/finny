@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Typography, Chip, Box, Paper } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
-import { analyticsAPI } from "../api/api";
+import { analyticsAPI, settingsAPI } from "../api/api";
+import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -17,10 +18,12 @@ export default function MarketTrends() {
 
   const loadMarketTrends = useCallback(async () => {
     try {
-      // Calculate YTD days
-      const now = new Date();
-      const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const ytdDays = Math.ceil((now - startOfYear) / (1000 * 60 * 60 * 24));
+      const settingsRes = await settingsAPI.get().catch(() => ({ data: {} }));
+      const todayStr = getTodayInTimezone(settingsRes.data?.timezone || "UTC");
+      const ytdDays = Math.ceil(
+        (new Date(todayStr) - new Date(`${todayStr.substring(0, 4)}-01-01`)) /
+          (1000 * 60 * 60 * 24),
+      );
 
       // Load both 30D and YTD data in parallel
       const [response30D, responseYTD] = await Promise.all([

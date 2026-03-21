@@ -101,7 +101,7 @@ router.post("/summary", authMiddleware, async (req, res) => {
  *               - frequency
  *     responses:
  *       200:
- *         description: Batch email send result
+ *         description: Batch Send Report result
  *         content:
  *           application/json:
  *             schema:

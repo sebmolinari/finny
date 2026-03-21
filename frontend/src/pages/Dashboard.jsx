@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -27,19 +27,12 @@ import PortfolioValueChart from "../components/PortfolioValueChart";
 import MarketValueByBrokerChart from "../components/MarketValueByBrokerChart";
 import MTMEvolutionChart from "../components/MTMEvolutionChart";
 import TrendCard from "../components/TrendCard";
-import { analyticsAPI } from "../api/api";
+import { analyticsAPI, settingsAPI } from "../api/api";
+import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 
-// Helper: format a date to YYYY-MM-DD without timezone shift
-function toDateInput(date) {
-  const d = new Date(date);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -54,29 +47,28 @@ const Dashboard = () => {
   // Date range selector
   const [rangeMode, setRangeMode] = useState("ytd"); // 'ytd' | '12m' | 'inception' | 'custom'
   const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState(toDateInput(new Date()));
+  const [customEnd, setCustomEnd] = useState("");
+  const [userTimezone, setUserTimezone] = useState("UTC");
   const [inceptionDate, setInceptionDate] = useState(null);
   const [rangeMetrics, setRangeMetrics] = useState(null);
   const [rangeMetricsLoading, setRangeMetricsLoading] = useState(false);
 
   // Compute start/end for the current range mode
   const getActiveRange = useCallback(() => {
-    const now = new Date();
-    const todayStr = toDateInput(now);
+    const todayStr = getTodayInTimezone(userTimezone);
     switch (rangeMode) {
       case "ytd": {
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        return { startDate: toDateInput(startOfYear), endDate: todayStr };
+        return { startDate: `${todayStr.substring(0, 4)}-01-01`, endDate: todayStr };
       }
       case "30d": {
-        const start = new Date(now);
+        const start = new Date(todayStr);
         start.setDate(start.getDate() - 30);
-        return { startDate: toDateInput(start), endDate: todayStr };
+        return { startDate: start.toISOString().split("T")[0], endDate: todayStr };
       }
       case "12m": {
-        const start = new Date(now);
+        const start = new Date(todayStr);
         start.setFullYear(start.getFullYear() - 1);
-        return { startDate: toDateInput(start), endDate: todayStr };
+        return { startDate: start.toISOString().split("T")[0], endDate: todayStr };
       }
       case "inception":
         return inceptionDate
@@ -89,7 +81,7 @@ const Dashboard = () => {
       default:
         return null;
     }
-  }, [rangeMode, customStart, customEnd, inceptionDate]);
+  }, [rangeMode, customStart, customEnd, inceptionDate, userTimezone]);
 
   useEffect(() => {
     loadDashboard();
@@ -98,6 +90,14 @@ const Dashboard = () => {
     loadHoldingsSparklineData();
     loadReturnDetails();
     loadInceptionDate();
+    settingsAPI
+      .get()
+      .then((res) => {
+        const tz = res.data?.timezone || "UTC";
+        setUserTimezone(tz);
+        setCustomEnd(getTodayInTimezone(tz));
+      })
+      .catch(() => setCustomEnd(getTodayInTimezone("UTC")));
   }, []);
 
   // Compute a stable key that only changes when the resolved date range actually changes.

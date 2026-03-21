@@ -4,6 +4,8 @@ const priceService = require("./priceService");
 const emailService = require("./emailService");
 const AuditLog = require("../models/AuditLog");
 const User = require("../models/User");
+const UserSettings = require("../models/UserSettings");
+const { getSchedulerNow } = require("../utils/dateUtils");
 const logger = require("../utils/logger");
 
 class SchedulerService {
@@ -13,12 +15,6 @@ class SchedulerService {
    */
   static async checkDueSchedules() {
     try {
-      const now = new Date();
-      const currentHour = String(now.getHours()).padStart(2, "0");
-      const currentMinute = String(now.getMinutes()).padStart(2, "0");
-      const currentTime = `${currentHour}:${currentMinute}`;
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
       // Get all enabled schedulers
       const stmt = db.prepare(`
         SELECT * FROM schedulers WHERE enabled = 1
@@ -27,11 +23,17 @@ class SchedulerService {
 
       for (const scheduler of schedulers) {
         try {
-          const due = this.isScheduleDue(scheduler, currentTime);
+          // Resolve current time in the creator's configured timezone so that
+          // "run at 18:00" means 18:00 in the admin's timezone, not server time.
+          const creatorTimezone =
+            UserSettings.findByUserId(scheduler.created_by)?.timezone || "UTC";
+          const nowParts = getSchedulerNow(creatorTimezone);
+
+          const due = this.isScheduleDue(scheduler, nowParts);
 
           // Check if this scheduler is due
           if (due) {
-            // Check if already executed today
+            // Check if already executed today (in the creator's timezone)
             const alreadyExecuted = db
               .prepare(
                 `
@@ -42,7 +44,7 @@ class SchedulerService {
               LIMIT 1
             `,
               )
-              .get(scheduler.id, today);
+              .get(scheduler.id, nowParts.today);
 
             if (alreadyExecuted) {
               logger.info(
@@ -66,12 +68,12 @@ class SchedulerService {
   /**
    * Check if a scheduler is due based on frequency and time
    */
-  static isScheduleDue(scheduler, currentTime) {
+  static isScheduleDue(scheduler, nowParts) {
     const metadata = scheduler.metadata ? JSON.parse(scheduler.metadata) : {};
     const scheduledTime = scheduler.time_of_day; // HH:MM format
 
     // Check if current time matches scheduled time (within same minute)
-    if (currentTime !== scheduledTime) {
+    if (nowParts.time !== scheduledTime) {
       return false;
     }
 
@@ -83,15 +85,13 @@ class SchedulerService {
       case "weekly": {
         // Execute on Monday (day 1) by default, unless specified in metadata
         const dayOfWeek = metadata.day_of_week || 1;
-        const now = new Date();
-        return now.getDay() === dayOfWeek;
+        return nowParts.dayOfWeek === dayOfWeek;
       }
 
       case "monthly": {
         // Execute on specific day of month, default to 1st
         const dayOfMonth = metadata.day_of_month || 1;
-        const now = new Date();
-        return now.getDate() === dayOfMonth;
+        return nowParts.dayOfMonth === dayOfMonth;
       }
 
       default:
@@ -113,7 +113,7 @@ class SchedulerService {
       // Execute the job based on type
       let result;
       switch (scheduler.type) {
-        case "email_send": {
+        case "send_report": {
           result = await portfolioEmailService.sendBatchEmails();
           break;
         }
@@ -194,7 +194,13 @@ class SchedulerService {
   /**
    * Send failure notification email to all active admin users
    */
-  static async notifyAdminsOfFailure(schedulerId, schedulerName, errorMessage, schedulerType, attempts) {
+  static async notifyAdminsOfFailure(
+    schedulerId,
+    schedulerName,
+    errorMessage,
+    schedulerType,
+    attempts,
+  ) {
     try {
       const { users: admins } = User.getAll({
         role: "admin",
@@ -207,7 +213,12 @@ class SchedulerService {
         await emailService.sendEmail(
           admin.email,
           `⚠️ Scheduler failure: ${label}`,
-          this._generateFailureEmail(label, errorMessage, schedulerType, attempts),
+          this._generateFailureEmail(
+            label,
+            errorMessage,
+            schedulerType,
+            attempts,
+          ),
         );
       }
     } catch (notifyError) {
@@ -220,10 +231,21 @@ class SchedulerService {
   /**
    * Generate a styled HTML email for scheduler failure notifications
    */
-  static _generateFailureEmail(schedulerName, errorMessage, schedulerType, attempts) {
+  static _generateFailureEmail(
+    schedulerName,
+    errorMessage,
+    schedulerType,
+    attempts,
+  ) {
     const now = new Date();
-    const timestamp = now.toISOString().replace("T", " ").substring(0, 19) + " UTC";
-    const typeLabel = schedulerType === "email_send" ? "Portfolio Email" : schedulerType === "asset_refresh" ? "Asset Price Refresh" : schedulerType ?? "Unknown";
+    const timestamp =
+      now.toISOString().replace("T", " ").substring(0, 19) + " UTC";
+    const typeLabel =
+      schedulerType === "send_report"
+        ? "Portfolio Email"
+        : schedulerType === "asset_refresh"
+          ? "Asset Price Refresh"
+          : (schedulerType ?? "Unknown");
 
     return `<!DOCTYPE html>
 <html lang="en">

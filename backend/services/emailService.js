@@ -30,7 +30,7 @@ class EmailService {
 
   async sendEmail(to, subject, htmlContent, auditInfo = null) {
     if (!this.enabled) {
-      logger.info("Email service is disabled. Skipping email send.");
+      logger.info("Email service is disabled. Skipping Send Report.");
       return { success: false, message: "Email service is disabled" };
     }
 
@@ -72,7 +72,7 @@ class EmailService {
           logger.error(
             `Failed to create audit log for email: ${auditError.message}`,
           );
-          // Don't fail the email send if audit log fails
+          // Don't fail the Send Report if audit log fails
         }
       }
 

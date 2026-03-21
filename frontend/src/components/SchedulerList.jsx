@@ -55,7 +55,7 @@ const SchedulerList = ({
 
   const getTypeLabel = (type) => {
     const labels = {
-      email_send: "Email Send",
+      send_report: "Send Report",
       asset_refresh: "Asset Refresh",
     };
     return labels[type] || type;
@@ -63,7 +63,7 @@ const SchedulerList = ({
 
   const getTypeColor = (type) => {
     const colors = {
-      email_send: "primary",
+      send_report: "primary",
       asset_refresh: "success",
     };
     return colors[type] || "default";
@@ -96,9 +96,7 @@ const SchedulerList = ({
           <TableBody>
             {schedulers.map((scheduler) => (
               <TableRow key={scheduler.id} hover>
-                <TableCell sx={{ fontWeight: 500 }}>
-                  {scheduler.name}
-                </TableCell>
+                <TableCell sx={{ fontWeight: 500 }}>{scheduler.name}</TableCell>
                 <TableCell>
                   <Chip
                     label={getTypeLabel(scheduler.type)}

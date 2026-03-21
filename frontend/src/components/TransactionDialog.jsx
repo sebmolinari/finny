@@ -188,7 +188,7 @@ export default function TransactionDialog({
   };
 
   // ── Submit ───────────────────────────────────────────────────────────────────
-  const handleSubmit = async () => {
+  const handleSubmit = async (createAnother = false) => {
     try {
       const type = formData.transaction_type;
 
@@ -245,12 +245,18 @@ export default function TransactionDialog({
       if (editingTransaction) {
         await transactionAPI.update(editingTransaction.id, submitData);
         toast.success("Transaction updated successfully");
+        onClose();
+        onSave();
       } else {
         await transactionAPI.create(submitData);
         toast.success("Transaction created successfully");
+        onSave();
+        if (createAnother) {
+          setFormData({ ...EMPTY_FORM, date: getTodayInTimezone(userTimezone) });
+        } else {
+          onClose();
+        }
       }
-      onClose();
-      onSave();
     } catch (error) {
       handleApiError(error, "Failed to save transaction");
     }
@@ -475,8 +481,13 @@ export default function TransactionDialog({
           Cancel
         </Button>
         <Button type="submit" variant="contained" form="transaction-form">
-          {editingTransaction ? "Update" : "Create"}
+          {editingTransaction ? "Update" : "Save"}
         </Button>
+        {!editingTransaction && (
+          <Button variant="outlined" onClick={() => handleSubmit(true)}>
+            Save &amp; Add Another
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

@@ -105,7 +105,7 @@ A professional-grade finance management application designed to help you track t
 
 - Automated portfolio summary emails
 - Configurable frequency (daily, weekly, monthly)
-- Manual email send on-demand
+- Manual Send Report on-demand
 - HTML email templates with portfolio metrics
 - Holdings breakdown and asset allocation charts
 - Performance metrics in email format
@@ -187,7 +187,7 @@ A professional-grade finance management application designed to help you track t
 ### ⏱️ Scheduler Management (Admin)
 
 - Admin-only page to create, edit, enable/disable, and delete scheduled background jobs
-- Supported job types: `email_send` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
+- Supported job types: `send_report` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
 - Configurable frequency (daily, weekly, monthly) and time of day per scheduler
 - Per-scheduler execution history: status, result, error message, and timestamps for every run
 - Purge all scheduler history from Admin Overview without affecting the schedulers themselves
@@ -197,12 +197,12 @@ A professional-grade finance management application designed to help you track t
 - Onboarding checklist for new users: review settings, create a broker, add assets, record a transaction, set allocation targets, and (for admins) configure schedulers
 - Visible in the sidebar until dismissed with "I'm all set"
 - Progress tracked automatically — each step marks itself complete as you go
-- Default assets (USD, USDARS\_BNA, USDARS\_CCL) and user settings created automatically on registration
+- Default assets (USD, USDARS_BNA, USDARS_CCL) and user settings created automatically on registration
 
 ### ⏱️ Scheduler Management (Admin)
 
 - Admin-only page to create, edit, enable/disable, and delete scheduled background jobs
-- Supported job types: `email_send` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
+- Supported job types: `send_report` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
 - Configurable frequency (daily, weekly, monthly) and time of day per scheduler
 - Per-scheduler execution history: status, result, error message, and timestamps for every run
 - Purge all scheduler history from Admin Overview without affecting the schedulers themselves
@@ -212,7 +212,7 @@ A professional-grade finance management application designed to help you track t
 - Onboarding checklist for new users: review settings, create a broker, add assets, record a transaction, set allocation targets, and (for admins) configure schedulers
 - Visible in the sidebar until dismissed with "I'm all set"
 - Progress tracked automatically — each step marks itself complete as you go
-- Default assets (USD, USDARS\_BNA, USDARS\_CCL) and user settings created automatically on registration
+- Default assets (USD, USDARS_BNA, USDARS_CCL) and user settings created automatically on registration
 
 ### 📋 Changelog
 

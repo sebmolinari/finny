@@ -25,6 +25,14 @@ const LABELS = {
   fixedincome: "Fixed Income",
 };
 
+const SUGGESTED_PRICE_SOURCE = {
+  crypto: "coingecko",
+  currency: "dolarapi",
+  equity: "yahoo",
+  fixedincome: "yahoo",
+  realestate: "manual",
+};
+
 const EMPTY_FORM = {
   symbol: "",
   name: "",
@@ -149,9 +157,14 @@ export default function AssetDialog({
             <InputLabel>Asset Type</InputLabel>
             <Select
               value={formData.asset_type}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, asset_type: e.target.value }))
-              }
+              onChange={(e) => {
+                const type = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  asset_type: type,
+                  price_source: SUGGESTED_PRICE_SOURCE[type] ?? prev.price_source,
+                }));
+              }}
               label="Asset Type"
             >
               {validAssetTypes.map((type) => (

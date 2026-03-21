@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Chip,
@@ -18,8 +18,9 @@ import {
   TrendingUp as TrendingUpIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
-import { analyticsAPI } from "../api/api";
+import { analyticsAPI, settingsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
+import { getTodayInTimezone } from "../utils/dateUtils";
 import PageContainer from "../components/PageContainer";
 import StyledDataGrid from "../components/StyledDataGrid";
 import { fadeInUpSx } from "../utils/animations";
@@ -48,22 +49,25 @@ const EVENT_CONFIG = {
   },
 };
 
-const today = new Date().toISOString().split("T")[0];
-
 export default function EconomicCalendar() {
   const theme = useTheme();
   const [events, setEvents] = useState([]);
   const [fundStats, setFundStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [today, setToday] = useState("");
 
   const loadCalendar = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await analyticsAPI.getEconomicCalendar();
-      setEvents(res.data.events ?? []);
-      setFundStats(res.data.fund_stats ?? []);
+      const [calRes, settingsRes] = await Promise.all([
+        analyticsAPI.getEconomicCalendar(),
+        settingsAPI.get().catch(() => ({ data: {} })),
+      ]);
+      setEvents(calRes.data.events ?? []);
+      setFundStats(calRes.data.fund_stats ?? []);
+      setToday(getTodayInTimezone(settingsRes.data?.timezone || "UTC"));
     } catch (err) {
       setError("Failed to load economic calendar. Please try again.");
     } finally {

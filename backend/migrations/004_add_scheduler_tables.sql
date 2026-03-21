@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS schedulers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('email_send', 'asset_refresh')),
+  type TEXT NOT NULL,
   frequency TEXT NOT NULL CHECK(frequency IN ('daily', 'weekly', 'monthly')),
   time_of_day TEXT NOT NULL, -- Format: HH:MM (e.g., '18:00', '06:00')
   enabled INTEGER NOT NULL DEFAULT 1,

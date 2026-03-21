@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Grid,
@@ -26,7 +26,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { analyticsAPI } from "../api/api";
+import { analyticsAPI, settingsAPI } from "../api/api";
+import { getTodayInTimezone } from "../utils/dateUtils";
 import {
   formatCurrency,
   formatPercent,
@@ -37,13 +38,6 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
-function toDateInput(date) {
-  const d = new Date(date);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
 
 const RANGE_OPTIONS = [
   { label: "YTD", value: "ytd", days: null },
@@ -60,7 +54,7 @@ export default function RiskMetrics() {
   const [loading, setLoading] = useState(true);
   const [rangeMode, setRangeMode] = useState("ytd");
   const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState(toDateInput(new Date()));
+  const [customEnd, setCustomEnd] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,9 +73,10 @@ export default function RiskMetrics() {
         endDate = customEnd;
         days = 365;
       } else if (rangeMode === "ytd") {
-        const now = new Date();
-        startDate = `${now.getFullYear()}-01-01`;
-        endDate = toDateInput(now);
+        const settingsRes = await settingsAPI.get().catch(() => ({ data: {} }));
+        const todayStr = getTodayInTimezone(settingsRes.data?.timezone || "UTC");
+        startDate = `${todayStr.substring(0, 4)}-01-01`;
+        endDate = todayStr;
         days = 365;
       } else if (rangeMode === "inception") {
         days = 3650; // 10 years max for inception — backend will clip to first transaction
@@ -95,6 +90,13 @@ export default function RiskMetrics() {
       setLoading(false);
     }
   }, [rangeMode, customStart, customEnd]);
+
+  useEffect(() => {
+    settingsAPI
+      .get()
+      .then((res) => setCustomEnd(getTodayInTimezone(res.data?.timezone || "UTC")))
+      .catch(() => setCustomEnd(getTodayInTimezone("UTC")));
+  }, []);
 
   useEffect(() => {
     loadData();

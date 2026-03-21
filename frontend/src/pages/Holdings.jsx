@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Grid,
@@ -18,7 +18,8 @@ import { MetricCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StyledDataGrid from "../components/StyledDataGrid";
 
-import { analyticsAPI } from "../api/api";
+import { analyticsAPI, settingsAPI } from "../api/api";
+import { getTodayInTimezone } from "../utils/dateUtils";
 import {
   formatNumber,
   formatCurrency,
@@ -27,11 +28,6 @@ import {
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
-function toDateInput(date) {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export default function Holdings() {
   const [holdings, setHoldings] = useState(null);
   const [analytics, setAnalytics] = useState(null);
@@ -39,7 +35,7 @@ export default function Holdings() {
 
   // Historical mode
   const [isHistorical, setIsHistorical] = useState(false);
-  const [asOfDate, setAsOfDate] = useState(toDateInput(new Date()));
+  const [asOfDate, setAsOfDate] = useState("");
   const [historicalData, setHistoricalData] = useState(null);
   const [historicalLoading, setHistoricalLoading] = useState(false);
 
@@ -75,6 +71,13 @@ export default function Holdings() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    settingsAPI
+      .get()
+      .then((res) => setAsOfDate(getTodayInTimezone(res.data?.timezone || "UTC")))
+      .catch(() => setAsOfDate(getTodayInTimezone("UTC")));
+  }, []);
 
   useEffect(() => {
     if (isHistorical && asOfDate) {

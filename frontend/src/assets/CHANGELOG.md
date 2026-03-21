@@ -6,7 +6,7 @@ All notable changes to this project are documented below.
 
 ### Added
 
-- **Scheduler Management** – Admin-only page to create, edit, enable/disable, and delete scheduled background jobs; supports `email_send` and `asset_refresh` types with daily, weekly, or monthly frequency and configurable time of day; per-scheduler execution history with status, result, and error details
+- **Scheduler Management** – Admin-only page to create, edit, enable/disable, and delete scheduled background jobs; supports `send_report` and `asset_refresh` types with daily, weekly, or monthly frequency and configurable time of day; per-scheduler execution history with status, result, and error details
 - **Getting Started** – Onboarding checklist page guiding new users through: reviewing settings, creating a broker, adding assets, recording a transaction, and setting allocation targets; admins get an extra step to configure schedulers; dismissed permanently with "I'm all set"
 - **Auto-setup on Registration** – Default currency assets (USD, USDARS_BNA, USDARS_CCL) and initial user settings are created automatically when a new account is registered; USD seeded with a price of 1.0
 - **WAL Flush** – Admin Overview now has a "Flush WAL" button that runs a SQLite WAL TRUNCATE checkpoint and reports pages checkpointed
