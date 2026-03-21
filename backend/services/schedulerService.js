@@ -27,7 +27,7 @@ class SchedulerService {
 
       for (const scheduler of schedulers) {
         try {
-          const due = this.isScheduleDue(scheduler, currentTime, today);
+          const due = this.isScheduleDue(scheduler, currentTime);
 
           // Check if this scheduler is due
           if (due) {
@@ -66,7 +66,7 @@ class SchedulerService {
   /**
    * Check if a scheduler is due based on frequency and time
    */
-  static isScheduleDue(scheduler, currentTime, today) {
+  static isScheduleDue(scheduler, currentTime) {
     const metadata = scheduler.metadata ? JSON.parse(scheduler.metadata) : {};
     const scheduledTime = scheduler.time_of_day; // HH:MM format
 
@@ -184,6 +184,8 @@ class SchedulerService {
           schedulerId,
           scheduler.name,
           error.message,
+          scheduler.type,
+          attempt,
         );
       }
     }
@@ -192,7 +194,7 @@ class SchedulerService {
   /**
    * Send failure notification email to all active admin users
    */
-  static async notifyAdminsOfFailure(schedulerId, schedulerName, errorMessage) {
+  static async notifyAdminsOfFailure(schedulerId, schedulerName, errorMessage, schedulerType, attempts) {
     try {
       const { users: admins } = User.getAll({
         role: "admin",
@@ -204,9 +206,8 @@ class SchedulerService {
         const label = schedulerName ?? `#${schedulerId}`;
         await emailService.sendEmail(
           admin.email,
-          `Scheduler failure: ${label}`,
-          `<p>Scheduler <strong>${label}</strong> failed after all retry attempts.</p>
-           <p><strong>Error:</strong> ${errorMessage}</p>`,
+          `⚠️ Scheduler failure: ${label}`,
+          this._generateFailureEmail(label, errorMessage, schedulerType, attempts),
         );
       }
     } catch (notifyError) {
@@ -214,6 +215,104 @@ class SchedulerService {
         `Failed to send admin failure notification: ${notifyError.message}`,
       );
     }
+  }
+
+  /**
+   * Generate a styled HTML email for scheduler failure notifications
+   */
+  static _generateFailureEmail(schedulerName, errorMessage, schedulerType, attempts) {
+    const now = new Date();
+    const timestamp = now.toISOString().replace("T", " ").substring(0, 19) + " UTC";
+    const typeLabel = schedulerType === "email_send" ? "Portfolio Email" : schedulerType === "asset_refresh" ? "Asset Price Refresh" : schedulerType ?? "Unknown";
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduler Failure</title>
+  <style>
+    body { margin:0; padding:0; background-color:#f5f5f5; }
+    table { border-collapse:collapse; }
+    @media only screen and (max-width:620px) {
+      .email-container { width:100% !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f5f5f5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f5f5f5">
+    <tr>
+      <td align="center" style="padding:20px 10px;">
+
+        <table class="email-container" role="presentation" width="600" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:600px; width:100%; background:#ffffff; border:1px solid #e0e0e0;">
+          <tr>
+            <td style="padding:32px 36px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; color:#333333;">
+
+              <!-- HEADER -->
+              <p style="font-size:20px; font-weight:700; color:#1976d2; margin:0 0 4px 0;">Finny</p>
+              <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:#888888; margin:0 0 24px 0;">Portfolio Manager</p>
+
+              <!-- ALERT BANNER -->
+              <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background-color:#fdecea; border-left:4px solid #d32f2f; padding:16px 20px; border-radius:2px;">
+                    <p style="font-size:16px; font-weight:700; color:#d32f2f; margin:0 0 4px 0;">⚠️ Scheduler Failed</p>
+                    <p style="font-size:13px; color:#b71c1c; margin:0;">All retry attempts exhausted. Action may be required.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- DETAILS TABLE -->
+              <h2 style="color:#1976d2; font-size:15px; font-weight:700; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:0.03em;">Details</h2>
+              <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="padding:9px 0; font-size:14px; color:#888; border-bottom:1px solid #e0e0e0; width:40%;">Scheduler</td>
+                  <td style="padding:9px 0; font-size:14px; color:#333; font-weight:600; border-bottom:1px solid #e0e0e0;">${schedulerName}</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0; font-size:14px; color:#888; border-bottom:1px solid #e0e0e0;">Type</td>
+                  <td style="padding:9px 0; font-size:14px; color:#333; border-bottom:1px solid #e0e0e0;">${typeLabel}</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0; font-size:14px; color:#888; border-bottom:1px solid #e0e0e0;">Attempts</td>
+                  <td style="padding:9px 0; font-size:14px; color:#333; border-bottom:1px solid #e0e0e0;">${attempts ?? 3} / 3</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0; font-size:14px; color:#888;">Timestamp</td>
+                  <td style="padding:9px 0; font-size:14px; color:#333;">${timestamp}</td>
+                </tr>
+              </table>
+
+              <!-- ERROR MESSAGE -->
+              <h2 style="color:#1976d2; font-size:15px; font-weight:700; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:0.03em;">Error</h2>
+              <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background-color:#f5f5f5; border:1px solid #e0e0e0; padding:14px 16px; border-radius:2px; font-size:13px; color:#333; font-family:monospace; line-height:1.6; word-break:break-word;">
+                    ${errorMessage ?? "No error details available."}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- FOOTER -->
+              <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #e0e0e0;">
+                <tr>
+                  <td style="padding-top:16px; font-size:11px; color:#aaaaaa; text-align:center; line-height:1.6;">
+                    This is an automated alert from Finny Portfolio Manager.<br>
+                    Check the Admin &rsaquo; Schedulers page for full execution history.
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
   }
 
   /**

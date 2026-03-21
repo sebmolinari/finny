@@ -1,4 +1,3 @@
-// eslint-disable-next-line react-refresh/only-export-components
 import { createContext, useState, useContext, useEffect } from "react";
 import { authAPI } from "../api/api";
 
@@ -22,7 +21,7 @@ export const AuthProvider = ({ children }) => {
       }
       const response = await authAPI.getCurrentUser();
       setUser(response.data.user);
-    } catch (error) {
+    } catch {
       setUser(null);
       localStorage.removeItem("token");
     } finally {
@@ -67,6 +66,7 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
