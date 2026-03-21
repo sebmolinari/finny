@@ -25,7 +25,8 @@ const routeTitles = {
   "/change-password": "Change Password",
   "/risk-metrics": "Risk Metrics",
   "/economic-calendar": "Economic Calendar",
-  "/admin/overview": "Admin Overview",
+  "/missing-prices": "Missing Prices",
+  "/admin/overview": "Control Panel",
   "/schedulers": "Schedulers",
 };
 

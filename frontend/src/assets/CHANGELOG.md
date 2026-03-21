@@ -6,6 +6,7 @@ All notable changes to this project are documented below.
 
 ### Added
 
+- **Missing Prices** – New admin page that identifies assets with missing price data for transaction dates; admins can fetch historical closing prices from Yahoo Finance in batches, review and edit proposed prices in a table, then apply them to the database in one click; rows not found on Yahoo are flagged for manual entry
 - **Scheduler Management** – Admin-only page to create, edit, enable/disable, and delete scheduled background jobs; supports `send_report` and `asset_refresh` types with daily, weekly, or monthly frequency and configurable time of day; per-scheduler execution history with status, result, and error details
 - **Getting Started** – Onboarding checklist page guiding new users through: reviewing settings, creating a broker, adding assets, recording a transaction, and setting allocation targets; admins get an extra step to configure schedulers; dismissed permanently with "I'm all set"
 - **Auto-setup on Registration** – Default currency assets (USD, USDARS_BNA, USDARS_CCL) and initial user settings are created automatically when a new account is registered; USD seeded with a price of 1.0
@@ -15,10 +16,15 @@ All notable changes to this project are documented below.
 
 ### Changed
 
+- **Admin "Overview" renamed to "Control Panel"** – The admin navigation item and page title have been updated to better reflect the page's combined monitoring and maintenance purpose
 - **Settings page simplified** – Removed Theme, Language, Email Frequency, and In-App Notification Polling controls; saving settings now redirects to the dashboard
 - **Notification polling removed** – Header no longer polls for drift alerts; notifications are still accessible on demand via the bell icon
 - **Email scheduling moved to Schedulers** – Email frequency is now configured as a scheduler job instead of a user setting
 - Registration and `/me` responses now include `onboarding_completed` flag used to show/hide the Getting Started menu item
+
+### Fixed
+
+- Reset All Data now correctly preserves the `USDARS_CCL` asset (was incorrectly matching `USD_ARS_CCL`)
 
 ### Removed
 

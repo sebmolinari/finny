@@ -27,6 +27,7 @@ import EconomicCalendar from "../pages/EconomicCalendar";
 import AdminOverview from "../pages/AdminOverview";
 import Scheduler from "../pages/Scheduler";
 import GettingStarted from "../pages/GettingStarted";
+import MissingPrices from "../pages/MissingPrices";
 
 export const router = createBrowserRouter([
   {
@@ -115,6 +116,10 @@ export const router = createBrowserRouter([
           {
             path: "economic-calendar",
             element: <EconomicCalendar />,
+          },
+          {
+            path: "missing-prices",
+            element: <MissingPrices />,
           },
           {
             path: "users",

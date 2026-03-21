@@ -197,6 +197,42 @@ class PriceService {
   }
 
   /**
+   * Fetch the closing price for a symbol on a specific historical date from Yahoo Finance.
+   * Returns the raw float price on success, or null if unavailable.
+   */
+  static async fetchHistoricalPrice(priceSymbol, dateStr) {
+    try {
+      const date = new Date(dateStr + "T00:00:00Z");
+      const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+      const period1 = Math.floor(date.getTime() / 1000);
+      const period2 = Math.floor(nextDate.getTime() / 1000);
+
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${priceSymbol}`;
+      const response = await axios.get(url, {
+        params: { interval: "1d", period1, period2 },
+        timeout: 8000,
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+
+      const result = response.data?.chart?.result?.[0];
+      if (!result) return null;
+
+      // Prefer the closes array; fall back to meta prices
+      const closes = result.indicators?.quote?.[0]?.close;
+      if (closes && closes.length > 0) {
+        const close = closes.find((c) => c != null);
+        if (close != null) return close;
+      }
+
+      const fallback =
+        result.meta?.regularMarketPrice ?? result.meta?.previousClose;
+      return fallback ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Fetch price from the specified source
    */
   static async fetchPriceBySource(priceSymbol, priceSource, priceFactor) {

@@ -170,7 +170,7 @@ export default function AdminOverview() {
 
   if (error) {
     return (
-      <PageContainer title="Admin Overview">
+      <PageContainer title="Control Panel">
         <Alert severity="error">{error}</Alert>
       </PageContainer>
     );

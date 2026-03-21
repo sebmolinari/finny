@@ -75,6 +75,7 @@ const STEPS = [
 export default function GettingStarted() {
   const navigate = useNavigate();
   const { refreshUser, user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
@@ -94,15 +95,19 @@ export default function GettingStarted() {
         assetsRes,
         transactionsRes,
         targetsRes,
-        schedulersRes,
       ] = await Promise.allSettled([
         settingsAPI.get(),
         brokerAPI.getAll(),
         assetAPI.getAll(),
         transactionAPI.getAll(),
         allocationAPI.getTargets(),
-        schedulerAPI.getAll(),
       ]);
+
+      let schedulers = [];
+      if (isAdmin) {
+        const schedulersRes = await schedulerAPI.getAll().catch(() => null);
+        schedulers = schedulersRes?.data?.data ?? [];
+      }
 
       setData({
         settings:
@@ -117,10 +122,7 @@ export default function GettingStarted() {
           targetsRes.status === "fulfilled"
             ? (targetsRes.value.data?.targets ?? targetsRes.value.data)
             : [],
-        schedulers:
-          schedulersRes.status === "fulfilled"
-            ? (schedulersRes.value.data?.data ?? [])
-            : [],
+        schedulers,
       });
     } catch (err) {
       setError("Failed to load progress data.");
@@ -143,7 +145,6 @@ export default function GettingStarted() {
     }
   };
 
-  const isAdmin = user?.role === "admin";
   const steps = [
     ...STEPS,
     ...(isAdmin

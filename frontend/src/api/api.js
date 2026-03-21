@@ -220,6 +220,14 @@ getRiskMetrics: (days = 365, startDate = null, endDate = null) => {
   getEconomicCalendar: () => api.get("/analytics/economic-calendar"),
 
   getAdminOverview: () => api.get("/analytics/admin/overview"),
+
+  getMissingPrices: () => api.get("/analytics/missing-prices"),
+
+  fetchMissingPrices: (items) =>
+    api.post("/analytics/missing-prices/fetch", { items }, { timeout: 120000 }),
+
+  applyMissingPrices: (items) =>
+    api.post("/analytics/missing-prices/apply", { items }),
 };
 
 export const emailAPI = {

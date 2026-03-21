@@ -75,13 +75,13 @@ router.delete("/reset", authMiddleware, adminMiddleware, (req, res) => {
       const priceData = db
         .prepare(
           `DELETE FROM price_data WHERE asset_id NOT IN (
-            SELECT id FROM assets WHERE symbol IN ('USD','USDARS_BNA','USD_ARS_CCL')
+            SELECT id FROM assets WHERE symbol IN ('USD','USDARS_BNA','USDARS_CCL')
           )`,
         )
         .run().changes;
       const assets = db
         .prepare(
-          `DELETE FROM assets WHERE symbol NOT IN ('USD','USDARS_BNA','USD_ARS_CCL')`,
+          `DELETE FROM assets WHERE symbol NOT IN ('USD','USDARS_BNA','USDARS_CCL')`,
         )
         .run().changes;
       const brokers = db.prepare("DELETE FROM brokers").run().changes;

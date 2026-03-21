@@ -174,7 +174,7 @@ A professional-grade finance management application designed to help you track t
 - CPU temperature (Linux/Raspberry Pi)
 - System uptime, platform, architecture and hostname
 
-### 🖥️ Admin System Overview
+### 🖥️ Admin Control Panel
 
 - Aggregate platform stats: total users, active vs. inactive breakdown, total transactions, active assets and brokers
 - Last price data date and total price records across the database
@@ -184,20 +184,14 @@ A professional-grade finance management application designed to help you track t
 - **WAL Flush** – trigger a SQLite WAL TRUNCATE checkpoint to flush committed frames to the main DB file and reset the WAL to zero bytes
 - Admin-only access enforced via role-based access control
 
-### ⏱️ Scheduler Management (Admin)
+### 🔍 Missing Prices (Admin)
 
-- Admin-only page to create, edit, enable/disable, and delete scheduled background jobs
-- Supported job types: `send_report` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
-- Configurable frequency (daily, weekly, monthly) and time of day per scheduler
-- Per-scheduler execution history: status, result, error message, and timestamps for every run
-- Purge all scheduler history from Admin Overview without affecting the schedulers themselves
-
-### 🚀 Getting Started
-
-- Onboarding checklist for new users: review settings, create a broker, add assets, record a transaction, set allocation targets, and (for admins) configure schedulers
-- Visible in the sidebar until dismissed with "I'm all set"
-- Progress tracked automatically — each step marks itself complete as you go
-- Default assets (USD, USDARS_BNA, USDARS_CCL) and user settings created automatically on registration
+- Identifies assets that have transactions on dates with no price data
+- Shows missing dates grouped by asset with symbol, name and type
+- **Fetch from Yahoo Finance** – batch-fetches historical closing prices for all affected dates; processes in batches of 50 with a progress bar
+- Proposed prices appear in a review table; admins can edit any value before saving
+- Rows where Yahoo Finance returned no data are flagged for manual entry
+- **Apply to Database** – writes reviewed prices in one click; supports both inserting new price records and updating existing ones; result summary shows how many were applied
 
 ### ⏱️ Scheduler Management (Admin)
 
@@ -205,7 +199,7 @@ A professional-grade finance management application designed to help you track t
 - Supported job types: `send_report` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
 - Configurable frequency (daily, weekly, monthly) and time of day per scheduler
 - Per-scheduler execution history: status, result, error message, and timestamps for every run
-- Purge all scheduler history from Admin Overview without affecting the schedulers themselves
+- Purge all scheduler history from Admin Control Panel without affecting the schedulers themselves
 
 ### 🚀 Getting Started
 

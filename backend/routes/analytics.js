@@ -6,6 +6,9 @@ const AnalyticsService = require("../services/analytics");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
 const Asset = require("../models/Asset");
+const PriceData = require("../models/PriceData");
+const AuditLog = require("../models/AuditLog");
+const PriceService = require("../services/priceService");
 const { validate } = require("../utils/validationMiddleware");
 const {
   marketTrendsValidation,
@@ -932,12 +935,13 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
  * @swagger
  * /analytics/missing-prices:
  *   get:
- *     summary: Find transactions with missing or stale price data on the trade date
+ *     summary: Find transactions that predate all available price data for the asset
  *     description: >
- *       Returns buy/sell transactions where no price exists for the asset on the trade date.
- *       status='no_price' means no price data exists at all for this asset as of the trade date.
- *       status='stale_price' means the closest available price is from an earlier date.
- *       Use this to identify which assets need price data entries added.
+ *       Returns buy/sell transactions where no price record exists on or before the trade date
+ *       (status='no_price'). A transaction is NOT flagged when an older price is available and
+ *       can be used as a fallback — e.g. a price from t-6 will satisfy a trade on t-2.
+ *       Only transactions that predate every existing price record for the asset are listed.
+ *       Use this to identify which assets need historical price data added.
  *     tags: [Analytics]
  *     security:
  *       - bearerAuth: []
@@ -1046,6 +1050,133 @@ router.get("/missing-prices", authMiddleware, (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Fetch proposed prices from Yahoo Finance for a batch of missing date/asset pairs.
+// Admin only. Does NOT write to DB — returns proposals for review.
+router.post(
+  "/missing-prices/fetch",
+  authMiddleware,
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items array is required" });
+      }
+
+      const results = [];
+      for (const item of items) {
+        const { asset_id, price_symbol, trade_date } = item;
+        if (!asset_id || !trade_date) {
+          results.push({
+            asset_id,
+            trade_date,
+            price_symbol,
+            fetched_price: null,
+            status: "not_found",
+          });
+          continue;
+        }
+
+        const symbol = price_symbol || null;
+        let fetchedPrice = null;
+        if (symbol) {
+          fetchedPrice = await PriceService.fetchHistoricalPrice(
+            symbol,
+            trade_date,
+          );
+        }
+
+        results.push({
+          asset_id,
+          trade_date,
+          price_symbol: symbol,
+          fetched_price: fetchedPrice,
+          status: fetchedPrice != null ? "ok" : "not_found",
+        });
+
+        // Small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      res.json({ results });
+    } catch (error) {
+      logger.error(`missing-prices/fetch error: ${error.message}`);
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
+
+// Apply reviewed/edited prices to the database.
+// Admin only. Accepts raw float prices from the frontend.
+router.post(
+  "/missing-prices/apply",
+  authMiddleware,
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items array is required" });
+      }
+
+      let applied = 0;
+      const errors = [];
+
+      for (const item of items) {
+        const { asset_id, trade_date, price } = item;
+        if (!asset_id || !trade_date || price == null) {
+          errors.push(`Skipped invalid item: ${JSON.stringify(item)}`);
+          continue;
+        }
+
+        try {
+          const existing = PriceData.findByAssetAndDate(asset_id, trade_date);
+          if (existing) {
+            PriceData.update(existing.id, price, "yahoo", req.user.id);
+            AuditLog.logUpdate(
+              req.user.id,
+              req.user.username,
+              "price_data",
+              existing.id,
+              { price, source: "yahoo" },
+              req.ip,
+              req.get("user-agent"),
+            );
+          } else {
+            const newId = PriceData.create(
+              asset_id,
+              trade_date,
+              price,
+              "yahoo",
+              req.user.id,
+            );
+            AuditLog.logCreate(
+              req.user.id,
+              req.user.username,
+              "price_data",
+              newId,
+              { asset_id, trade_date, price, source: "yahoo" },
+              req.ip,
+              req.get("user-agent"),
+            );
+          }
+          applied++;
+        } catch (err) {
+          errors.push(`asset_id=${asset_id} date=${trade_date}: ${err.message}`);
+          logger.error(
+            `missing-prices/apply error for asset ${asset_id} on ${trade_date}: ${err.message}`,
+          );
+        }
+      }
+
+      res.json({ applied, errors });
+    } catch (error) {
+      logger.error(`missing-prices/apply error: ${error.message}`);
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
 
 // ── 1.3 Risk Metrics: Volatility & Drawdown ─────────────────────────────────
 router.get("/portfolio/risk-metrics", authMiddleware, (req, res) => {

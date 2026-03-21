@@ -22,6 +22,7 @@ import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 
 // ── Section: Admin ────────────────────────────────────────────────
+import PriceCheckRoundedIcon from "@mui/icons-material/PriceCheckRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import ManageHistoryRoundedIcon from "@mui/icons-material/ManageHistoryRounded";
 import SpeedRoundedIcon from "@mui/icons-material/SpeedRounded";
@@ -75,6 +76,11 @@ const analysisItems = [
     path: "/risk-metrics",
   },
   {
+    text: "Missing Prices",
+    icon: <PriceCheckRoundedIcon fontSize="small" />,
+    path: "/missing-prices",
+  },
+  {
     text: "Return Details",
     icon: <QueryStatsRoundedIcon fontSize="small" />,
     path: "/return-details",
@@ -103,7 +109,7 @@ const adminItems = [
     path: "/schedulers",
   },
   {
-    text: "Overview",
+    text: "Control Panel",
     icon: <DashboardCustomizeRoundedIcon fontSize="small" />,
     path: "/admin/overview",
   },
