@@ -1,7 +1,7 @@
 import { Paper, Box } from "@mui/material";
 import PageContainer from "../components/PageContainer";
 import ReactMarkdown from "react-markdown";
-import changelog from "../assets/CHANGELOG.md?raw";
+import features from "../assets/FEATURES.md?raw";
 import { fadeInUpSx } from "../utils/animations";
 
 const mdSx = {
@@ -14,12 +14,12 @@ const mdSx = {
   "& hr": { my: 2, borderColor: "divider" },
 };
 
-export default function Changelog() {
+export default function Features() {
   return (
     <PageContainer maxWidth="md">
       <Paper sx={{ p: 3, ...fadeInUpSx(1) }}>
         <Box sx={mdSx}>
-          <ReactMarkdown>{changelog}</ReactMarkdown>
+          <ReactMarkdown>{features}</ReactMarkdown>
         </Box>
       </Paper>
     </PageContainer>

@@ -28,6 +28,8 @@ const routeTitles = {
   "/missing-prices": "Missing Prices",
   "/admin/overview": "Control Panel",
   "/schedulers": "Schedulers",
+  "/income": "Income",
+  "/user-manual": "User Manual",
 };
 
 export default function NavbarBreadcrumbs() {

@@ -27,10 +27,12 @@ import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import ManageHistoryRoundedIcon from "@mui/icons-material/ManageHistoryRounded";
 import SpeedRoundedIcon from "@mui/icons-material/SpeedRounded";
 import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
+import MonetizationOnRoundedIcon from "@mui/icons-material/MonetizationOnRounded";
 import RocketLaunchRoundedIcon from "@mui/icons-material/RocketLaunchRounded";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -74,6 +76,11 @@ const analysisItems = [
     text: "Risk Metrics",
     icon: <ShowChartRoundedIcon fontSize="small" />,
     path: "/risk-metrics",
+  },
+  {
+    text: "Income",
+    icon: <MonetizationOnRoundedIcon fontSize="small" />,
+    path: "/income",
   },
   {
     text: "Missing Prices",
@@ -131,6 +138,11 @@ const adminItems = [
 ];
 
 const otherItems = [
+  {
+    text: "Features",
+    icon: <MenuBookRoundedIcon fontSize="small" />,
+    path: "/features",
+  },
   {
     text: "Changelog",
     icon: <UpdateRoundedIcon fontSize="small" />,

@@ -44,8 +44,20 @@ const taxReportValidation = [
     .withMessage("Exclude brokers must be a comma-separated string"),
 ];
 
+/**
+ * Validation rules for income analytics endpoint
+ */
+const incomeValidation = [
+  query("year")
+    .optional()
+    .isInt({ min: 1900, max: 2100 })
+    .withMessage("Year must be an integer between 1900 and 2100")
+    .toInt(),
+];
+
 module.exports = {
   marketTrendsValidation,
   portfolioPerformanceValidation,
   taxReportValidation,
+  incomeValidation,
 };

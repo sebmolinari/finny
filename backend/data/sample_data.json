@@ -1793,6 +1793,160 @@
       "fee": 1,
       "total_amount": 3921,
       "notes": "Auto-generated transaction"
+    },
+    {
+      "date": "2025-03-15",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 58.50,
+      "notes": "Q1 2025 dividend"
+    },
+    {
+      "date": "2025-06-15",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 58.50,
+      "notes": "Q2 2025 dividend"
+    },
+    {
+      "date": "2025-09-15",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 60.75,
+      "notes": "Q3 2025 dividend"
+    },
+    {
+      "date": "2025-12-15",
+      "asset_symbol": "AAPL",
+      "broker_name": "Broker A",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 60.75,
+      "notes": "Q4 2025 dividend"
+    },
+    {
+      "date": "2025-04-01",
+      "asset_symbol": "MSFT",
+      "broker_name": "Broker C",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 47.25,
+      "notes": "Q1 2025 dividend"
+    },
+    {
+      "date": "2025-07-01",
+      "asset_symbol": "MSFT",
+      "broker_name": "Broker C",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 47.25,
+      "notes": "Q2 2025 dividend"
+    },
+    {
+      "date": "2025-10-01",
+      "asset_symbol": "MSFT",
+      "broker_name": "Broker C",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 49.50,
+      "notes": "Q3 2025 dividend"
+    },
+    {
+      "date": "2026-01-01",
+      "asset_symbol": "MSFT",
+      "broker_name": "Broker C",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 49.50,
+      "notes": "Q4 2025 dividend"
+    },
+    {
+      "date": "2025-06-30",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker D",
+      "transaction_type": "coupon",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 212.50,
+      "notes": "Semi-annual coupon payment"
+    },
+    {
+      "date": "2025-12-31",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker D",
+      "transaction_type": "coupon",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 212.50,
+      "notes": "Semi-annual coupon payment"
+    },
+    {
+      "date": "2025-02-28",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker B",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 89.40,
+      "notes": "Q1 2025 dividend"
+    },
+    {
+      "date": "2025-05-31",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker B",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 92.10,
+      "notes": "Q2 2025 dividend"
+    },
+    {
+      "date": "2025-08-31",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker B",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 95.80,
+      "notes": "Q3 2025 dividend"
+    },
+    {
+      "date": "2025-11-30",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker B",
+      "transaction_type": "dividend",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 98.60,
+      "notes": "Q4 2025 dividend"
     }
   ],
   "allocationTargets": {

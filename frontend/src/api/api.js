@@ -197,6 +197,12 @@ export const analyticsAPI = {
     return api.get("/analytics/realized-gains", { params });
   },
 
+  getIncome: (year = null) => {
+    const params = {};
+    if (year !== null) params.year = year;
+    return api.get("/analytics/income", { params });
+  },
+
   getTaxHarvesting: (marginalRate = null, year = null) => {
     const params = {};
     if (marginalRate !== null) params.marginal_rate = marginalRate;

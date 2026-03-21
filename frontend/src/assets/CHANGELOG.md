@@ -1,11 +1,10 @@
-# Changelog
-
 All notable changes to this project are documented below.
 
 ## [1.0.1] – 2026-03-21
 
 ### Added
 
+- **Income Analytics** – new Analysis page showing all income transactions (dividends, interest, coupons and rentals); summary cards with total income broken down by type, projected annual run-rate, best-month and best-year highlights; monthly and annual aggregation views; per-asset income breakdown table; full income transaction list; filterable by calendar year
 - **Missing Prices** – New admin page that identifies assets with missing price data for transaction dates; admins can fetch historical closing prices from Yahoo Finance in batches, review and edit proposed prices in a table, then apply them to the database in one click; rows not found on Yahoo are flagged for manual entry
 - **Scheduler Management** – Admin-only page to create, edit, enable/disable, and delete scheduled background jobs; supports `send_report` and `asset_refresh` types with daily, weekly, or monthly frequency and configurable time of day; per-scheduler execution history with status, result, and error details
 - **Getting Started** – Onboarding checklist page guiding new users through: reviewing settings, creating a broker, adding assets, recording a transaction, and setting allocation targets; admins get an extra step to configure schedulers; dismissed permanently with "I'm all set"
@@ -128,4 +127,4 @@ All notable changes to this project are documented below.
 
 ### Added
 
-- Initial commit
+- Initial basic version

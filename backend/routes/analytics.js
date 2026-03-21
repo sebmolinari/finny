@@ -8,12 +8,14 @@ const adminMiddleware = require("../middleware/admin");
 const Asset = require("../models/Asset");
 const PriceData = require("../models/PriceData");
 const AuditLog = require("../models/AuditLog");
+const Transaction = require("../models/Transaction");
 const PriceService = require("../services/priceService");
 const { validate } = require("../utils/validationMiddleware");
 const {
   marketTrendsValidation,
   portfolioPerformanceValidation,
   taxReportValidation,
+  incomeValidation,
 } = require("../middleware/validators/analyticsValidators");
 
 // Get broker summary (transaction counts and volumes)
@@ -1391,6 +1393,81 @@ router.get("/economic-calendar", authMiddleware, async (req, res) => {
       fund_stats: fundStats,
       symbols_queried: assetList.map((a) => a.yahooSymbol),
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── Income Analytics ─────────────────────────────────────────────────────────
+/**
+ * @swagger
+ * /analytics/income:
+ *   get:
+ *     summary: Get income analytics (dividends, interest, coupons, rentals)
+ *     description: Returns a full income report including summary totals, monthly and annual aggregations, per-asset breakdown, and individual income transactions.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         description: Filter to a specific year. Omit for all-time data.
+ *     responses:
+ *       200:
+ *         description: Income analytics report
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 summary:
+ *                   type: object
+ *                   properties:
+ *                     total_income:
+ *                       type: number
+ *                     total_dividends:
+ *                       type: number
+ *                     total_interest:
+ *                       type: number
+ *                     total_coupons:
+ *                       type: number
+ *                     total_rentals:
+ *                       type: number
+ *                     income_transaction_count:
+ *                       type: integer
+ *                     projected_annual:
+ *                       type: number
+ *                       nullable: true
+ *                     best_month:
+ *                       type: object
+ *                       nullable: true
+ *                     best_year:
+ *                       type: object
+ *                       nullable: true
+ *                 by_month:
+ *                   type: array
+ *                 by_year:
+ *                   type: array
+ *                 by_asset:
+ *                   type: array
+ *                 transactions:
+ *                   type: array
+ *                 available_years:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
+router.get("/income", authMiddleware, validate(incomeValidation), (req, res) => {
+  try {
+    const { year } = req.query;
+    const report = Transaction.getIncomeReport(req.user.id, year || null);
+    res.json(report);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

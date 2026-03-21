@@ -13,6 +13,7 @@ import Blotter from "../pages/Blotter";
 import Assets from "../pages/Assets";
 import ReturnDetails from "../pages/ReturnDetails";
 import CashDetails from "../pages/CashDetails";
+import IncomeAnalytics from "../pages/IncomeAnalytics";
 import Brokers from "../pages/Brokers";
 import Settings from "../pages/Settings";
 import AuditLogs from "../pages/AuditLogs";
@@ -28,6 +29,7 @@ import AdminOverview from "../pages/AdminOverview";
 import Scheduler from "../pages/Scheduler";
 import GettingStarted from "../pages/GettingStarted";
 import MissingPrices from "../pages/MissingPrices";
+import Features from "../pages/Features";
 
 export const router = createBrowserRouter([
   {
@@ -74,6 +76,10 @@ export const router = createBrowserRouter([
             element: <CashDetails />,
           },
           {
+            path: "income",
+            element: <IncomeAnalytics />,
+          },
+          {
             path: "tax-report",
             element: <TaxReport />,
           },
@@ -104,6 +110,10 @@ export const router = createBrowserRouter([
           {
             path: "changelog",
             element: <Changelog />,
+          },
+          {
+            path: "features",
+            element: <Features />,
           },
           {
             path: "getting-started",

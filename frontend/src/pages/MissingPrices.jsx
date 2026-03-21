@@ -201,7 +201,7 @@ export default function MissingPrices() {
 
   if (error && !issues) {
     return (
-      <PageContainer title="Missing Prices">
+      <PageContainer>
         <Alert severity="error">{error}</Alert>
       </PageContainer>
     );
@@ -242,7 +242,7 @@ export default function MissingPrices() {
   }).length;
 
   return (
-    <PageContainer title="Missing Prices">
+    <PageContainer>
       <Alert severity="info" sx={{ mb: 3 }}>
         A <strong>missing price</strong> means no price record exists on or
         before the transaction date — the portfolio valuation engine has nothing

@@ -172,7 +172,7 @@ export default function AdminOverview() {
 
   if (error) {
     return (
-      <PageContainer title="Control Panel">
+      <PageContainer>
         <Alert severity="error">{error}</Alert>
       </PageContainer>
     );
@@ -882,21 +882,30 @@ export default function AdminOverview() {
                             />
                           </TableCell>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {r.scheduled_run_at
                                 ? new Date(r.scheduled_run_at).toLocaleString()
                                 : "—"}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {r.executed_at
                                 ? new Date(r.executed_at).toLocaleString()
                                 : "—"}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {r.attempt}
                             </Typography>
                           </TableCell>
@@ -930,7 +939,10 @@ export default function AdminOverview() {
                                 {r.error_message}
                               </Typography>
                             ) : (
-                              <Typography variant="caption" color="text.disabled">
+                              <Typography
+                                variant="caption"
+                                color="text.disabled"
+                              >
                                 —
                               </Typography>
                             )}
@@ -991,7 +1003,10 @@ export default function AdminOverview() {
                           sx={{ "&:hover": { bgcolor: "action.hover" } }}
                         >
                           <TableCell>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {i + 1}
                             </Typography>
                           </TableCell>
@@ -1001,7 +1016,10 @@ export default function AdminOverview() {
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {m.applied_at
                                 ? new Date(m.applied_at).toLocaleString()
                                 : "—"}

@@ -1159,6 +1159,215 @@ class Transaction {
       transaction_count: transactions.length,
     };
   }
+
+  /**
+   * Get income analytics report (dividends, interest, coupons, rentals).
+   * @param {number} userId
+   * @param {number|null} year - Filter to a specific year, or null for all-time
+   * @returns {{ summary, by_month, by_year, by_asset, transactions, available_years }}
+   */
+  static getIncomeReport(userId, year = null) {
+    // Always fetch all available years regardless of filter
+    const availableYearsRows = db
+      .prepare(
+        `SELECT DISTINCT strftime('%Y', date) AS year
+         FROM transactions
+         WHERE user_id = ? AND transaction_type IN ('dividend','interest','coupon','rental')
+         ORDER BY year DESC`
+      )
+      .all(userId);
+    const available_years = availableYearsRows.map((r) => r.year);
+
+    // Main query — optionally filtered by year
+    let sql = `
+      SELECT t.id, t.date, t.transaction_type, t.total_amount, t.notes,
+             a.id        AS asset_id,
+             a.symbol,
+             a.name      AS asset_name,
+             a.asset_type,
+             b.name      AS broker_name,
+             strftime('%Y',    t.date) AS year,
+             strftime('%m',    t.date) AS month,
+             strftime('%Y-%m', t.date) AS year_month
+      FROM transactions t
+      LEFT JOIN assets  a ON t.asset_id  = a.id
+      LEFT JOIN brokers b ON t.broker_id = b.id
+      WHERE t.user_id = ?
+        AND t.transaction_type IN ('dividend','interest','coupon','rental')
+    `;
+    const params = [userId];
+    if (year !== null) {
+      sql += ` AND strftime('%Y', t.date) = ?`;
+      params.push(String(year));
+    }
+    sql += ` ORDER BY t.date ASC, t.id ASC`;
+
+    const rows = db.prepare(sql).all(...params);
+
+    // Convert scaled amounts and build per-row objects
+    const incomeTypes = ["dividend", "interest", "coupon", "rental"];
+    const zeroByType = () => ({ dividend: 0, interest: 0, coupon: 0, rental: 0 });
+
+    // --- by_asset map ---
+    const assetMap = new Map();
+    // --- by_year map ---
+    const yearMap = new Map();
+    // --- raw transactions array ---
+    const transactions = [];
+
+    let latestDate = null;
+
+    for (const row of rows) {
+      const amount = fromValueScale(row.total_amount, AMOUNT_SCALE);
+      const type = row.transaction_type; // dividend | interest | coupon | rental
+
+      if (!latestDate || row.date > latestDate) latestDate = row.date;
+
+      // transactions list
+      transactions.push({
+        id: row.id,
+        date: row.date,
+        transaction_type: type,
+        amount,
+        symbol: row.symbol || null,
+        asset_name: row.asset_name || null,
+        broker_name: row.broker_name || null,
+        notes: row.notes || null,
+      });
+
+      // by_year
+      if (!yearMap.has(row.year)) yearMap.set(row.year, zeroByType());
+      yearMap.get(row.year)[type] += amount;
+
+      // by_asset
+      const assetKey = row.asset_id !== null ? row.asset_id : `cash_${type}`;
+      if (!assetMap.has(assetKey)) {
+        assetMap.set(assetKey, {
+          asset_id: row.asset_id,
+          symbol: row.symbol || "—",
+          asset_name: row.asset_name || "—",
+          asset_type: row.asset_type || "—",
+          ...zeroByType(),
+          total: 0,
+          transaction_count: 0,
+          first_date: row.date,
+          last_date: row.date,
+        });
+      }
+      const assetEntry = assetMap.get(assetKey);
+      assetEntry[type] += amount;
+      assetEntry.total += amount;
+      assetEntry.transaction_count += 1;
+      if (row.date > assetEntry.last_date) assetEntry.last_date = row.date;
+    }
+
+    // --- summary ---
+    const summary = {
+      total_income: 0,
+      total_dividends: 0,
+      total_interest: 0,
+      total_coupons: 0,
+      total_rentals: 0,
+      income_transaction_count: rows.length,
+      projected_annual: null,
+      best_month: null,
+      best_year: null,
+    };
+
+    for (const row of transactions) {
+      summary.total_income += row.amount;
+      if (row.transaction_type === "dividend") summary.total_dividends += row.amount;
+      else if (row.transaction_type === "interest") summary.total_interest += row.amount;
+      else if (row.transaction_type === "coupon") summary.total_coupons += row.amount;
+      else if (row.transaction_type === "rental") summary.total_rentals += row.amount;
+    }
+
+    // projected_annual: trailing 12 calendar months from latest transaction date
+    // Only compute when not filtering by a historical year
+    const currentYear = new Date().getFullYear();
+    if (year === null || Number(year) === currentYear) {
+      if (latestDate) {
+        const latestMs = new Date(latestDate).getTime();
+        const twelveMonthsAgoMs = latestMs - 365 * 24 * 60 * 60 * 1000;
+        let ttmTotal = 0;
+        const monthsWithData = new Set();
+        for (const row of transactions) {
+          const rowMs = new Date(row.date).getTime();
+          if (rowMs >= twelveMonthsAgoMs) {
+            ttmTotal += row.amount;
+            monthsWithData.add(row.date.substring(0, 7)); // YYYY-MM
+          }
+        }
+        const nMonths = monthsWithData.size;
+        summary.projected_annual = nMonths > 0 && nMonths < 12
+          ? (ttmTotal / nMonths) * 12
+          : ttmTotal;
+      }
+    }
+
+    // --- by_year array + best_year ---
+    const by_year = [];
+    for (const [yr, vals] of yearMap) {
+      const total = vals.dividend + vals.interest + vals.coupon + vals.rental;
+      by_year.push({ year: yr, ...vals, total });
+    }
+    by_year.sort((a, b) => a.year.localeCompare(b.year));
+    if (by_year.length > 0) {
+      summary.best_year = by_year.reduce((best, cur) =>
+        cur.total > best.total ? cur : best
+      );
+      summary.best_year = { year: summary.best_year.year, amount: summary.best_year.total };
+    }
+
+    // --- by_month array (continuous, filling gaps with zeroes) ---
+    const by_month = [];
+    if (rows.length > 0) {
+      // Build map of year_month -> totals from actual rows
+      const monthDataMap = new Map();
+      for (const row of transactions) {
+        const ym = row.date.substring(0, 7); // YYYY-MM
+        if (!monthDataMap.has(ym)) monthDataMap.set(ym, zeroByType());
+        monthDataMap.get(ym)[row.transaction_type] += row.amount;
+      }
+
+      // Determine range
+      const firstYM = rows[0].date.substring(0, 7);
+      const lastYM = latestDate.substring(0, 7);
+
+      const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+      let [fy, fm] = firstYM.split("-").map(Number);
+      const [ly, lm] = lastYM.split("-").map(Number);
+
+      while (fy < ly || (fy === ly && fm <= lm)) {
+        const ym = `${fy}-${String(fm).padStart(2, "0")}`;
+        const vals = monthDataMap.get(ym) || zeroByType();
+        const total = vals.dividend + vals.interest + vals.coupon + vals.rental;
+        by_month.push({
+          year_month: ym,
+          month_label: `${MONTH_NAMES[fm - 1]} ${fy}`,
+          dividend: vals.dividend,
+          interest: vals.interest,
+          coupon: vals.coupon,
+          rental: vals.rental,
+          total,
+        });
+        fm += 1;
+        if (fm > 12) { fm = 1; fy += 1; }
+      }
+
+      // best_month
+      if (by_month.length > 0) {
+        const best = by_month.reduce((b, c) => (c.total > b.total ? c : b));
+        summary.best_month = { year_month: best.year_month, amount: best.total };
+      }
+    }
+
+    // --- by_asset array ---
+    const by_asset = Array.from(assetMap.values()).sort((a, b) => b.total - a.total);
+
+    return { summary, by_month, by_year, by_asset, transactions, available_years };
+  }
 }
 
 module.exports = Transaction;
