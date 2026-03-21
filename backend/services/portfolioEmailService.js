@@ -3,7 +3,7 @@ const UserSettings = require("../models/UserSettings");
 const { getTodayInTimezone } = require("../utils/dateUtils");
 const { formatCurrency, formatPercent } = require("../utils/formatters");
 const emailService = require("./emailService");
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 
 class PortfolioEmailService {
   /**
@@ -395,11 +395,10 @@ class PortfolioEmailService {
   }
 
   /**
-   * Send portfolio summary emails to users with matching frequency
-   * @param {string} frequency - 'daily', 'weekly', or 'monthly'
+   * Send portfolio summary emails to all users with email notifications enabled
    * @returns {Promise<{sent: number, failed: number}>}
    */
-  static async sendBatchEmails(frequency) {
+  static async sendBatchEmails() {
     if (process.env.EMAIL_ENABLED !== "true") {
       logger.info("Email service is disabled. Skipping portfolio emails.");
       return { sent: 0, failed: 0 };
@@ -408,19 +407,18 @@ class PortfolioEmailService {
     try {
       const db = require("../config/database");
 
-      // Get all active users with email notifications enabled for this frequency
+      // Get all active users with email notifications enabled
       const stmt = db.prepare(`
-        SELECT u.id, u.username, u.email, us.email_frequency
+        SELECT u.id, u.username, u.email
         FROM users u
         JOIN user_settings us ON u.id = us.user_id
-        WHERE u.active = 1 
-          AND us.email_notifications_enabled = 1 
-          AND us.email_frequency = ?
+        WHERE u.active = 1
+          AND us.email_notifications_enabled = 1
       `);
 
-      const users = stmt.all(frequency);
+      const users = stmt.all();
       logger.info(
-        `Found ${users.length} users to send ${frequency} portfolio emails`,
+        `Found ${users.length} users to send portfolio emails`,
       );
 
       let sent = 0;

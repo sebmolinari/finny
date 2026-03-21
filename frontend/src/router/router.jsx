@@ -25,6 +25,8 @@ import Changelog from "../pages/Changelog";
 import RiskMetrics from "../pages/RiskMetrics";
 import EconomicCalendar from "../pages/EconomicCalendar";
 import AdminOverview from "../pages/AdminOverview";
+import Scheduler from "../pages/Scheduler";
+import GettingStarted from "../pages/GettingStarted";
 
 export const router = createBrowserRouter([
   {
@@ -103,6 +105,10 @@ export const router = createBrowserRouter([
             element: <Changelog />,
           },
           {
+            path: "getting-started",
+            element: <GettingStarted />,
+          },
+          {
             path: "risk-metrics",
             element: <RiskMetrics />,
           },
@@ -123,6 +129,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute role="admin">
                 <AuditLogs />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "schedulers",
+            element: (
+              <ProtectedRoute role="admin">
+                <Scheduler />
               </ProtectedRoute>
             ),
           },

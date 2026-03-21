@@ -204,9 +204,7 @@ export const analyticsAPI = {
     return api.get("/analytics/tax-harvesting", { params });
   },
 
-  getDriftAlerts: () => api.get("/analytics/drift-alerts"),
-
-  getRiskMetrics: (days = 365, startDate = null, endDate = null) => {
+getRiskMetrics: (days = 365, startDate = null, endDate = null) => {
     const params = {};
     if (!startDate || !endDate) params.days = days;
     if (startDate) params.start_date = startDate;
@@ -241,10 +239,18 @@ export const notificationsAPI = {
   purgeAll: () => api.delete("/notifications/admin/purge"),
 };
 
+export const databaseAPI = {
+  walCheckpoint: () => api.post("/database/wal-checkpoint"),
+};
+
 export const settingsAPI = {
   get: () => api.get("/settings"),
 
   update: (data) => api.put("/settings", data),
+
+  markOnboardingComplete: () => api.post("/settings/onboarding-complete"),
+
+  markReviewed: () => api.post("/settings/reviewed"),
 };
 
 export const brokerAPI = {
@@ -296,6 +302,26 @@ export const allocationAPI = {
       deposit,
       include_asset_types: includeAssetTypes,
     }),
+};
+
+export const schedulerAPI = {
+  getAll: (limit = 50, offset = 0) =>
+    api.get("/schedulers", { params: { limit, offset } }),
+
+  getById: (id) => api.get(`/schedulers/${id}`),
+
+  create: (data) => api.post("/schedulers", data),
+
+  update: (id, data) => api.put(`/schedulers/${id}`, data),
+
+  delete: (id) => api.delete(`/schedulers/${id}`),
+
+  getInstances: (schedulerId, limit = 50, offset = 0) =>
+    api.get(`/schedulers/${schedulerId}/instances`, {
+      params: { limit, offset },
+    }),
+
+  purgeInstances: () => api.delete("/schedulers/instances"),
 };
 
 export default api;

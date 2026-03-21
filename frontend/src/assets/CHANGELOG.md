@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented below.
 
+## [1.0.1] – 2026-03-21
+
+### Added
+
+- **Scheduler Management** – Admin-only page to create, edit, enable/disable, and delete scheduled background jobs; supports `email_send` and `asset_refresh` types with daily, weekly, or monthly frequency and configurable time of day; per-scheduler execution history with status, result, and error details
+- **Getting Started** – Onboarding checklist page guiding new users through: reviewing settings, creating a broker, adding assets, recording a transaction, and setting allocation targets; admins get an extra step to configure schedulers; dismissed permanently with "I'm all set"
+- **Auto-setup on Registration** – Default currency assets (USD, USDARS_BNA, USDARS_CCL) and initial user settings are created automatically when a new account is registered; USD seeded with a price of 1.0
+- **WAL Flush** – Admin Overview now has a "Flush WAL" button that runs a SQLite WAL TRUNCATE checkpoint and reports pages checkpointed
+- **Purge Scheduler History** – Admin Overview button to delete all scheduler execution history without affecting the schedulers themselves
+- **Supabase Price Source Toggle** – `SUPABASE_ENABLED=true` env var gates the "supabase" option in price source dropdowns; hidden by default
+
+### Changed
+
+- **Settings page simplified** – Removed Theme, Language, Email Frequency, and In-App Notification Polling controls; saving settings now redirects to the dashboard
+- **Notification polling removed** – Header no longer polls for drift alerts; notifications are still accessible on demand via the bell icon
+- **Email scheduling moved to Schedulers** – Email frequency is now configured as a scheduler job instead of a user setting
+- Registration and `/me` responses now include `onboarding_completed` flag used to show/hide the Getting Started menu item
+
+### Removed
+
+- Theme and Language fields removed from user settings (theme is controlled by the header toggle; language support dropped)
+- Email Frequency and Notification Polling Interval removed from Settings page and API
+
+---
+
 ## [1.0.0] – 2026-03-06
 
 ### Added

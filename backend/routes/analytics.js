@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 const AnalyticsService = require("../services/analytics");
-const Notification = require("../models/Notification");
-const UserSettings = require("../models/UserSettings");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
 const Asset = require("../models/Asset");
@@ -929,83 +927,6 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
   }
 });
 
-// Get allocation drift alerts
-/**
- * @swagger
- * /analytics/drift-alerts:
- *   get:
- *     summary: Get allocation drift alerts
- *     description: Returns asset types whose actual allocation deviates from the target by more than the user's configured rebalancing tolerance. Also creates in-app notifications for new alerts.
- *     tags: [Analytics]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of drift alerts
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   asset_type:
- *                     type: string
- *                   target_percentage:
- *                     type: number
- *                   actual_percentage:
- *                     type: number
- *                   drift:
- *                     type: number
- *                     description: Absolute deviation from target in percentage points
- *       401:
- *         description: Authentication required
- */
-router.get("/drift-alerts", authMiddleware, (req, res) => {
-  try {
-    const alerts = AnalyticsService.getDriftAlerts(req.user.id);
-
-    const settings = UserSettings.findByUserId(req.user.id);
-
-    // Only create notifications when the user has polling enabled
-    if (settings?.notification_polling_enabled !== 0) {
-      // Dedup window is fixed at 24 h — notifications should not repeat more often than once per day
-      const dedupSeconds = 86400;
-
-      // Feature 8.4 — create in-app notifications for new drift alerts
-      for (const alert of alerts) {
-        const title = `Allocation drift: ${alert.asset_type}`;
-        const alreadyNotified = Notification.hasRecent(
-          req.user.id,
-          "drift_alert",
-          title,
-          dedupSeconds,
-        );
-        if (!alreadyNotified) {
-          const drift = alert.drift.toFixed(1);
-          const actual = alert.actual_percentage.toFixed(1);
-          const target = alert.target_percentage.toFixed(1);
-          Notification.create(
-            req.user.id,
-            "drift_alert",
-            title,
-            `${alert.asset_type} is at ${actual}% (target ${target}%, drift ${drift}%). Consider rebalancing.`,
-            {
-              asset_type: alert.asset_type,
-              drift: alert.drift,
-              actual: alert.actual_percentage,
-              target: alert.target_percentage,
-            },
-          );
-        }
-      }
-    }
-
-    res.json(alerts);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 /**
  * @swagger

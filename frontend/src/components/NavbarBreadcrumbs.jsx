@@ -26,6 +26,7 @@ const routeTitles = {
   "/risk-metrics": "Risk Metrics",
   "/economic-calendar": "Economic Calendar",
   "/admin/overview": "Admin Overview",
+  "/schedulers": "Schedulers",
 };
 
 export default function NavbarBreadcrumbs() {

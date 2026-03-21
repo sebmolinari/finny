@@ -11,23 +11,11 @@ const updateSettingsValidation = [
     .notEmpty()
     .withMessage("Date format cannot be empty"),
 
-  body("theme")
-    .optional()
-    .trim()
-    .isIn(VALID_VALUES.THEMES)
-    .withMessage(`Theme must be one of: ${VALID_VALUES.THEMES.join(", ")}`),
-
   body("timezone")
     .optional()
     .trim()
     .notEmpty()
     .withMessage("Timezone cannot be empty"),
-
-  body("language")
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage("Language cannot be empty"),
 
   body("liquidity_asset_id")
     .optional({ nullable: true })
@@ -54,12 +42,6 @@ const updateSettingsValidation = [
       "Email notifications enabled must be a boolean (0, 1, true, or false)",
     )
     .toInt(),
-
-  body("email_frequency")
-    .optional()
-    .trim()
-    .isIn(["daily", "weekly", "monthly"])
-    .withMessage("Email frequency must be one of: daily, weekly, monthly"),
 
   body("validate_cash_balance")
     .optional()
@@ -89,19 +71,6 @@ const updateSettingsValidation = [
     .withMessage("Long-term holding period must be a positive integer")
     .toInt(),
 
-  body("notification_polling_enabled")
-    .optional()
-    .isIn([0, 1, true, false])
-    .withMessage(
-      "Notification polling enabled must be a boolean (0, 1, true, or false)",
-    )
-    .toInt(),
-
-  body("notification_polling_interval")
-    .optional()
-    .isInt({ min: 10 })
-    .withMessage("Notification polling interval must be at least 10 seconds")
-    .toInt(),
 ];
 
 module.exports = {

@@ -24,23 +24,6 @@ class User {
     );
     const userId = result.lastInsertRowid;
 
-    // Create default user settings
-    UserSettings.create(
-      userId,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      5,
-      1,
-      "daily",
-      1,
-      1,
-      userId,
-    );
-
     return userId;
   }
 

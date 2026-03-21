@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Stack from "@mui/material/Stack";
 import Divider from "@mui/material/Divider";
 import Badge from "@mui/material/Badge";
@@ -17,30 +17,12 @@ import ColorModeIconDropdown from "./ColorModeIconDropdown";
 import NavbarBreadcrumbs from "./NavbarBreadcrumbs";
 import MenuButton from "./MenuButton";
 import Today from "./Today";
-import { notificationsAPI, analyticsAPI, settingsAPI } from "../api/api";
+import { notificationsAPI } from "../api/api";
 
 export default function Header({ onOpenMobileNav }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  // null = not yet loaded; defers interval setup until settings are known
-  const [pollingEnabled, setPollingEnabled] = useState(null);
-  const [pollingInterval, setPollingInterval] = useState(null);
-
-  useEffect(() => {
-    settingsAPI
-      .get()
-      .then((res) => {
-        const s = res.data;
-        setPollingEnabled(s.notification_polling_enabled !== 0);
-        setPollingInterval((s.notification_polling_interval || 60) * 1000);
-      })
-      .catch(() => {
-        // fall back to defaults on error
-        setPollingEnabled(true);
-        setPollingInterval(60000);
-      });
-  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -51,25 +33,6 @@ export default function Header({ onOpenMobileNav }) {
       // silently fail — header should not block on errors
     }
   }, []);
-
-  // Poll cycle: ping drift-alerts (which creates new notifications if needed) then refresh the list.
-  // Only called from the polling interval (and the initial tick when polling is enabled).
-  const pollCycle = useCallback(async () => {
-    analyticsAPI.getDriftAlerts().catch(() => {});
-    await fetchNotifications();
-  }, [fetchNotifications]);
-
-  useEffect(() => {
-    if (pollingEnabled === null) return; // wait for settings to load
-    if (pollingEnabled) {
-      pollCycle(); // initial tick with drift check
-      const interval = setInterval(pollCycle, pollingInterval);
-      return () => clearInterval(interval);
-    } else {
-      // Polling disabled: load existing notifications once, but do NOT ping drift-alerts
-      fetchNotifications();
-    }
-  }, [pollCycle, fetchNotifications, pollingEnabled, pollingInterval]);
 
   const handleOpen = (e) => {
     setAnchorEl(e.currentTarget);

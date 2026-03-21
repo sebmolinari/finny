@@ -4,7 +4,7 @@ const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 const { validate } = require("../utils/validationMiddleware");
 const {
   updateUserStatusValidation,

@@ -29,6 +29,8 @@ import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
+import RocketLaunchRoundedIcon from "@mui/icons-material/RocketLaunchRounded";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -95,6 +97,11 @@ const analysisItems = [
 ];
 
 const adminItems = [
+  {
+    text: "Schedulers",
+    icon: <TimerRoundedIcon fontSize="small" />,
+    path: "/schedulers",
+  },
   {
     text: "Overview",
     icon: <DashboardCustomizeRoundedIcon fontSize="small" />,
@@ -171,6 +178,7 @@ export default function MenuContent() {
   const location = useLocation();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const showGettingStarted = !user?.onboarding_completed;
   return (
     <Stack
       sx={{
@@ -202,7 +210,22 @@ export default function MenuContent() {
           />
         )}
         <Divider sx={{ my: 1 }} />
-        <NavSection label="" items={otherItems} pathname={location.pathname} />
+        <NavSection
+          label=""
+          items={[
+            ...(showGettingStarted
+              ? [
+                  {
+                    text: "Getting Started",
+                    icon: <RocketLaunchRoundedIcon fontSize="small" />,
+                    path: "/getting-started",
+                  },
+                ]
+              : []),
+            ...otherItems,
+          ]}
+          pathname={location.pathname}
+        />
       </div>
     </Stack>
   );

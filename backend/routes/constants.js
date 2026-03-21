@@ -19,7 +19,11 @@ const authMiddleware = require("../middleware/auth");
  */
 router.get("/", authMiddleware, (req, res) => {
   try {
-    res.json(VALID_VALUES);
+    const allValues = { ...VALID_VALUES };
+    if (process.env.SUPABASE_ENABLED !== "true") {
+      allValues.PRICE_SOURCES = allValues.PRICE_SOURCES.filter((v) => v !== "supabase");
+    }
+    res.json(allValues);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -60,7 +64,11 @@ router.get("/:category", authMiddleware, (req, res) => {
     }
 
     // Return the array directly for easy frontend consumption
-    res.json(VALID_VALUES[category]);
+    let values = VALID_VALUES[category];
+    if (category === "PRICE_SOURCES" && process.env.SUPABASE_ENABLED !== "true") {
+      values = values.filter((v) => v !== "supabase");
+    }
+    res.json(values);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

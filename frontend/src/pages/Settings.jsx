@@ -18,8 +18,8 @@ import {
   Save as SaveIcon,
   Email as EmailIcon,
   AccountBalance as AccountBalanceIcon,
-  Notifications as NotificationsIcon,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { settingsAPI, assetAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
@@ -28,22 +28,18 @@ import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState({
-    date_format: "YYYY-MM-DD",
-    theme: "light",
+    date_format: "DD/MM/YYYY",
     timezone: "America/Argentina/Buenos_Aires",
-    language: "en",
     liquidity_asset_id: null,
     fx_rate_asset_id: null,
     rebalancing_tolerance: 5,
     email_notifications_enabled: false,
-    email_frequency: "daily",
     validate_cash_balance: true,
     validate_sell_balance: true,
     marginal_tax_rate: 25,
     lt_holding_period_days: 365,
-    notification_polling_enabled: 1,
-    notification_polling_interval: 60,
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingAssets, setLoadingAssets] = useState(true);
@@ -52,6 +48,7 @@ export default function Settings() {
   useEffect(() => {
     loadSettings();
     loadAssets();
+    settingsAPI.markReviewed().catch(() => {});
   }, []);
 
   const loadAssets = async () => {
@@ -99,6 +96,7 @@ export default function Settings() {
         marginal_tax_rate: settings.marginal_tax_rate / 100,
       });
       toast.success("Settings saved successfully");
+      navigate("/");
     } catch (error) {
       handleApiError(error, "Failed to save settings");
     }
@@ -146,25 +144,6 @@ export default function Settings() {
               <TextField
                 fullWidth
                 select
-                label="Theme"
-                name="theme"
-                value={settings.theme}
-                onChange={handleChange}
-              >
-                <MenuItem value="light">Light</MenuItem>
-                <MenuItem value="dark">Dark</MenuItem>
-              </TextField>
-            </Grid>
-
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                select
                 label="Timezone"
                 name="timezone"
                 value={settings.timezone}
@@ -174,25 +153,6 @@ export default function Settings() {
                 <MenuItem value="America/Argentina/Buenos_Aires">
                   Argentina/Buenos Aires
                 </MenuItem>
-              </TextField>
-            </Grid>
-
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                select
-                label="Language"
-                name="language"
-                value={settings.language}
-                onChange={handleChange}
-              >
-                <MenuItem value="en">English</MenuItem>
-                <MenuItem value="es">Español</MenuItem>
               </TextField>
             </Grid>
 
@@ -241,24 +201,6 @@ export default function Settings() {
                   ))}
                 </Select>
               </FormControl>
-            </Grid>
-
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                type="number"
-                label="Rebalancing Tolerance (%)"
-                name="rebalancing_tolerance"
-                value={settings.rebalancing_tolerance}
-                onChange={handleChange}
-                slotProps={{ min: 0, max: 100, step: 1 }}
-                helperText="Portfolio rebalancing tolerance in percentage points (default: 5%)"
-              />
             </Grid>
 
             <Grid
@@ -329,6 +271,24 @@ export default function Settings() {
               </Typography>
             </Grid>
 
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <TextField
+                fullWidth
+                type="number"
+                label="Rebalancing Tolerance (%)"
+                name="rebalancing_tolerance"
+                value={settings.rebalancing_tolerance}
+                onChange={handleChange}
+                slotProps={{ min: 0, max: 100, step: 1 }}
+                helperText="Portfolio rebalancing tolerance in percentage points (default: 5%)"
+              />
+            </Grid>
+
             <Grid size={12}>
               <Divider sx={{ my: 2 }}>
                 <Typography variant="body2" color="text.secondary">
@@ -372,98 +332,6 @@ export default function Settings() {
                 Receive automated emails with your portfolio summary, holdings,
                 and market data
               </Typography>
-            </Grid>
-
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                select
-                label="Email Frequency"
-                name="email_frequency"
-                value={settings.email_frequency}
-                onChange={handleChange}
-                disabled={!settings.email_notifications_enabled}
-              >
-                <MenuItem value="daily">Daily</MenuItem>
-                <MenuItem value="weekly">Weekly</MenuItem>
-                <MenuItem value="monthly">Monthly</MenuItem>
-              </TextField>
-            </Grid>
-
-            <Grid size={12}>
-              <Divider sx={{ my: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  <NotificationsIcon
-                    sx={{ fontSize: 16, verticalAlign: "middle", mr: 1 }}
-                  />
-                  In-App Notifications
-                </Typography>
-              </Divider>
-            </Grid>
-
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={
-                      settings.notification_polling_enabled === 1 ||
-                      settings.notification_polling_enabled === true
-                    }
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        notification_polling_enabled: e.target.checked ? 1 : 0,
-                      })
-                    }
-                    name="notification_polling_enabled"
-                  />
-                }
-                label="Enable Notification Polling"
-              />
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: "block", mt: 1 }}
-              >
-                Automatically poll the server for new notifications in the
-                background
-              </Typography>
-            </Grid>
-
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                select
-                label="Notification Polling Interval"
-                name="notification_polling_interval"
-                value={settings.notification_polling_interval}
-                onChange={handleChange}
-                disabled={
-                  !settings.notification_polling_enabled &&
-                  settings.notification_polling_enabled !== 1
-                }
-                helperText="How often to check for new notifications"
-              >
-                <MenuItem value={60}>1 minute</MenuItem>
-                <MenuItem value={900}>15 minutes</MenuItem>
-                <MenuItem value={3600}>1 hour</MenuItem>
-                <MenuItem value={86400}>1 day</MenuItem>
-              </TextField>
             </Grid>
 
             <Grid size={12}>

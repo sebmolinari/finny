@@ -3,7 +3,7 @@ const router = express.Router();
 const AuditLog = require("../models/AuditLog");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 
 // All audit routes require authentication and admin privileges
 router.use(authMiddleware);

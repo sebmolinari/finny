@@ -12,6 +12,7 @@ const {
   assetPriceValidation,
   bulkImportPricesValidation,
 } = require("../middleware/validators/assetValidators");
+const logger = require("../utils/logger");
 
 /**
  * @swagger
@@ -200,16 +201,24 @@ router.post(
       const asset = Asset.findById(id);
 
       // Log asset creation
-      AuditLog.logCreate(req.user.id, req.user.username, "assets", id, {
-        symbol,
-        name,
-        asset_type,
-        currency,
-        price_source,
-        price_symbol,
-        active,
-        price_factor,
-      });
+      AuditLog.logCreate(
+        req.user.id,
+        req.user.username,
+        "assets",
+        id,
+        {
+          symbol,
+          name,
+          asset_type,
+          currency,
+          price_source,
+          price_symbol,
+          active,
+          price_factor,
+        },
+        req.ip,
+        req.get("user-agent"),
+      );
 
       res.status(201).json(asset);
     } catch (error) {

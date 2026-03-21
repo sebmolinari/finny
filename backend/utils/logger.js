@@ -1,4 +1,4 @@
-const { getNowInTimezoneISO } = require("../utils/dateUtils");
+const { getNowInTimezoneISO } = require("./dateUtils");
 
 const logger = {
   info: (message, ...args) => {

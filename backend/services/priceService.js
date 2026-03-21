@@ -2,7 +2,7 @@ const axios = require("axios");
 const PriceData = require("../models/PriceData");
 const UserSettings = require("../models/UserSettings");
 const Asset = require("../models/Asset");
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 const { getTodayInTimezone } = require("../utils/dateUtils");
 
 class PriceService {

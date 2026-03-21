@@ -53,18 +53,10 @@ router.get("/", authMiddleware, (req, res) => {
  *             properties:
  *               date_format:
  *                 type: string
- *               theme:
- *                 type: string
- *                 enum: [light, dark]
  *               timezone:
- *                 type: string
- *               language:
  *                 type: string
  *               email_notifications_enabled:
  *                 type: boolean
- *               email_frequency:
- *                 type: string
- *                 enum: [daily, weekly, monthly]
  *     responses:
  *       200:
  *         description: Updated user settings
@@ -81,20 +73,15 @@ router.put(
     try {
       const {
         date_format,
-        theme,
         timezone,
-        language,
         liquidity_asset_id,
         fx_rate_asset_id,
         rebalancing_tolerance,
         email_notifications_enabled,
-        email_frequency,
         validate_cash_balance,
         validate_sell_balance,
         marginal_tax_rate,
         lt_holding_period_days,
-        notification_polling_enabled,
-        notification_polling_interval,
       } = req.body;
 
       const existingSettings = UserSettings.findByUserId(req.user.id);
@@ -107,21 +94,16 @@ router.put(
       UserSettings.update(
         req.user.id,
         date_format,
-        theme,
         timezone,
-        language,
         liquidity_asset_id,
         fx_rate_asset_id,
         rebalancing_tolerance,
         email_notifications_enabled,
-        email_frequency,
         validate_cash_balance,
         validate_sell_balance,
         req.user.id,
         marginal_tax_rate,
         lt_holding_period_days,
-        notification_polling_enabled,
-        notification_polling_interval,
       );
 
       // Log settings change
@@ -132,41 +114,29 @@ router.put(
         table_name: "user_settings",
         record_id: existingSettings.id,
         old_values: {
-          theme: existingSettings.theme,
           date_format: existingSettings.date_format,
           timezone: existingSettings.timezone,
-          language: existingSettings.language,
           liquidity_asset_id: existingSettings.liquidity_asset_id,
           fx_rate_asset_id: existingSettings.fx_rate_asset_id,
           rebalancing_tolerance: existingSettings.rebalancing_tolerance,
           email_notifications_enabled:
             existingSettings.email_notifications_enabled,
-          email_frequency: existingSettings.email_frequency,
           validate_cash_balance: existingSettings.validate_cash_balance,
           validate_sell_balance: existingSettings.validate_sell_balance,
           marginal_tax_rate: existingSettings.marginal_tax_rate,
           lt_holding_period_days: existingSettings.lt_holding_period_days,
-          notification_polling_enabled:
-            existingSettings.notification_polling_enabled,
-          notification_polling_interval:
-            existingSettings.notification_polling_interval,
         },
         new_values: {
-          theme: theme,
           date_format: date_format,
           timezone: timezone,
-          language: language,
           liquidity_asset_id: liquidity_asset_id,
           fx_rate_asset_id: fx_rate_asset_id,
           rebalancing_tolerance: rebalancing_tolerance,
           email_notifications_enabled: email_notifications_enabled,
-          email_frequency: email_frequency,
           validate_cash_balance: validate_cash_balance,
           validate_sell_balance: validate_sell_balance,
           marginal_tax_rate: marginal_tax_rate,
           lt_holding_period_days: lt_holding_period_days,
-          notification_polling_enabled: notification_polling_enabled,
-          notification_polling_interval: notification_polling_interval,
         },
       });
 
@@ -177,5 +147,23 @@ router.put(
     }
   },
 );
+
+router.post("/reviewed", authMiddleware, (req, res) => {
+  try {
+    UserSettings.markSettingsReviewed(req.user.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/onboarding-complete", authMiddleware, (req, res) => {
+  try {
+    UserSettings.markOnboardingComplete(req.user.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 
 // Admin-only middleware
 const adminMiddleware = (req, res, next) => {

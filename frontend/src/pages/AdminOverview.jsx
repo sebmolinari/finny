@@ -23,9 +23,11 @@ import {
   History as HistoryIcon,
   EmojiEvents as TrophyIcon,
   NotificationsOff as NotificationsOffIcon,
+  DeleteSweep as DeleteSweepIcon,
+  Storage as StorageIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
-import { analyticsAPI, notificationsAPI } from "../api/api";
+import { analyticsAPI, notificationsAPI, schedulerAPI, databaseAPI } from "../api/api";
 import { formatNumber } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/StyledCard";
 import PageContainer from "../components/PageContainer";
@@ -44,6 +46,40 @@ export default function AdminOverview() {
   const [error, setError] = useState(null);
   const [purging, setPurging] = useState(false);
   const [purgeResult, setPurgeResult] = useState(null); // { deleted: N } | { error: msg }
+  const [purgingHistory, setPurgingHistory] = useState(false);
+  const [purgeHistoryResult, setPurgeHistoryResult] = useState(null);
+  const [checkpointing, setCheckpointing] = useState(false);
+  const [checkpointResult, setCheckpointResult] = useState(null);
+
+  const handleWalCheckpoint = useCallback(async () => {
+    setCheckpointing(true);
+    setCheckpointResult(null);
+    try {
+      const res = await databaseAPI.walCheckpoint();
+      setCheckpointResult({ checkpointed: res.data.checkpointed, log: res.data.log });
+    } catch (err) {
+      setCheckpointResult({
+        error: err.response?.data?.message || "Checkpoint failed.",
+      });
+    } finally {
+      setCheckpointing(false);
+    }
+  }, []);
+
+  const handlePurgeSchedulerHistory = useCallback(async () => {
+    setPurgingHistory(true);
+    setPurgeHistoryResult(null);
+    try {
+      const res = await schedulerAPI.purgeInstances();
+      setPurgeHistoryResult({ deleted: res.data.deleted });
+    } catch (err) {
+      setPurgeHistoryResult({
+        error: err.response?.data?.message || "Purge failed.",
+      });
+    } finally {
+      setPurgingHistory(false);
+    }
+  }, []);
 
   const handlePurgeNotifications = useCallback(async () => {
     setPurging(true);
@@ -791,6 +827,68 @@ export default function AdminOverview() {
                   {purgeResult?.error && (
                     <Alert severity="error" sx={{ py: 0, px: 1 }}>
                       {purgeResult.error}
+                    </Alert>
+                  )}
+                  <Tooltip title="Deletes all scheduler execution history (scheduler_instances table). Schedulers themselves are not affected.">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        startIcon={
+                          purgingHistory ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <DeleteSweepIcon fontSize="small" />
+                          )
+                        }
+                        onClick={handlePurgeSchedulerHistory}
+                        disabled={purgingHistory}
+                      >
+                        Purge Scheduler History
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  {purgeHistoryResult && !purgeHistoryResult.error && (
+                    <Alert severity="success" sx={{ py: 0, px: 1 }}>
+                      {purgeHistoryResult.deleted} instance
+                      {purgeHistoryResult.deleted !== 1 ? "s" : ""} deleted.
+                    </Alert>
+                  )}
+                  {purgeHistoryResult?.error && (
+                    <Alert severity="error" sx={{ py: 0, px: 1 }}>
+                      {purgeHistoryResult.error}
+                    </Alert>
+                  )}
+                  <Tooltip title="Runs a TRUNCATE WAL checkpoint — flushes all committed WAL frames to the main database file and resets the WAL file to zero bytes.">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="info"
+                        size="small"
+                        startIcon={
+                          checkpointing ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <StorageIcon fontSize="small" />
+                          )
+                        }
+                        onClick={handleWalCheckpoint}
+                        disabled={checkpointing}
+                      >
+                        Flush WAL
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  {checkpointResult && !checkpointResult.error && (
+                    <Alert severity="success" sx={{ py: 0, px: 1 }}>
+                      {checkpointResult.checkpointed} page
+                      {checkpointResult.checkpointed !== 1 ? "s" : ""} checkpointed ({checkpointResult.log} in log).
+                    </Alert>
+                  )}
+                  {checkpointResult?.error && (
+                    <Alert severity="error" sx={{ py: 0, px: 1 }}>
+                      {checkpointResult.error}
                     </Alert>
                   )}
                 </Box>

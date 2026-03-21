@@ -57,7 +57,7 @@ const Register = () => {
 
     try {
       await register(formData.username, formData.email, formData.password);
-      navigate("/");
+      navigate("/getting-started");
     } catch (err) {
       const responseData = err.response?.data;
       if (responseData?.errors && Array.isArray(responseData.errors)) {

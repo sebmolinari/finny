@@ -49,12 +49,17 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    await checkAuth();
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
     loading,
+    refreshUser,
     isAuthenticated: !!user,
   };
 

@@ -141,10 +141,9 @@ A professional-grade finance management application designed to help you track t
 
 ### ⚙️ User Settings & Preferences
 
-- Theme selection (light/dark)
+- Theme selection (light/dark) via header toggle
 - Date format preferences (YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY)
 - Timezone configuration (UTC, America/Argentina/Buenos_Aires)
-- Language preferences (English, Español)
 - Liquidity asset selection (currency asset used for cash calculations)
 - FX rate asset selection (currency asset used as exchange rate reference)
 - Rebalancing tolerance threshold (percentage)
@@ -152,7 +151,7 @@ A professional-grade finance management application designed to help you track t
 - **Long-term holding period** – configurable threshold (days) for short-term vs. long-term gain classification
 - Cash balance validation toggle (prevent negative cash on transactions)
 - Sell balance validation toggle (prevent selling more than held)
-- Email notification settings
+- Email notification toggle (email frequency configured via Schedulers)
 - User profile management
 
 ### 🔐 Security & Access Control
@@ -181,7 +180,39 @@ A professional-grade finance management application designed to help you track t
 - Last price data date and total price records across the database
 - Recent price refresh activity log with success/failure status chips
 - Surface errors from recent price refresh runs with per-asset error messages
+- Purge all in-app notifications or scheduler execution history in one click
+- **WAL Flush** – trigger a SQLite WAL TRUNCATE checkpoint to flush committed frames to the main DB file and reset the WAL to zero bytes
 - Admin-only access enforced via role-based access control
+
+### ⏱️ Scheduler Management (Admin)
+
+- Admin-only page to create, edit, enable/disable, and delete scheduled background jobs
+- Supported job types: `email_send` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
+- Configurable frequency (daily, weekly, monthly) and time of day per scheduler
+- Per-scheduler execution history: status, result, error message, and timestamps for every run
+- Purge all scheduler history from Admin Overview without affecting the schedulers themselves
+
+### 🚀 Getting Started
+
+- Onboarding checklist for new users: review settings, create a broker, add assets, record a transaction, set allocation targets, and (for admins) configure schedulers
+- Visible in the sidebar until dismissed with "I'm all set"
+- Progress tracked automatically — each step marks itself complete as you go
+- Default assets (USD, USDARS\_BNA, USDARS\_CCL) and user settings created automatically on registration
+
+### ⏱️ Scheduler Management (Admin)
+
+- Admin-only page to create, edit, enable/disable, and delete scheduled background jobs
+- Supported job types: `email_send` (automated portfolio summary emails) and `asset_refresh` (automatic price updates)
+- Configurable frequency (daily, weekly, monthly) and time of day per scheduler
+- Per-scheduler execution history: status, result, error message, and timestamps for every run
+- Purge all scheduler history from Admin Overview without affecting the schedulers themselves
+
+### 🚀 Getting Started
+
+- Onboarding checklist for new users: review settings, create a broker, add assets, record a transaction, set allocation targets, and (for admins) configure schedulers
+- Visible in the sidebar until dismissed with "I'm all set"
+- Progress tracked automatically — each step marks itself complete as you go
+- Default assets (USD, USDARS\_BNA, USDARS\_CCL) and user settings created automatically on registration
 
 ### 📋 Changelog
 

@@ -4,11 +4,9 @@ const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const logger = require("./config/logger");
+const logger = require("./utils/logger");
 const { db, closeDatabase } = require("./config/database");
-const PriceService = require("./services/priceService");
 const emailService = require("./services/emailService");
-const PortfolioEmailService = require("./services/portfolioEmailService");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const assetRoutes = require("./routes/assets");
@@ -22,7 +20,13 @@ const emailRoutes = require("./routes/email");
 const allocationRoutes = require("./routes/allocation");
 const hostMetricsRoutes = require("./routes/hostMetrics");
 const notificationsRoutes = require("./routes/notifications");
+const schedulerRoutes = require("./routes/scheduler");
+const databaseRoutes = require("./routes/database");
 const { runSchemaMigrations } = require("./scripts/migrationRunner");
+const SchedulerService = require("./services/schedulerService");
+
+const SCHEDULER_INTERVAL_SECONDS = 60;
+let schedulerInterval;
 
 const app = express();
 const PORT = process.env.PORT;
@@ -147,6 +151,8 @@ app.use("/api/v1/email", emailRoutes);
 app.use("/api/v1/allocation", allocationRoutes);
 app.use("/api/v1/metrics", hostMetricsRoutes);
 app.use("/api/v1/notifications", notificationsRoutes);
+app.use("/api/v1/schedulers", schedulerRoutes);
+app.use("/api/v1/database", databaseRoutes);
 
 // Health check with database validation
 app.get("/api/v1/health", (req, res) => {
@@ -217,6 +223,11 @@ app.listen(PORT, "0.0.0.0", () => {
   logger.info(`Environment: ${process.env.NODE_ENV}`);
   logger.info("========================================");
 
+  schedulerInterval = setInterval(() => {
+    SchedulerService.checkDueSchedules();
+  }, SCHEDULER_INTERVAL_SECONDS * 1000);
+  logger.info(`Background scheduler initialized (checks every ${SCHEDULER_INTERVAL_SECONDS} seconds)`);
+
   // Verify email service connection if enabled
   if (process.env.EMAIL_ENABLED === "true") {
     emailService.verifyConnection().then((verified) => {
@@ -231,6 +242,12 @@ app.listen(PORT, "0.0.0.0", () => {
 
 const shutdown = (signal) => {
   logger.info(`${signal} received. Shutting down...`);
+
+  // Clear scheduler interval
+  if (schedulerInterval) {
+    clearInterval(schedulerInterval);
+    logger.info("Background scheduler stopped");
+  }
 
   closeDatabase();
   logger.info("SQLite connection closed");

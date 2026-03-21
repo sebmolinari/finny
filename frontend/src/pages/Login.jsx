@@ -37,8 +37,8 @@ const Login = () => {
     setLoading(true);
     setError("");
     try {
-      await login(formData.username, formData.password);
-      navigate("/");
+      const data = await login(formData.username, formData.password);
+      navigate(data.user?.onboarding_completed ? "/" : "/getting-started");
     } catch (err) {
       const responseData = err.response?.data;
       setError(responseData?.message || "Login failed. Please try again.");

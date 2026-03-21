@@ -2,9 +2,12 @@ const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const UserSettings = require("../models/UserSettings");
+const Asset = require("../models/Asset");
+const PriceData = require("../models/PriceData");
 const AuditLog = require("../models/AuditLog");
 const authMiddleware = require("../middleware/auth");
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 const { validate } = require("../utils/validationMiddleware");
 const {
   registerValidation,
@@ -69,6 +72,8 @@ router.post("/register", validate(registerValidation), async (req, res) => {
 
     // Create user
     const userId = User.create(username, email, password, "user");
+    const newUser = User.findById(userId);
+    const actualRole = newUser.role;
 
     logger.info(`USER REGISTERED: ${username} (ID: ${userId})`);
 
@@ -81,19 +86,95 @@ router.post("/register", validate(registerValidation), async (req, res) => {
       {
         username,
         email,
-        role: "user",
+        role: actualRole,
       },
       req.ip,
       req.get("user-agent"),
     );
 
-    // Generate token
-    const token = generateToken(userId, username, "user");
+    // Create default assets and seed user settings
+    const defaultAssets = [
+      {
+        symbol: "USD",
+        name: "US Dollar",
+        assetType: "currency",
+        currency: "USD",
+        priceSource: "manual",
+        priceSymbol: null,
+      },
+      {
+        symbol: "USDARS_BNA",
+        name: "USD/ARS FX Rate BNA",
+        assetType: "currency",
+        currency: "USD",
+        priceSource: "dolarapi",
+        priceSymbol: "oficial",
+      },
+      {
+        symbol: "USDARS_CCL",
+        name: "USD/ARS FX Rate CCL",
+        assetType: "currency",
+        currency: "USD",
+        priceSource: "dolarapi",
+        priceSymbol: "contadoconliqui",
+      },
+    ];
+    try {
+      for (const a of defaultAssets) {
+        if (!Asset.findBySymbol(a.symbol)) {
+          Asset.create(
+            a.symbol,
+            a.name,
+            a.assetType,
+            a.currency,
+            a.priceSource,
+            a.priceSymbol,
+            1,
+            null,
+            userId,
+          );
+        }
+      }
+      const usdAsset = Asset.findBySymbol("USD");
+      const bnaAsset = Asset.findBySymbol("USDARS_BNA");
+      UserSettings.create(
+        userId,
+        undefined,
+        undefined,
+        usdAsset?.id,
+        bnaAsset?.id,
+        5,
+        1,
+        1,
+        1,
+        userId,
+      );
 
+      // Seed USD with a default price if it was just created and has no price yet
+      if (usdAsset && !Asset.getLatestPrice(usdAsset.id)) {
+        const today = new Date().toISOString().split("T")[0];
+        PriceData.create(usdAsset.id, today, 1, "manual", userId);
+      }
+    } catch (assetErr) {
+      logger.warn(
+        `Failed to create default assets for user ${userId}: ${assetErr.message}`,
+      );
+    }
+
+    // Generate token
+    const token = generateToken(userId, username, actualRole);
+
+    const newSettings = UserSettings.findByUserId(userId);
     res.status(201).json({
       message: "User registered successfully",
       token,
-      user: { id: userId, username, email, role: "user" },
+      user: {
+        id: userId,
+        username,
+        email,
+        role: actualRole,
+        onboarding_completed: newSettings?.onboarding_completed ?? 0,
+      },
     });
   } catch (error) {
     logger.error(`Registration error: ${error.message}`);
@@ -188,6 +269,7 @@ router.post("/login", validate(loginValidation), async (req, res) => {
     // Log successful login
     AuditLog.logLogin(user.id, user.username, req.ip, req.get("user-agent"));
 
+    const loginSettings = UserSettings.findByUserId(user.id);
     res.json({
       message: "Login successful",
       token,
@@ -196,6 +278,7 @@ router.post("/login", validate(loginValidation), async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        onboarding_completed: loginSettings?.onboarding_completed ?? 0,
       },
     });
   } catch (error) {
@@ -256,12 +339,14 @@ router.get("/me", authMiddleware, (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const meSettings = UserSettings.findByUserId(user.id);
     res.json({
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
+        onboarding_completed: meSettings?.onboarding_completed ?? 0,
       },
     });
   } catch (error) {

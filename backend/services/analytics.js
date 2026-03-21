@@ -1,4 +1,4 @@
-const logger = require("../config/logger");
+const logger = require("../utils/logger");
 const Transaction = require("../models/Transaction");
 const PriceData = require("../models/PriceData");
 const Broker = require("../models/Broker");
@@ -1275,60 +1275,7 @@ class AnalyticsService {
     return suggestions;
   }
 
-  // Check for allocation drift alerts.
-  // Delegates to getRebalancingRecommendations so allocations are computed
-  // with the exact same logic used on the Asset Allocation screen.
-  static getDriftAlerts(userId) {
-    const settings = UserSettings.findByUserId(userId);
-    if (!settings || !settings.rebalancing_tolerance) return [];
-
-    const db = require("../config/database");
-
-    // Fetch the explicitly targeted asset types for this user
-    const targetedTypes = db
-      .prepare(
-        `SELECT asset_type FROM asset_allocation_targets WHERE user_id = ? AND asset_type IS NOT NULL AND asset_id IS NULL`,
-      )
-      .all(userId)
-      .map((r) => r.asset_type);
-
-    if (!targetedTypes.length) return [];
-
-    // Exclude every asset type that has no target, so the total portfolio
-    // value denominator matches exactly what the Asset Allocation screen uses
-    // (which also filters to the included/targeted types only).
-    const allTypeRows = db
-      .prepare(
-        `SELECT DISTINCT asset_type FROM assets WHERE asset_type IS NOT NULL`,
-      )
-      .all();
-    const targetedSet = new Set(targetedTypes.map((t) => t.toLowerCase()));
-    const excludeAssetTypes = allTypeRows
-      .map((r) => r.asset_type)
-      .filter((t) => !targetedSet.has(t.toLowerCase()));
-
-    const rebalancing = this.getRebalancingRecommendations(
-      userId,
-      excludeAssetTypes,
-    );
-    if (!rebalancing.has_targets) return [];
-
-    // Only alert on types with an explicit target that are out of tolerance
-    return rebalancing.recommendations
-      .filter(
-        (r) =>
-          r.level === "type" &&
-          !r.is_balanced &&
-          targetedSet.has(r.asset_type.toLowerCase()),
-      )
-      .map((r) => ({
-        asset_type: r.asset_type,
-        target_percentage: r.target_percentage,
-        actual_percentage: r.current_percentage,
-        drift: Math.abs(r.difference_percentage),
-      }));
-  }
-  /**
+/**
    * Find buy/sell transactions where price data is missing or stale on the trade date.
    * Returns:
    *   status='no_price'    — no price row exists for this asset at all
