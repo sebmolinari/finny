@@ -39,6 +39,7 @@ import {
   schedulerAPI,
   databaseAPI,
 } from "../api/api";
+import SystemConfigCard from "../components/SystemConfigCard";
 import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
 import { formatNumber } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/StyledCard";
@@ -50,6 +51,12 @@ import {
   StyledHeaderCell,
 } from "../components/StyledTable";
 import { TableBody, TableCell, TableRow, TableHead } from "@mui/material";
+
+const DELETE_CONFIRM_WORDS = [
+  "apple", "river", "cloud", "tiger", "stone",
+  "maple", "orbit", "flame", "cedar", "delta",
+  "frost", "lunar", "noble", "pearl", "quartz",
+];
 
 export default function AdminOverview() {
   const theme = useTheme();
@@ -67,6 +74,7 @@ export default function AdminOverview() {
   const [deletingData, setDeletingData] = useState(false);
   const [deleteDataResult, setDeleteDataResult] = useState(null);
   const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
+  const [deleteDataPhrase, setDeleteDataPhrase] = useState("delete all data");
 
   const handleSeedData = useCallback(async () => {
     setSeedingData(true);
@@ -1234,7 +1242,16 @@ export default function AdminOverview() {
                             <DeleteForeverIcon fontSize="small" />
                           )
                         }
-                        onClick={() => setDeleteDataDialogOpen(true)}
+                        onClick={() => {
+                          const word =
+                            DELETE_CONFIRM_WORDS[
+                              Math.floor(
+                                Math.random() * DELETE_CONFIRM_WORDS.length,
+                              )
+                            ];
+                          setDeleteDataPhrase(`delete all data - ${word}`);
+                          setDeleteDataDialogOpen(true);
+                        }}
                         disabled={deletingData || seedingData}
                       >
                         Delete All Data
@@ -1260,10 +1277,17 @@ export default function AdminOverview() {
         </Grid>
       </Grid>
 
+      {/* ── System Configuration ── */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SystemConfigCard />
+        </Grid>
+      </Grid>
+
       <ConfirmPhraseDialog
         open={deleteDataDialogOpen}
         title="Delete All Data"
-        phrase="delete all data"
+        phrase={deleteDataPhrase}
         description="Permanently deletes all transactions, price data, assets (except USD, USDARS_BNA, USDARS_CCL), brokers, allocation targets, and audit logs. This cannot be undone."
         onConfirm={handleDeleteAllData}
         onClose={() => setDeleteDataDialogOpen(false)}

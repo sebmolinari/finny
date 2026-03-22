@@ -89,6 +89,9 @@ router.delete("/reset", authMiddleware, adminMiddleware, (req, res) => {
         .prepare("DELETE FROM notifications")
         .run().changes;
       const auditLogs = db.prepare("DELETE FROM audit_logs").run().changes;
+      db.prepare(
+        "UPDATE user_settings SET onboarding_completed = 0, settings_reviewed = 0",
+      ).run();
       return {
         allocationTargets,
         transactions,

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Box, Button, Alert, Tabs, Tab } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import { schedulerAPI } from "../api/api";
+import { schedulerAPI, systemAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
 import PageContainer from "../components/PageContainer";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -21,6 +21,7 @@ const Scheduler = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [warning, setWarning] = useState("");
   const [tabValue, setTabValue] = useState(0);
   const [editingScheduler, setEditingScheduler] = useState(null);
   const [pagination, setPagination] = useState({
@@ -32,10 +33,28 @@ const Scheduler = () => {
   const fetchSchedulers = useCallback(async (limit = 50, offset = 0) => {
     try {
       setLoading(true);
-      const response = await schedulerAPI.getAll(limit, offset);
-      setSchedulers(response.data.data);
-      setPagination(response.data.pagination);
+      const [schedulersRes, configRes] = await Promise.all([
+        schedulerAPI.getAll(limit, offset),
+        systemAPI.getConfig(),
+      ]);
+      const data = schedulersRes.data.data;
+      setSchedulers(data);
+      setPagination(schedulersRes.data.pagination);
       setError("");
+
+      const emailDisabled = configRes.data.EMAIL_ENABLED !== "true";
+      const hasSendReport = data.some(
+        (s) => s.type === "send_report" && s.enabled === 1,
+      );
+      if (emailDisabled && hasSendReport) {
+        setWarning(
+          "Email is disabled (EMAIL_ENABLED=false). Send Report schedulers will run but no emails will be sent.",
+        );
+      } else {
+        setWarning((prev) =>
+          prev.startsWith("Email is disabled") ? "" : prev,
+        );
+      }
     } catch (err) {
       handleApiError(err, "Failed to fetch schedulers", (msg) => setError(msg));
     } finally {
@@ -62,17 +81,19 @@ const Scheduler = () => {
 
   const handleFormSubmit = async (formData) => {
     try {
+      let response;
       if (editingScheduler) {
-        await schedulerAPI.update(editingScheduler.id, {
+        response = await schedulerAPI.update(editingScheduler.id, {
           ...formData,
           enabled: editingScheduler.enabled,
         });
         setSuccess("Scheduler updated successfully");
       } else {
-        await schedulerAPI.create(formData);
+        response = await schedulerAPI.create(formData);
         setSuccess("Scheduler created successfully");
       }
 
+      setWarning(response.data.warning || "");
       setTabValue(0); // Switch back to list
       fetchSchedulers();
       setEditingScheduler(null);
@@ -119,6 +140,11 @@ const Scheduler = () => {
           {success}
         </Alert>
       )}
+      {warning && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {warning}
+        </Alert>
+      )}
 
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
@@ -149,6 +175,7 @@ const Scheduler = () => {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onPageChange={fetchSchedulers}
+            onWarning={setWarning}
           />
         )}
       </TabPanel>

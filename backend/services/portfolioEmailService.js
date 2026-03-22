@@ -439,7 +439,7 @@ class PortfolioEmailService {
               {
                 userId: user.id,
                 username: user.username,
-                trigger: `scheduled_${frequency}_portfolio_summary`,
+                trigger: "scheduled_portfolio_summary",
               },
             );
 

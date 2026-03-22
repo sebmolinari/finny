@@ -253,6 +253,10 @@ export const notificationsAPI = {
   purgeAll: () => api.delete("/notifications/admin/purge"),
 };
 
+export const systemAPI = {
+  getConfig: () => api.get("/system/config"),
+};
+
 export const databaseAPI = {
   walCheckpoint: () => api.post("/database/wal-checkpoint"),
   resetAllData: () => api.delete("/database/reset"),

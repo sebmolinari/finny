@@ -15,12 +15,12 @@ class EmailService {
 
     if (!this.transporter) {
       this.transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || "smtp.gmail.com",
-        port: parseInt(process.env.EMAIL_PORT) || 587,
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT),
         secure: process.env.EMAIL_SECURE === "true", // true for 465, false for other ports
         auth: {
           user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASSWORD,
+          pass: process.env.EMAIL_APP_PASSWORD,
         },
       });
     }
@@ -42,9 +42,7 @@ class EmailService {
 
     try {
       const mailOptions = {
-        from: `"${process.env.EMAIL_FROM_NAME || "Finny Portfolio Manager"}" <${
-          process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER
-        }>`,
+        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`,
         to,
         subject,
         html: htmlContent,

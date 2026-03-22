@@ -151,6 +151,11 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
     res.status(201).json({
       message: "Scheduler created successfully",
       data: scheduler,
+      ...(type === "send_report" &&
+        process.env.EMAIL_ENABLED !== "true" && {
+          warning:
+            "Email is disabled (EMAIL_ENABLED=false). This scheduler will run but no emails will be sent.",
+        }),
     });
   } catch (error) {
     if (error.message.includes("Invalid time format")) {
@@ -323,6 +328,11 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
     res.json({
       message: "Scheduler updated successfully",
       data: updatedScheduler,
+      ...(type === "send_report" &&
+        process.env.EMAIL_ENABLED !== "true" && {
+          warning:
+            "Email is disabled (EMAIL_ENABLED=false). This scheduler will run but no emails will be sent.",
+        }),
     });
   } catch (error) {
     if (error.message.includes("Invalid time format")) {

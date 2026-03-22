@@ -28,19 +28,21 @@ const SchedulerList = ({
   onEdit,
   onDelete,
   onPageChange,
+  onWarning,
 }) => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedScheduler, setSelectedScheduler] = useState(null);
 
   const handleToggleEnabled = async (scheduler) => {
     try {
-      await schedulerAPI.update(scheduler.id, {
+      const response = await schedulerAPI.update(scheduler.id, {
         ...scheduler,
         enabled: scheduler.enabled ? 0 : 1,
         type: scheduler.type,
         frequency: scheduler.frequency,
         time_of_day: scheduler.time_of_day,
       });
+      if (response.data.warning) onWarning?.(response.data.warning);
       // Refresh the list
       onPageChange(pagination.limit, pagination.offset);
     } catch (err) {

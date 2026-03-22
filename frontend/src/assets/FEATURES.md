@@ -156,6 +156,7 @@ Finny is a finance management app for tracking investments across multiple broke
 - Recent price refresh activity log with success/failure status
 - Purge all notifications or scheduler history in one click
 - WAL Flush to checkpoint the SQLite write-ahead log
+- **System Configuration** — read-only table of all server environment variables (secrets masked) grouped by Server, Security, Rate Limiting, Email, and Supabase
 
 ### 🔍 Missing Prices
 
@@ -169,6 +170,7 @@ Finny is a finance management app for tracking investments across multiple broke
 - Supported job types: `send_report` (portfolio emails) and `asset_refresh` (price updates)
 - Configurable frequency (daily, weekly, monthly) and time of day
 - Per-scheduler execution history with status, result, error message and timestamps
+- Warning banner shown when email is disabled but `send_report` schedulers are active
 
 ### 📡 Host Metrics
 

@@ -1,6 +1,6 @@
 All notable changes to this project are documented below.
 
-## [1.0.1] – 2026-03-21
+## [1.0.0] – 2026-03-22
 
 ### Added
 
@@ -12,6 +12,8 @@ All notable changes to this project are documented below.
 - **WAL Flush** – Admin Overview now has a "Flush WAL" button that runs a SQLite WAL TRUNCATE checkpoint and reports pages checkpointed
 - **Purge Scheduler History** – Admin Overview button to delete all scheduler execution history without affecting the schedulers themselves
 - **Supabase Price Source Toggle** – `SUPABASE_ENABLED=true` env var gates the "supabase" option in price source dropdowns; hidden by default
+- **System Configuration Card** – Admin Control Panel now displays a read-only table of all server environment variables (secrets masked); grouped by Server, Security, Rate Limiting, Email, and Supabase sections
+- **Scheduler email warnings** – Creating, editing, or toggling a `send_report` scheduler while email is disabled now shows a warning banner explaining that no emails will be sent
 
 ### Changed
 
@@ -32,7 +34,7 @@ All notable changes to this project are documented below.
 
 ---
 
-## [1.0.0] – 2026-03-06
+## [0.2.0] – 2026-03-06
 
 ### Added
 

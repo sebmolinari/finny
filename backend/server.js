@@ -1,10 +1,11 @@
-require("dotenv").config({ quiet: true });
+const logger = require("./utils/logger");
+require("./config/env");
+
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const logger = require("./utils/logger");
 const { db, closeDatabase } = require("./config/database");
 const emailService = require("./services/emailService");
 const authRoutes = require("./routes/auth");
@@ -22,6 +23,7 @@ const hostMetricsRoutes = require("./routes/hostMetrics");
 const notificationsRoutes = require("./routes/notifications");
 const schedulerRoutes = require("./routes/scheduler");
 const databaseRoutes = require("./routes/database");
+const systemRoutes = require("./routes/system");
 const { runSchemaMigrations } = require("./scripts/migrationRunner");
 const SchedulerService = require("./services/schedulerService");
 
@@ -29,43 +31,30 @@ const SCHEDULER_INTERVAL_SECONDS = 60;
 let schedulerInterval;
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = parseInt(process.env.PORT);
 
-// Validate required environment variables
-if (!process.env.PORT || !process.env.NODE_ENV) {
-  logger.error("FATAL: PORT or NODE_ENV is not set");
-  logger.error("Please set PORT and NODE_ENV in .env file");
+// Required env vars — user must provide these in .env
+if (!process.env.DB_KEY || process.env.DB_KEY.length < 8) {
+  logger.error("FATAL: DB_KEY is not set or too short (min 8 characters)");
+  logger.error("Please set DB_KEY in your .env file");
   process.exit(1);
 }
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   logger.error("FATAL: JWT_SECRET is not set or too short (min 32 characters)");
-  logger.error("Please set JWT_SECRET in .env file");
+  logger.error("Please set JWT_SECRET in your .env file");
   process.exit(1);
 }
-if (!process.env.CORS_ORIGIN) {
-  logger.error("FATAL: CORS_ORIGIN is not set");
-  logger.error("Please set CORS_ORIGIN in .env file");
-  process.exit(1);
-}
-if (!process.env.RATE_LIMIT_WINDOW_MS || !process.env.RATE_LIMIT_MAX_REQUESTS) {
-  logger.error(
-    "FATAL: RATE_LIMIT_WINDOW_MS or RATE_LIMIT_MAX_REQUESTS is not set",
+if (process.env.EMAIL_ENABLED === "true") {
+  const missingEmailVars = ["EMAIL_USER", "EMAIL_APP_PASSWORD"].filter(
+    (v) => !process.env[v],
   );
-  logger.error(
-    "Please set RATE_LIMIT_WINDOW_MS and RATE_LIMIT_MAX_REQUESTS in .env file",
-  );
-  process.exit(1);
-}
-if (!process.env.DATABASE_PATH) {
-  logger.error("FATAL: DATABASE_PATH is not set");
-  logger.error("Please set DATABASE_PATH in .env file");
-  process.exit(1);
-}
-
-if (!process.env.DB_KEY || process.env.DB_KEY.length < 8) {
-  logger.error("FATAL: DB_KEY is not set or too short (min 8 characters)");
-  logger.error("Please set DB_KEY in .env file");
-  process.exit(1);
+  if (missingEmailVars.length > 0) {
+    logger.error(
+      `FATAL: EMAIL_ENABLED=true but missing required email vars: ${missingEmailVars.join(", ")}`,
+    );
+    logger.error("Please set them in your .env file");
+    process.exit(1);
+  }
 }
 
 // Trust proxy - needed for rate limiting when behind a proxy/load balancer
@@ -81,12 +70,7 @@ app.use(
     crossOriginEmbedderPolicy: false,
   }),
 );
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true,
-  }),
-);
+app.use(cors({ origin: true, credentials: true }));
 
 // Rate limiting for all routes
 const limiter = rateLimit({
@@ -153,6 +137,7 @@ app.use("/api/v1/metrics", hostMetricsRoutes);
 app.use("/api/v1/notifications", notificationsRoutes);
 app.use("/api/v1/schedulers", schedulerRoutes);
 app.use("/api/v1/database", databaseRoutes);
+app.use("/api/v1/system", systemRoutes);
 
 // Health check with database validation
 app.get("/api/v1/health", (req, res) => {
@@ -175,12 +160,12 @@ app.get("/api/v1/health", (req, res) => {
 
 // Serve static files from React app in production
 if (process.env.NODE_ENV === "production") {
-  const frontendBuildPath = path.join(__dirname, "..", "frontend", "dist");
-  app.use(express.static(frontendBuildPath));
+  const staticPath = path.join(__dirname, "public");
+  app.use(express.static(staticPath));
 
-  // Handle React routing - return index.html for all non-API routes
+  // SPA fallback: all non-API routes serve index.html for React Router
   app.use((req, res) => {
-    res.sendFile(path.join(frontendBuildPath, "index.html"));
+    res.sendFile(path.join(staticPath, "index.html"));
   });
 }
 
@@ -226,7 +211,9 @@ app.listen(PORT, "0.0.0.0", () => {
   schedulerInterval = setInterval(() => {
     SchedulerService.checkDueSchedules();
   }, SCHEDULER_INTERVAL_SECONDS * 1000);
-  logger.info(`Background scheduler initialized (checks every ${SCHEDULER_INTERVAL_SECONDS} seconds)`);
+  logger.info(
+    `Background scheduler initialized (checks every ${SCHEDULER_INTERVAL_SECONDS} seconds)`,
+  );
 
   // Verify email service connection if enabled
   if (process.env.EMAIL_ENABLED === "true") {
@@ -234,7 +221,10 @@ app.listen(PORT, "0.0.0.0", () => {
       if (verified) {
         logger.info("Email service configured and ready");
       } else {
-        logger.warn("Email service configured but connection failed");
+        logger.error(
+          "FATAL: Email service connection failed. Check EMAIL_HOST/EMAIL_PORT/EMAIL_USER/EMAIL_APP_PASSWORD.",
+        );
+        process.exit(1);
       }
     });
   }

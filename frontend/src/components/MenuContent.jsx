@@ -208,6 +208,22 @@ export default function MenuContent() {
       }}
     >
       <div>
+        {showGettingStarted && (
+          <>
+            <NavSection
+              label=""
+              items={[
+                {
+                  text: "Getting Started",
+                  icon: <RocketLaunchRoundedIcon fontSize="small" />,
+                  path: "/getting-started",
+                },
+              ]}
+              pathname={location.pathname}
+            />
+            <Divider sx={{ my: 1 }} />
+          </>
+        )}
         <NavSection
           label="Portfolio"
           items={portfolioItems}
@@ -230,18 +246,7 @@ export default function MenuContent() {
         <Divider sx={{ my: 1 }} />
         <NavSection
           label=""
-          items={[
-            ...(showGettingStarted
-              ? [
-                  {
-                    text: "Getting Started",
-                    icon: <RocketLaunchRoundedIcon fontSize="small" />,
-                    path: "/getting-started",
-                  },
-                ]
-              : []),
-            ...otherItems,
-          ]}
+          items={otherItems}
           pathname={location.pathname}
         />
       </div>
