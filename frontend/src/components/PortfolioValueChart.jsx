@@ -93,16 +93,15 @@ const PortfolioValueChart = ({
           />
           <YAxis
             domain={yDomain}
-            tickFormatter={(v) => normalized ? v.toFixed(1) : formatCurrency(v, 0)}
+            tickFormatter={(v) => normalized ? `${(v - 100).toFixed(1)}%` : formatCurrency(v, 0)}
             tick={{ fontSize: 11, fill: tickColor }}
             axisLine={false}
             tickLine={false}
-            width={normalized ? 48 : 80}
-            label={normalized ? { value: "Base 100", angle: -90, position: "insideLeft", offset: 12, style: { fontSize: 10, fill: tickColor } } : undefined}
+            width={normalized ? 56 : 80}
           />
           <RechartsTooltip
             formatter={(v, name) => [
-              normalized ? `${v.toFixed(2)}` : formatCurrency(v),
+              normalized ? `${(v - 100).toFixed(2)}%` : formatCurrency(v),
               name === "benchmark" ? benchmarkLabel : "Portfolio",
             ]}
             contentStyle={{
