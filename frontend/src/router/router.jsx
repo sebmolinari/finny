@@ -30,6 +30,7 @@ import Scheduler from "../pages/Scheduler";
 import GettingStarted from "../pages/GettingStarted";
 import MissingPrices from "../pages/MissingPrices";
 import Features from "../pages/Features";
+import PerformanceAttribution from "../pages/PerformanceAttribution";
 
 export const router = createBrowserRouter([
   {
@@ -122,6 +123,10 @@ export const router = createBrowserRouter([
           {
             path: "risk-metrics",
             element: <RiskMetrics />,
+          },
+          {
+            path: "attribution",
+            element: <PerformanceAttribution />,
           },
           {
             path: "economic-calendar",

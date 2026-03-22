@@ -53,6 +53,8 @@ const incomeValidation = [
     .isInt({ min: 1900, max: 2100 })
     .withMessage("Year must be an integer between 1900 and 2100")
     .toInt(),
+  query("startDate").optional().isDate().withMessage("startDate must be YYYY-MM-DD"),
+  query("endDate").optional().isDate().withMessage("endDate must be YYYY-MM-DD"),
 ];
 
 module.exports = {

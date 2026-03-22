@@ -1465,8 +1465,13 @@ router.get("/economic-calendar", authMiddleware, async (req, res) => {
  */
 router.get("/income", authMiddleware, validate(incomeValidation), (req, res) => {
   try {
-    const { year } = req.query;
-    const report = Transaction.getIncomeReport(req.user.id, year || null);
+    const { year, startDate, endDate } = req.query;
+    const report = Transaction.getIncomeReport(
+      req.user.id,
+      year || null,
+      startDate || null,
+      endDate || null,
+    );
     res.json(report);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1477,6 +1482,64 @@ router.get("/income", authMiddleware, validate(incomeValidation), (req, res) => 
 router.get("/admin/overview", authMiddleware, adminMiddleware, (req, res) => {
   try {
     const result = AnalyticsService.getAdminOverview();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 11. Benchmark Comparison ─────────────────────────────────────────────────
+// Fetches a market index from Yahoo Finance (e.g. ^GSPC) and returns both
+// portfolio NAV and index series normalized to base 100 for comparison.
+router.get("/portfolio/benchmark", authMiddleware, async (req, res) => {
+  try {
+    const { symbol, startDate, endDate, days } = req.query;
+    if (!symbol) {
+      return res.status(400).json({ message: "symbol is required" });
+    }
+    const result = await AnalyticsService.getBenchmarkSeries(
+      req.user.id,
+      symbol,
+      startDate || null,
+      endDate || null,
+      parseInt(days) || 365,
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 12. Performance Attribution ──────────────────────────────────────────────
+// Returns per-asset contribution to portfolio return over a date range
+router.get("/portfolio/attribution", authMiddleware, (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res
+        .status(400)
+        .json({ message: "startDate and endDate are required" });
+    }
+    const result = AnalyticsService.getPerformanceAttribution(
+      req.user.id,
+      startDate,
+      endDate,
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── 13. Correlation Matrix ────────────────────────────────────────────────────
+// Returns Pearson correlation matrix of daily returns for held assets
+router.get("/portfolio/correlation", authMiddleware, (req, res) => {
+  try {
+    const { days } = req.query;
+    const result = AnalyticsService.getCorrelationMatrix(
+      req.user.id,
+      parseInt(days) || 365,
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });

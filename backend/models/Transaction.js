@@ -1166,7 +1166,7 @@ class Transaction {
    * @param {number|null} year - Filter to a specific year, or null for all-time
    * @returns {{ summary, by_month, by_year, by_asset, transactions, available_years }}
    */
-  static getIncomeReport(userId, year = null) {
+  static getIncomeReport(userId, year = null, startDate = null, endDate = null) {
     // Always fetch all available years regardless of filter
     const availableYearsRows = db
       .prepare(
@@ -1199,6 +1199,9 @@ class Transaction {
     if (year !== null) {
       sql += ` AND strftime('%Y', t.date) = ?`;
       params.push(String(year));
+    } else if (startDate !== null && endDate !== null) {
+      sql += ` AND t.date >= ? AND t.date <= ?`;
+      params.push(startDate, endDate);
     }
     sql += ` ORDER BY t.date ASC, t.id ASC`;
 
@@ -1285,7 +1288,7 @@ class Transaction {
     // projected_annual: trailing 12 calendar months from latest transaction date
     // Only compute when not filtering by a historical year
     const currentYear = new Date().getFullYear();
-    if (year === null || Number(year) === currentYear) {
+    if (year === null || Number(year) === currentYear || startDate !== null) {
       if (latestDate) {
         const latestMs = new Date(latestDate).getTime();
         const twelveMonthsAgoMs = latestMs - 365 * 24 * 60 * 60 * 1000;

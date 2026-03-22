@@ -9,6 +9,10 @@ import {
   TextField,
   CircularProgress,
   CardContent,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { fadeInUpSx } from "../utils/animations";
 import { MetricCard, StyledCard } from "../components/StyledCard";
@@ -28,11 +32,18 @@ import MarketValueByBrokerChart from "../components/MarketValueByBrokerChart";
 import MTMEvolutionChart from "../components/MTMEvolutionChart";
 import TrendCard from "../components/TrendCard";
 import { analyticsAPI, settingsAPI } from "../api/api";
+
+const BENCHMARKS = [
+  { label: "S&P 500", symbol: "^GSPC" },
+  { label: "NASDAQ Composite", symbol: "^IXIC" },
+  { label: "Dow Jones", symbol: "^DJI" },
+  { label: "Russell 2000", symbol: "^RUT" },
+  { label: "MSCI World (URTH)", symbol: "URTH" },
+];
 import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
-
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -53,22 +64,67 @@ const Dashboard = () => {
   const [rangeMetrics, setRangeMetrics] = useState(null);
   const [rangeMetricsLoading, setRangeMetricsLoading] = useState(false);
 
+  // Benchmark
+  const [benchmarkSymbol, setBenchmarkSymbol] = useState("");
+  const [benchmarkData, setBenchmarkData] = useState(null);
+
   // Compute start/end for the current range mode
   const getActiveRange = useCallback(() => {
     const todayStr = getTodayInTimezone(userTimezone);
     switch (rangeMode) {
       case "ytd": {
-        return { startDate: `${todayStr.substring(0, 4)}-01-01`, endDate: todayStr };
+        return {
+          startDate: `${todayStr.substring(0, 4)}-01-01`,
+          endDate: todayStr,
+        };
       }
       case "30d": {
         const start = new Date(todayStr);
         start.setDate(start.getDate() - 30);
-        return { startDate: start.toISOString().split("T")[0], endDate: todayStr };
+        return {
+          startDate: start.toISOString().split("T")[0],
+          endDate: todayStr,
+        };
       }
       case "12m": {
         const start = new Date(todayStr);
         start.setFullYear(start.getFullYear() - 1);
-        return { startDate: start.toISOString().split("T")[0], endDate: todayStr };
+        return {
+          startDate: start.toISOString().split("T")[0],
+          endDate: todayStr,
+        };
+      }
+      case "3m": {
+        const start = new Date(todayStr);
+        start.setMonth(start.getMonth() - 3);
+        return {
+          startDate: start.toISOString().split("T")[0],
+          endDate: todayStr,
+        };
+      }
+      case "6m": {
+        const start = new Date(todayStr);
+        start.setMonth(start.getMonth() - 6);
+        return {
+          startDate: start.toISOString().split("T")[0],
+          endDate: todayStr,
+        };
+      }
+      case "3y": {
+        const start = new Date(todayStr);
+        start.setFullYear(start.getFullYear() - 3);
+        return {
+          startDate: start.toISOString().split("T")[0],
+          endDate: todayStr,
+        };
+      }
+      case "5y": {
+        const start = new Date(todayStr);
+        start.setFullYear(start.getFullYear() - 5);
+        return {
+          startDate: start.toISOString().split("T")[0],
+          endDate: todayStr,
+        };
       }
       case "inception":
         return inceptionDate
@@ -113,6 +169,24 @@ const Dashboard = () => {
     loadPerformanceForRange();
     loadRangeMetrics();
   }, [activeRangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload benchmark whenever range or selected benchmark changes
+  useEffect(() => {
+    if (!activeRangeKey || !benchmarkSymbol) {
+      setBenchmarkData(null);
+      return;
+    }
+    const range = getActiveRange();
+    if (!range) return;
+    analyticsAPI
+      .getBenchmark({
+        symbol: benchmarkSymbol,
+        startDate: range.startDate,
+        endDate: range.endDate,
+      })
+      .then((res) => setBenchmarkData(res.data || null))
+      .catch(() => setBenchmarkData(null));
+  }, [activeRangeKey, benchmarkSymbol]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadDashboard = async () => {
     try {
@@ -308,9 +382,17 @@ const Dashboard = () => {
         ? "Last 30 Days"
         : rangeMode === "12m"
           ? "Last 12 Months"
-          : rangeMode === "inception"
-            ? "All Time"
-            : "Custom Range";
+          : rangeMode === "3m"
+            ? "Last 3 Months"
+            : rangeMode === "6m"
+              ? "Last 6 Months"
+              : rangeMode === "3y"
+                ? "Last 3 Years"
+                : rangeMode === "5y"
+                  ? "Last 5 Years"
+                  : rangeMode === "inception"
+                    ? "All Time"
+                    : "Custom Range";
 
   return (
     <PageContainer>
@@ -503,9 +585,15 @@ const Dashboard = () => {
       </Grid>
       {/* Portfolio Performance Chart with Date Range Selector */}
       <PortfolioValueChart
-        data={performanceData}
-        title={`Portfolio Performance — ${rangeLabel}`}
+        data={benchmarkData?.portfolio_series || performanceData}
+        title={`Net Asset Value — ${rangeLabel}`}
         height={300}
+        benchmarkData={benchmarkData?.benchmark_series || null}
+        benchmarkLabel={
+          BENCHMARKS.find((b) => b.symbol === benchmarkSymbol)?.label ||
+          benchmarkSymbol
+        }
+        normalized={!!benchmarkData}
         controls={
           <Box
             sx={{
@@ -523,7 +611,11 @@ const Dashboard = () => {
             >
               <ToggleButton value="ytd">YTD</ToggleButton>
               <ToggleButton value="30d">1M</ToggleButton>
+              <ToggleButton value="3m">3M</ToggleButton>
+              <ToggleButton value="6m">6M</ToggleButton>
               <ToggleButton value="12m">1Y</ToggleButton>
+              <ToggleButton value="3y">3Y</ToggleButton>
+              <ToggleButton value="5y">5Y</ToggleButton>
               <ToggleButton value="inception" disabled={!inceptionDate}>
                 All
               </ToggleButton>
@@ -552,6 +644,24 @@ const Dashboard = () => {
                 />
               </Box>
             )}
+
+            <FormControl size="small" sx={{ width: 200 }}>
+              <InputLabel>Benchmark</InputLabel>
+              <Select
+                value={benchmarkSymbol}
+                label="Benchmark"
+                onChange={(e) => setBenchmarkSymbol(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {BENCHMARKS.map((b) => (
+                  <MenuItem key={b.symbol} value={b.symbol}>
+                    {b.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             {rangeMetricsLoading ? (
               <CircularProgress size={18} sx={{ ml: "auto" }} />

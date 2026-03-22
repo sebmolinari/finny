@@ -82,6 +82,7 @@ router.put(
         validate_sell_balance,
         marginal_tax_rate,
         lt_holding_period_days,
+        risk_free_rate,
       } = req.body;
 
       const existingSettings = UserSettings.findByUserId(req.user.id);
@@ -104,6 +105,7 @@ router.put(
         req.user.id,
         marginal_tax_rate,
         lt_holding_period_days,
+        risk_free_rate,
       );
 
       // Log settings change
@@ -125,6 +127,7 @@ router.put(
           validate_sell_balance: existingSettings.validate_sell_balance,
           marginal_tax_rate: existingSettings.marginal_tax_rate,
           lt_holding_period_days: existingSettings.lt_holding_period_days,
+          risk_free_rate: existingSettings.risk_free_rate,
         },
         new_values: {
           date_format: date_format,
@@ -137,6 +140,7 @@ router.put(
           validate_sell_balance: validate_sell_balance,
           marginal_tax_rate: marginal_tax_rate,
           lt_holding_period_days: lt_holding_period_days,
+          risk_free_rate: risk_free_rate,
         },
       });
 

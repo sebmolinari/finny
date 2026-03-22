@@ -14,11 +14,12 @@ class UserSettings {
     createdBy = userId,
     marginalTaxRate = 0.25,
     ltHoldingPeriodDays = 365,
+    riskFreeRate = 0.05,
   ) {
     const stmt = db.prepare(`
       INSERT INTO user_settings
-      (user_id, date_format, timezone, liquidity_asset_id, fx_rate_asset_id, rebalancing_tolerance, email_notifications_enabled, validate_cash_balance, validate_sell_balance, created_by, updated_by, marginal_tax_rate, lt_holding_period_days)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (user_id, date_format, timezone, liquidity_asset_id, fx_rate_asset_id, rebalancing_tolerance, email_notifications_enabled, validate_cash_balance, validate_sell_balance, created_by, updated_by, marginal_tax_rate, lt_holding_period_days, risk_free_rate)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         date_format = ?,
         timezone = ?,
@@ -30,6 +31,7 @@ class UserSettings {
         validate_sell_balance = ?,
         marginal_tax_rate = ?,
         lt_holding_period_days = ?,
+        risk_free_rate = ?,
         updated_at = CURRENT_TIMESTAMP
     `);
     const result = stmt.run(
@@ -46,6 +48,7 @@ class UserSettings {
       createdBy,
       marginalTaxRate,
       ltHoldingPeriodDays,
+      riskFreeRate,
       dateFormat,
       timezone,
       liquidityAssetId,
@@ -56,6 +59,7 @@ class UserSettings {
       validateSellBalance,
       marginalTaxRate,
       ltHoldingPeriodDays,
+      riskFreeRate,
     );
     return result.lastInsertRowid;
   }
@@ -73,6 +77,7 @@ class UserSettings {
     updatedBy,
     marginalTaxRate,
     ltHoldingPeriodDays,
+    riskFreeRate,
   ) {
     const stmt = db.prepare(`
       UPDATE user_settings
@@ -86,6 +91,7 @@ class UserSettings {
           validate_sell_balance = ?,
           marginal_tax_rate = ?,
           lt_holding_period_days = ?,
+          risk_free_rate = ?,
           updated_by = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
@@ -101,6 +107,7 @@ class UserSettings {
       validateSellBalance,
       marginalTaxRate,
       ltHoldingPeriodDays,
+      riskFreeRate,
       updatedBy,
       userId,
     );

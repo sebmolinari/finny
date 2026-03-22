@@ -8,7 +8,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-
   Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -29,7 +28,7 @@ import StyledDataGrid from "../components/StyledDataGrid";
 import PageContainer from "../components/PageContainer";
 import { analyticsAPI, settingsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
-import { formatDate } from "../utils/dateUtils";
+import { formatDate, getTodayInTimezone } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { fadeInUpSx } from "../utils/animations";
 
@@ -37,11 +36,16 @@ const INCOME_TYPES = ["dividend", "interest", "coupon", "rental"];
 
 function getTypeColor(type) {
   switch (type) {
-    case "dividend": return "primary";
-    case "interest": return "secondary";
-    case "coupon":   return "info";
-    case "rental":   return "warning";
-    default:         return "default";
+    case "dividend":
+      return "primary";
+    case "interest":
+      return "secondary";
+    case "coupon":
+      return "info";
+    case "rental":
+      return "warning";
+    default:
+      return "default";
   }
 }
 
@@ -55,6 +59,7 @@ export default function IncomeAnalytics() {
 
   const [report, setReport] = useState(null);
   const [userSettings, setUserSettings] = useState(null);
+  const [timezone, setTimezone] = useState("UTC");
   const [incomeLoading, setIncomeLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -63,7 +68,24 @@ export default function IncomeAnalytics() {
   const loadIncome = useCallback(async () => {
     setIncomeLoading(true);
     try {
-      const res = await analyticsAPI.getIncome(selectedYear);
+      let year = null,
+        startDate = null,
+        endDate = null;
+      if (typeof selectedYear === "number") {
+        year = selectedYear;
+      } else if (
+        typeof selectedYear === "string" &&
+        selectedYear.startsWith("last")
+      ) {
+        const today = getTodayInTimezone(timezone);
+        endDate = today;
+        const yrs =
+          selectedYear === "last1y" ? 1 : selectedYear === "last3y" ? 3 : 5;
+        const s = new Date(today);
+        s.setFullYear(s.getFullYear() - yrs);
+        startDate = s.toISOString().split("T")[0];
+      }
+      const res = await analyticsAPI.getIncome(year, startDate, endDate);
       setReport(res.data);
     } catch (err) {
       handleApiError(err, "Failed to load income data", setError);
@@ -71,13 +93,14 @@ export default function IncomeAnalytics() {
     } finally {
       setIncomeLoading(false);
     }
-  }, [selectedYear]);
+  }, [selectedYear, timezone]);
 
   const loadUserSettings = useCallback(async () => {
     setSettingsLoading(true);
     try {
       const res = await settingsAPI.get();
       setUserSettings(res.data);
+      setTimezone(res.data?.timezone || "UTC");
     } catch {
       setUserSettings({ date_format: "YYYY-MM-DD", timezone: "UTC" });
     } finally {
@@ -102,8 +125,14 @@ export default function IncomeAnalytics() {
     );
   }
 
-  const { summary, by_month, by_year, by_asset, transactions, available_years } =
-    report || {};
+  const {
+    summary,
+    by_month,
+    by_year,
+    by_asset,
+    transactions,
+    available_years,
+  } = report || {};
 
   // Chart style helpers
   const gridColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
@@ -114,8 +143,8 @@ export default function IncomeAnalytics() {
   const COLORS = {
     dividend: theme.palette.primary.main,
     interest: theme.palette.secondary.main,
-    coupon:   theme.palette.info.main,
-    rental:   theme.palette.warning.main,
+    coupon: theme.palette.info.main,
+    rental: theme.palette.warning.main,
   };
 
   // ── Custom tooltip for income charts ───────────────────────────────────────
@@ -135,17 +164,34 @@ export default function IncomeAnalytics() {
           minWidth: 160,
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 6, color: theme.palette.text.primary }}>
+        <div
+          style={{
+            fontWeight: 700,
+            marginBottom: 6,
+            color: theme.palette.text.primary,
+          }}
+        >
           {label}
         </div>
         {payload.map((p) =>
           p.value > 0 ? (
-            <div key={p.dataKey} style={{ color: COLORS[p.dataKey], marginBottom: 2 }}>
-              {typeLabel(p.dataKey)}: <strong>{formatCurrency(p.value, 0)}</strong>
+            <div
+              key={p.dataKey}
+              style={{ color: COLORS[p.dataKey], marginBottom: 2 }}
+            >
+              {typeLabel(p.dataKey)}:{" "}
+              <strong>{formatCurrency(p.value, 0)}</strong>
             </div>
-          ) : null
+          ) : null,
         )}
-        <div style={{ borderTop: `1px solid ${tooltipBorder}`, marginTop: 6, paddingTop: 6, color: theme.palette.text.primary }}>
+        <div
+          style={{
+            borderTop: `1px solid ${tooltipBorder}`,
+            marginTop: 6,
+            paddingTop: 6,
+            color: theme.palette.text.primary,
+          }}
+        >
           Total: <strong>{formatCurrency(total, 0)}</strong>
         </div>
       </div>
@@ -156,8 +202,15 @@ export default function IncomeAnalytics() {
   const IncomeBarChart = ({ data, xKey, height = 320, animIndex }) => (
     <ChartCard height={height} animIndex={animIndex}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+        <ComposedChart
+          data={data}
+          margin={{ top: 16, right: 24, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={gridColor}
+            vertical={false}
+          />
           <XAxis
             dataKey={xKey}
             tick={{ fontSize: 11, fill: tickColor }}
@@ -197,7 +250,9 @@ export default function IncomeAnalytics() {
       headerAlign: "center",
       width: 90,
       renderCell: (params) => (
-        <Typography variant="body2" fontWeight={600}>{params.value}</Typography>
+        <Typography variant="body2" fontWeight={600}>
+          {params.value}
+        </Typography>
       ),
     },
     {
@@ -221,7 +276,9 @@ export default function IncomeAnalytics() {
       flex: 1,
       renderCell: (params) =>
         params.value > 0 ? (
-          <span style={{ color: COLORS.dividend }}>{formatCurrency(params.value, 0)}</span>
+          <span style={{ color: COLORS.dividend }}>
+            {formatCurrency(params.value, 0)}
+          </span>
         ) : (
           <span style={{ color: theme.palette.text.disabled }}>—</span>
         ),
@@ -234,7 +291,9 @@ export default function IncomeAnalytics() {
       flex: 1,
       renderCell: (params) =>
         params.value > 0 ? (
-          <span style={{ color: COLORS.interest }}>{formatCurrency(params.value, 0)}</span>
+          <span style={{ color: COLORS.interest }}>
+            {formatCurrency(params.value, 0)}
+          </span>
         ) : (
           <span style={{ color: theme.palette.text.disabled }}>—</span>
         ),
@@ -247,7 +306,9 @@ export default function IncomeAnalytics() {
       flex: 1,
       renderCell: (params) =>
         params.value > 0 ? (
-          <span style={{ color: COLORS.coupon }}>{formatCurrency(params.value, 0)}</span>
+          <span style={{ color: COLORS.coupon }}>
+            {formatCurrency(params.value, 0)}
+          </span>
         ) : (
           <span style={{ color: theme.palette.text.disabled }}>—</span>
         ),
@@ -260,7 +321,9 @@ export default function IncomeAnalytics() {
       flex: 1,
       renderCell: (params) =>
         params.value > 0 ? (
-          <span style={{ color: COLORS.rental }}>{formatCurrency(params.value, 0)}</span>
+          <span style={{ color: COLORS.rental }}>
+            {formatCurrency(params.value, 0)}
+          </span>
         ) : (
           <span style={{ color: theme.palette.text.disabled }}>—</span>
         ),
@@ -290,7 +353,9 @@ export default function IncomeAnalytics() {
       headerAlign: "center",
       width: 110,
       renderCell: (params) =>
-        params.value ? formatDate(params.value, userSettings?.date_format) : "—",
+        params.value
+          ? formatDate(params.value, userSettings?.date_format)
+          : "—",
     },
   ];
 
@@ -301,7 +366,8 @@ export default function IncomeAnalytics() {
       headerName: "Date",
       headerAlign: "center",
       width: 100,
-      renderCell: (params) => formatDate(params.value, userSettings?.date_format),
+      renderCell: (params) =>
+        formatDate(params.value, userSettings?.date_format),
     },
     {
       field: "transaction_type",
@@ -309,7 +375,11 @@ export default function IncomeAnalytics() {
       headerAlign: "center",
       width: 110,
       renderCell: (params) => (
-        <Chip label={typeLabel(params.value)} color={getTypeColor(params.value)} size="small" />
+        <Chip
+          label={typeLabel(params.value)}
+          color={getTypeColor(params.value)}
+          size="small"
+        />
       ),
     },
     {
@@ -349,17 +419,18 @@ export default function IncomeAnalytics() {
 
   return (
     <PageContainer>
-
       {/* ── Empty state ── */}
       {!hasIncome && (
         <Paper sx={{ p: 4, textAlign: "center" }}>
-          <MonetizationOnIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
+          <MonetizationOnIcon
+            sx={{ fontSize: 48, color: "text.disabled", mb: 1 }}
+          />
           <Typography variant="h6" color="text.secondary" gutterBottom>
             No income recorded
           </Typography>
           <Typography variant="body2" color="text.disabled">
-            Add dividend, interest, coupon, or rental transactions in the Blotter to see
-            income analytics here.
+            Add dividend, interest, coupon, or rental transactions in the
+            Blotter to see income analytics here.
           </Typography>
         </Paper>
       )}
@@ -385,7 +456,10 @@ export default function IncomeAnalytics() {
             <Grid size={{ xs: 12, sm: 6, md: 2.4 }} sx={fadeInUpSx(3)}>
               <CompactCard
                 title="Interest & Coupons"
-                value={formatCurrency(summary.total_interest + summary.total_coupons, 0)}
+                value={formatCurrency(
+                  summary.total_interest + summary.total_coupons,
+                  0,
+                )}
                 valueColor={COLORS.interest}
               />
             </Grid>
@@ -403,7 +477,7 @@ export default function IncomeAnalytics() {
                     ? summary.projected_ttm_months < 12
                       ? `Extrapolated from ${summary.projected_ttm_months} month${summary.projected_ttm_months !== 1 ? "s" : ""} of data in the past 12 months (avg/month × 12)`
                       : "Sum of the last 12 months of income"
-                    : "Only available for current year or all-time view"
+                    : "Not available in all-years view"
                 }
                 arrow
               >
@@ -430,43 +504,75 @@ export default function IncomeAnalytics() {
           {by_month.length > 0 && (
             <Box sx={{ mb: 3, ...fadeInUpSx(6) }}>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  sx={{ flexGrow: 1 }}
+                >
                   Monthly Income
                 </Typography>
-                <FormControl size="small" sx={{ minWidth: 140 }}>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
                   <Select
                     displayEmpty
-                    value={selectedYear ?? ""}
-                    onChange={(e) => setSelectedYear(e.target.value === "" ? null : Number(e.target.value))}
-                    renderValue={(v) => v === "" ? "All Years" : v}
+                    value={selectedYear === null ? "" : selectedYear}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") setSelectedYear(null);
+                      else if (typeof v === "string" && v.startsWith("last"))
+                        setSelectedYear(v);
+                      else setSelectedYear(Number(v));
+                    }}
+                    renderValue={(v) => {
+                      if (v === "") return "All Years";
+                      if (v === "last1y") return "Last 1 Year";
+                      if (v === "last3y") return "Last 3 Years";
+                      if (v === "last5y") return "Last 5 Years";
+                      return v;
+                    }}
                   >
                     <MenuItem value="">All Years</MenuItem>
+                    <MenuItem value="last1y">Last 1 Year</MenuItem>
+                    <MenuItem value="last3y">Last 3 Years</MenuItem>
+                    <MenuItem value="last5y">Last 5 Years</MenuItem>
                     {(available_years || []).map((yr) => (
-                      <MenuItem key={yr} value={Number(yr)}>{yr}</MenuItem>
+                      <MenuItem key={yr} value={Number(yr)}>
+                        {yr}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Box>
-              <IncomeBarChart data={by_month} xKey="month_label" height={320} animIndex={6} />
+              <IncomeBarChart
+                data={by_month}
+                xKey="month_label"
+                height={320}
+                animIndex={6}
+              />
             </Box>
           )}
 
           {/* ── Annual chart (all-time view only) ── */}
-          {selectedYear === null && by_year.length > 1 && (
+          {selectedYear === null && by_year && by_year.length > 1 && (
             <Box sx={{ mb: 3, ...fadeInUpSx(7) }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
                 Annual Income
               </Typography>
-              <IncomeBarChart data={by_year} xKey="year" height={280} animIndex={7} />
+              <IncomeBarChart
+                data={by_year}
+                xKey="year"
+                height={280}
+                animIndex={7}
+              />
             </Box>
           )}
 
           {/* ── Income by asset ── */}
           {by_asset.length > 0 && (
             <Paper sx={{ p: 2, mb: 3, ...fadeInUpSx(8) }}>
-              <Typography variant="h6" gutterBottom>
-                Income by Asset
-              </Typography>
               <StyledDataGrid
                 label="Income by Asset"
                 rows={by_asset}

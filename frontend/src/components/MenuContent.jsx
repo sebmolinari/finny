@@ -30,6 +30,7 @@ import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
+import StackedBarChartRoundedIcon from "@mui/icons-material/StackedBarChartRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
 import MonetizationOnRoundedIcon from "@mui/icons-material/MonetizationOnRounded";
@@ -78,7 +79,12 @@ const analysisItems = [
     path: "/risk-metrics",
   },
   {
-    text: "Income",
+    text: "Performance Attribution",
+    icon: <StackedBarChartRoundedIcon fontSize="small" />,
+    path: "/attribution",
+  },
+  {
+    text: "Income Analytics",
     icon: <MonetizationOnRoundedIcon fontSize="small" />,
     path: "/income",
   },

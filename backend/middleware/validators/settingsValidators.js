@@ -71,6 +71,12 @@ const updateSettingsValidation = [
     .withMessage("Long-term holding period must be a positive integer")
     .toInt(),
 
+  body("risk_free_rate")
+    .optional()
+    .isFloat({ min: 0, max: 1 })
+    .withMessage("Risk-free rate must be between 0 and 1")
+    .toFloat(),
+
 ];
 
 module.exports = {

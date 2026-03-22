@@ -197,9 +197,11 @@ export const analyticsAPI = {
     return api.get("/analytics/realized-gains", { params });
   },
 
-  getIncome: (year = null) => {
+  getIncome: (year = null, startDate = null, endDate = null) => {
     const params = {};
     if (year !== null) params.year = year;
+    if (startDate !== null) params.startDate = startDate;
+    if (endDate !== null) params.endDate = endDate;
     return api.get("/analytics/income", { params });
   },
 
@@ -224,6 +226,17 @@ getRiskMetrics: (days = 365, startDate = null, endDate = null) => {
     }),
 
   getEconomicCalendar: () => api.get("/analytics/economic-calendar"),
+
+  getBenchmark: (params) =>
+    api.get("/analytics/portfolio/benchmark", { params }),
+
+  getAttribution: (startDate, endDate) =>
+    api.get("/analytics/portfolio/attribution", {
+      params: { startDate, endDate },
+    }),
+
+  getCorrelation: (days = 365) =>
+    api.get("/analytics/portfolio/correlation", { params: { days } }),
 
   getAdminOverview: () => api.get("/analytics/admin/overview"),
 

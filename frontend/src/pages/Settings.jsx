@@ -18,6 +18,7 @@ import {
   Save as SaveIcon,
   Email as EmailIcon,
   AccountBalance as AccountBalanceIcon,
+  BarChart as BarChartIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { settingsAPI, assetAPI } from "../api/api";
@@ -72,6 +73,7 @@ export default function Settings() {
       setSettings({
         ...response.data,
         marginal_tax_rate: (response.data.marginal_tax_rate ?? 0.25) * 100,
+        risk_free_rate: (response.data.risk_free_rate ?? 0.05) * 100,
       });
     } catch (error) {
       handleApiError(error, "Failed to load settings");
@@ -94,6 +96,7 @@ export default function Settings() {
       await settingsAPI.update({
         ...settings,
         marginal_tax_rate: settings.marginal_tax_rate / 100,
+        risk_free_rate: settings.risk_free_rate / 100,
       });
       toast.success("Settings saved successfully");
       navigate("/");
@@ -378,6 +381,35 @@ export default function Settings() {
                 onChange={handleChange}
                 slotProps={{ min: 1, step: 1 }}
                 helperText="Minimum days held to qualify as long-term capital gain (default: 365)"
+              />
+            </Grid>
+
+            <Grid size={12}>
+              <Divider sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  <BarChartIcon
+                    sx={{ fontSize: 16, verticalAlign: "middle", mr: 1 }}
+                  />
+                  Risk & Performance
+                </Typography>
+              </Divider>
+            </Grid>
+
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <TextField
+                fullWidth
+                type="number"
+                label="Risk-Free Rate (%)"
+                name="risk_free_rate"
+                value={settings.risk_free_rate}
+                onChange={handleChange}
+                slotProps={{ min: 0, max: 100, step: 0.1 }}
+                helperText="Annual risk-free rate used for Sharpe and Sortino ratio calculations (default: 5%)"
               />
             </Grid>
 

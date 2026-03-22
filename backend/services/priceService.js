@@ -233,6 +233,54 @@ class PriceService {
   }
 
   /**
+   * Fetch a series of daily closing prices for a Yahoo Finance symbol over a date range.
+   * Returns an array of { date: "YYYY-MM-DD", price: float } sorted ascending.
+   */
+  static async fetchHistoricalPriceSeries(symbol, startDate, endDate) {
+    try {
+      const period1 = Math.floor(new Date(startDate + "T00:00:00Z").getTime() / 1000);
+      const period2 = Math.floor(new Date(endDate + "T23:59:59Z").getTime() / 1000);
+
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`;
+      logger.info(`[Yahoo] Fetching price series for ${symbol} from ${startDate} to ${endDate}`);
+
+      const response = await axios.get(url, {
+        params: { interval: "1d", period1, period2 },
+        timeout: 10000,
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+
+      const result = response.data?.chart?.result?.[0];
+      if (!result) {
+        logger.warn(`[Yahoo] No chart result returned for ${symbol}`);
+        return null;
+      }
+
+      const timestamps = result.timestamp || [];
+      const closes = result.indicators?.quote?.[0]?.close || [];
+
+      const series = [];
+      for (let i = 0; i < timestamps.length; i++) {
+        const price = closes[i];
+        if (price == null) continue;
+        const date = new Date(timestamps[i] * 1000).toISOString().split("T")[0];
+        series.push({ date, price: parseFloat(price.toFixed(6)) });
+      }
+
+      if (series.length === 0) {
+        logger.warn(`[Yahoo] Price series for ${symbol} returned 0 usable data points`);
+        return null;
+      }
+
+      logger.info(`[Yahoo] Got ${series.length} data points for ${symbol} (${series[0].date} → ${series[series.length - 1].date})`);
+      return series;
+    } catch (error) {
+      logger.error(`[Yahoo] Failed to fetch price series for ${symbol}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Fetch price from the specified source
    */
   static async fetchPriceBySource(priceSymbol, priceSource, priceFactor) {

@@ -85,6 +85,18 @@ Backend requires a `.env` file. See `backend/.env.example` for all variables. Ke
 
 Migrations run automatically at startup via `migrationRunner.js`. To add a migration, create a numbered SQL file in `backend/migrations/` (e.g. `006_*.sql`).
 
+### Column type conventions
+
+Never use `REAL` or `FLOAT` for any column. Use:
+
+| Data | Type | Notes |
+|---|---|---|
+| Booleans / flags | `INTEGER` (0/1) | e.g. `email_notifications_enabled INTEGER DEFAULT 0` |
+| Counts, IDs, days | `INTEGER` | e.g. `lt_holding_period_days INTEGER DEFAULT 365` |
+| Small decimals (rates, percentages stored as fractions) | `NUMERIC(5,2)` | e.g. `marginal_tax_rate NUMERIC(5,2) DEFAULT 0.25`, `risk_free_rate NUMERIC(5,2) DEFAULT 0.05` |
+| Financial values (prices, quantities, amounts) | `INTEGER` (scaled) | Use `toValueScale`/`fromValueScale` from `utils/valueScale.js` — **never store floats** |
+| Strings, dates, JSON | `TEXT` | Dates as `"YYYY-MM-DD"`, timestamps via `CURRENT_TIMESTAMP` |
+
 ## Patterns & Checklists
 
 ### Adding a new page
@@ -93,6 +105,8 @@ Migrations run automatically at startup via `migrationRunner.js`. To add a migra
 3. If it needs a nav entry: add to the appropriate items array in `frontend/src/components/MenuContent.jsx`
 4. If it calls new API endpoints: add them to `frontend/src/api/api.js`
 5. Admin-only pages: wrap in `<ProtectedRoute role="admin">` in `router.jsx` and add under `adminItems` in `MenuContent.jsx`
+6. Add the route path + page title to `routeTitles` in `frontend/src/components/NavbarBreadcrumbs.jsx` so the header shows the correct page name
+7. Wrap page content in `<PageContainer>` with **no** `title` or `subtitle` props — the navbar breadcrumb is the page title
 
 ### Adding a new backend route
 1. Create `backend/routes/myRoute.js`

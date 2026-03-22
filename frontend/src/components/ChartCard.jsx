@@ -58,7 +58,7 @@ export default function ChartCard({
         {controls && (
           <Box sx={{ mb: 1.5 }}>{controls}</Box>
         )}
-        <Box sx={{ height }}>{children}</Box>
+        <Box sx={{ height, minWidth: 0 }}>{children}</Box>
       </CardContent>
     </Card>
   );

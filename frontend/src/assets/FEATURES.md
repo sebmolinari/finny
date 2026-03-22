@@ -12,7 +12,7 @@ Finny is a finance management app for tracking investments across multiple broke
 ## 📊 Dashboard
 
 - Unified portfolio net worth (NAV) at a glance
-- Portfolio performance chart (value over time)
+- Portfolio performance chart (value over time) with optional **benchmark overlay** — compare against S&P 500, NASDAQ Composite, Dow Jones, Russell 2000 or MSCI World, normalized to base 100 at the first common date
 - MTM evolution bar chart (year-by-year mark-to-market)
 - Asset allocation pie chart and market value by broker
 - Top holdings with sparklines
@@ -88,7 +88,14 @@ Finny is a finance management app for tracking investments across multiple broke
 - Summary cards: total income, per-type totals, projected annual run-rate, best month and best year
 - Monthly and annual aggregation views
 - Per-asset income breakdown showing each asset's contribution
-- Filter by calendar year
+- Filter by calendar year or rolling period (Last 1Y, Last 3Y, Last 5Y)
+
+## 📊 Performance Attribution
+
+- Shows each held asset's contribution to total portfolio return over a configurable date range
+- Waterfall bar chart ranked from top contributors to largest detractors
+- Data grid with beginning value, ending value, net flows (buys minus sells), price gain and contribution % columns
+- Supports YTD, 1Y, 2Y, 3Y, 5Y, inception and custom date ranges
 
 ## 📉 Risk Metrics
 
@@ -96,7 +103,11 @@ Finny is a finance management app for tracking investments across multiple broke
 - Maximum drawdown: largest peak-to-trough NAV decline with start/end dates, peak and trough values
 - Recovery time metric (days from trough back to prior peak)
 - Running drawdown chart over time
-- Configurable lookback period (1Y, 2Y, 3Y, All, or custom date range)
+- **Annualised Return** and **Period Volatility** (full-period, annualised) metric cards
+- **Sharpe Ratio** — (annualised return − risk-free rate) / annualised volatility; colour-coded and shows components in subtitle
+- **Sortino Ratio** — same as Sharpe but uses downside deviation as the denominator, penalising only negative returns
+- **Asset Return Correlation Matrix** — colour-coded heatmap of Pearson correlations between all currently held assets; tooltips with plain-language strength labels
+- Configurable lookback period (1Y, 2Y, 3Y, 5Y, All, or custom date range)
 
 ## 📊 Market Trends
 
@@ -135,6 +146,7 @@ Finny is a finance management app for tracking investments across multiple broke
 - Liquidity asset and FX rate asset selection
 - Rebalancing tolerance threshold
 - Marginal tax rate and long-term holding period threshold for tax calculations
+- Risk-free rate (%) for Sharpe and Sortino ratio calculations (default 5%)
 - Cash balance and sell balance validation toggles
 - Email notification toggle
 - User profile management

@@ -1466,6 +1466,60 @@ class AnalyticsService {
       value: p.total_value,
     }));
 
+    // Sharpe & Sortino ratios
+    const settings = UserSettings.findByUserId(userId);
+    const riskFreeRate = settings?.risk_free_rate ?? 0.05;
+
+    let sharpeRatio = null;
+    let sortinoRatio = null;
+    let sharpeComponents = null;
+    let sortinoComponents = null;
+
+    if (returns.length > 1) {
+      const navStart = performance[0].total_value;
+      const navEnd = performance[performance.length - 1].total_value;
+      const nDays = returns.length;
+      const annualizedReturn =
+        navStart > 0
+          ? Math.pow(navEnd / navStart, 252 / nDays) - 1
+          : 0;
+
+      // Full-period annualised volatility (std dev of all daily returns × √252)
+      const allReturns = returns.map((r) => r.return);
+      const meanReturn = allReturns.reduce((s, r) => s + r, 0) / allReturns.length;
+      const fullVariance =
+        allReturns.reduce((s, r) => s + Math.pow(r - meanReturn, 2), 0) /
+        (allReturns.length - 1);
+      const fullPeriodVol = Math.sqrt(fullVariance) * Math.sqrt(252);
+
+      if (fullPeriodVol > 0) {
+        sharpeRatio = (annualizedReturn - riskFreeRate) / fullPeriodVol;
+        sharpeComponents = {
+          annualized_return: parseFloat((annualizedReturn * 100).toFixed(2)),
+          risk_free_rate: parseFloat((riskFreeRate * 100).toFixed(2)),
+          volatility: parseFloat((fullPeriodVol * 100).toFixed(2)),
+        };
+      }
+
+      // Downside deviation: std dev of negative daily returns, annualized
+      const negReturns = allReturns.filter((r) => r < 0);
+      if (negReturns.length > 1) {
+        const meanNeg = negReturns.reduce((s, r) => s + r, 0) / negReturns.length;
+        const variance =
+          negReturns.reduce((s, r) => s + Math.pow(r - meanNeg, 2), 0) /
+          (negReturns.length - 1);
+        const downsideDev = Math.sqrt(variance) * Math.sqrt(252);
+        if (downsideDev > 0) {
+          sortinoRatio = (annualizedReturn - riskFreeRate) / downsideDev;
+          sortinoComponents = {
+            annualized_return: parseFloat((annualizedReturn * 100).toFixed(2)),
+            risk_free_rate: parseFloat((riskFreeRate * 100).toFixed(2)),
+            downside_deviation: parseFloat((downsideDev * 100).toFixed(2)),
+          };
+        }
+      }
+    }
+
     return {
       nav_series,
       rolling_volatility,
@@ -1478,6 +1532,10 @@ class AnalyticsService {
       },
       recovery_days: recoveryDays,
       recovery_date: recoveryDate,
+      sharpe_ratio: sharpeRatio,
+      sharpe_components: sharpeComponents,
+      sortino_ratio: sortinoRatio,
+      sortino_components: sortinoComponents,
     };
   }
 
@@ -1542,6 +1600,318 @@ class AnalyticsService {
           totalCostBasis > 0 ? (totalUnrealizedGain / totalCostBasis) * 100 : 0,
       },
     };
+  }
+
+  // ── 11. Benchmark Comparison ─────────────────────────────────────────────────
+  // Fetches a market index price series from Yahoo Finance (e.g. "^GSPC") and
+  // returns both portfolio NAV and benchmark series normalized to base 100 at
+  // the first overlapping date, enabling a fair relative-return comparison.
+  static async getBenchmarkSeries(userId, symbol, startDate, endDate, days = 365) {
+    const PriceService = require("./priceService");
+
+    const userSettings = UserSettings.findByUserId(userId);
+    const today = getTodayInTimezone(userSettings?.timezone || "UTC");
+
+    let resolvedStart = startDate;
+    let resolvedEnd = endDate || today;
+    if (!resolvedStart) {
+      const cutoff = new Date(today);
+      cutoff.setDate(cutoff.getDate() - days);
+      resolvedStart = cutoff.toISOString().split("T")[0];
+    }
+
+    logger.info(`[Benchmark] Requested symbol=${symbol} range=${resolvedStart}→${resolvedEnd} userId=${userId}`);
+
+    // Portfolio NAV series
+    const navSeries = this.getPortfolioPerformance(
+      userId,
+      days,
+      [],
+      resolvedStart,
+      resolvedEnd,
+    );
+
+    if (navSeries.length === 0) {
+      logger.warn(`[Benchmark] No portfolio NAV data for userId=${userId} in range`);
+      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+    }
+
+    logger.info(`[Benchmark] Portfolio has ${navSeries.length} NAV points`);
+
+    // Fetch benchmark price series from Yahoo Finance
+    const rawSeries = await PriceService.fetchHistoricalPriceSeries(symbol, resolvedStart, resolvedEnd);
+    if (!rawSeries || rawSeries.length === 0) {
+      logger.warn(`[Benchmark] No price data returned for ${symbol}`);
+      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+    }
+
+    // Find the first date present in both series
+    const benchDateSet = new Set(rawSeries.map((d) => d.date));
+    const firstCommon = navSeries.find((d) => benchDateSet.has(d.date))?.date;
+
+    if (!firstCommon) {
+      logger.warn(`[Benchmark] No overlapping dates between portfolio and ${symbol} series`);
+      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+    }
+
+    logger.info(`[Benchmark] Anchor date=${firstCommon}, normalizing both series to base 100`);
+
+    // Normalize portfolio to base 100 from firstCommon
+    const anchorNav = navSeries.find((d) => d.date === firstCommon).total_value;
+    const portfolio_series = navSeries
+      .filter((d) => d.date >= firstCommon)
+      .map((d) => ({ date: d.date, value: parseFloat(((d.total_value / anchorNav) * 100).toFixed(4)) }));
+
+    // Normalize benchmark to base 100 from firstCommon
+    const anchorBench = rawSeries.find((d) => d.date === firstCommon)?.price
+      ?? rawSeries.find((d) => d.date >= firstCommon)?.price;
+    if (!anchorBench) {
+      logger.warn(`[Benchmark] Could not find anchor price for ${symbol} on or after ${firstCommon}`);
+      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+    }
+    const benchmark_series = rawSeries
+      .filter((d) => d.date >= firstCommon)
+      .map((d) => ({ date: d.date, value: parseFloat(((d.price / anchorBench) * 100).toFixed(4)) }));
+
+    logger.info(`[Benchmark] Done — portfolio ${portfolio_series.length} pts, ${symbol} ${benchmark_series.length} pts`);
+    return { portfolio_series, benchmark_series, symbol, name: symbol };
+  }
+
+  // ── 12. Performance Attribution ──────────────────────────────────────────────
+  // Returns per-asset contribution to total portfolio return over the given period.
+  // contribution = (ending_value - beginning_value - net_flows_during_period)
+  // contribution_pct = contribution / beginning_NAV * 100
+  static getPerformanceAttribution(userId, startDate, endDate) {
+    const db = require("../config/database");
+
+    // Get holdings as-of startDate and endDate (FIFO cost basis, all brokers grouped)
+    const startHoldings = Transaction.getPortfolioHoldings(
+      userId,
+      false,
+      startDate,
+    );
+    const endHoldings = Transaction.getPortfolioHoldings(userId, false, endDate);
+
+    // Build maps keyed by asset_id (grouped across brokers)
+    const startMap = {};
+    for (const h of startHoldings) {
+      if (!startMap[h.asset_id]) {
+        startMap[h.asset_id] = {
+          symbol: h.symbol,
+          name: h.name,
+          asset_type: h.asset_type,
+          total_quantity: 0,
+        };
+      }
+      startMap[h.asset_id].total_quantity += h.total_quantity;
+    }
+    const endMap = {};
+    for (const h of endHoldings) {
+      if (!endMap[h.asset_id]) {
+        endMap[h.asset_id] = {
+          symbol: h.symbol,
+          name: h.name,
+          asset_type: h.asset_type,
+          total_quantity: 0,
+        };
+      }
+      endMap[h.asset_id].total_quantity += h.total_quantity;
+    }
+
+    // Gather all unique asset IDs that had any position, limited to active assets
+    const activeAssetIds = new Set(
+      db.prepare("SELECT id FROM assets WHERE active = 1").all().map((r) => String(r.id))
+    );
+    const allAssetIds = new Set(
+      [...Object.keys(startMap), ...Object.keys(endMap)].filter((id) => activeAssetIds.has(id))
+    );
+
+    // Get beginning NAV (portfolio performance on startDate)
+    const navStart = this.getPortfolioPerformance(
+      userId,
+      1,
+      [],
+      startDate,
+      startDate,
+    );
+    const beginningNav = navStart.length > 0 ? navStart[0].total_value : 0;
+
+    // Net flows per asset during the period (buy amounts minus sell amounts)
+    const flowsStmt = db.prepare(`
+      SELECT asset_id,
+             SUM(CASE WHEN transaction_type = 'buy' THEN total_amount ELSE 0 END) as buy_total,
+             SUM(CASE WHEN transaction_type = 'sell' THEN total_amount ELSE 0 END) as sell_total
+      FROM transactions
+      WHERE user_id = ? AND date > ? AND date <= ?
+        AND transaction_type IN ('buy', 'sell')
+      GROUP BY asset_id
+    `);
+    const flowRows = flowsStmt.all(userId, startDate, endDate);
+    const flowMap = {};
+    for (const row of flowRows) {
+      flowMap[row.asset_id] = {
+        buy_total: fromValueScale(row.buy_total || 0, AMOUNT_SCALE),
+        sell_total: fromValueScale(row.sell_total || 0, AMOUNT_SCALE),
+      };
+    }
+
+    const attributions = [];
+
+    for (const assetId of allAssetIds) {
+      const aid = Number(assetId);
+      const startInfo = startMap[aid];
+      const endInfo = endMap[aid];
+
+      const symbol = startInfo?.symbol || endInfo?.symbol || String(aid);
+      const name = startInfo?.name || endInfo?.name || String(aid);
+      const assetType = startInfo?.asset_type || endInfo?.asset_type;
+
+      // Get prices
+      const startPriceRow = db
+        .prepare(
+          `SELECT price FROM price_data WHERE asset_id = ? AND date <= ? ORDER BY date DESC LIMIT 1`,
+        )
+        .get(aid, startDate);
+      const endPriceRow = db
+        .prepare(
+          `SELECT price FROM price_data WHERE asset_id = ? AND date <= ? ORDER BY date DESC LIMIT 1`,
+        )
+        .get(aid, endDate);
+
+      const startPrice = startPriceRow
+        ? fromValueScale(startPriceRow.price, PRICE_SCALE)
+        : 0;
+      const endPrice = endPriceRow
+        ? fromValueScale(endPriceRow.price, PRICE_SCALE)
+        : 0;
+
+      const startQty = startInfo?.total_quantity ?? 0;
+      const endQty = endInfo?.total_quantity ?? 0;
+
+      const beginningValue = startQty * startPrice;
+      const endingValue = endQty * endPrice;
+
+      const flows = flowMap[aid] || { buy_total: 0, sell_total: 0 };
+      const netFlows = flows.buy_total - flows.sell_total;
+
+      const priceGain = endingValue - beginningValue - netFlows;
+      const contributionPct =
+        beginningNav > 0 ? (priceGain / beginningNav) * 100 : 0;
+
+      attributions.push({
+        asset_id: aid,
+        symbol,
+        name,
+        asset_type: assetType,
+        beginning_value: beginningValue,
+        ending_value: endingValue,
+        net_flows: netFlows,
+        price_gain: priceGain,
+        contribution_pct: contributionPct,
+      });
+    }
+
+    // Sort by contribution descending (best contributors first)
+    attributions.sort((a, b) => b.contribution_pct - a.contribution_pct);
+
+    return {
+      start_date: startDate,
+      end_date: endDate,
+      beginning_nav: beginningNav,
+      attributions,
+    };
+  }
+
+  // ── 13. Correlation Matrix ────────────────────────────────────────────────────
+  // Returns Pearson correlation matrix of daily returns for currently held assets.
+  static getCorrelationMatrix(userId, days = 365) {
+    const db = require("../config/database");
+
+    const userSettings = UserSettings.findByUserId(userId);
+    const today = getTodayInTimezone(userSettings?.timezone || "UTC");
+
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffDate = cutoff.toISOString().split("T")[0];
+
+    // Get currently held assets (non-zero quantity)
+    const holdings = Transaction.getPortfolioHoldings(userId, true);
+    const uniqueAssets = [];
+    const seenIds = new Set();
+    for (const h of holdings) {
+      if (!seenIds.has(h.asset_id)) {
+        seenIds.add(h.asset_id);
+        uniqueAssets.push({ id: h.asset_id, symbol: h.symbol, name: h.name });
+      }
+    }
+
+    if (uniqueAssets.length < 2) {
+      return { assets: uniqueAssets, matrix: [] };
+    }
+
+    // Fetch daily returns per asset
+    const returnsMap = {};
+    for (const asset of uniqueAssets) {
+      const rows = db
+        .prepare(
+          `SELECT date, price FROM price_data
+           WHERE asset_id = ? AND date >= ? AND date <= ?
+           ORDER BY date ASC`,
+        )
+        .all(asset.id, cutoffDate, today);
+
+      const dailyReturns = {};
+      for (let i = 1; i < rows.length; i++) {
+        const prev = fromValueScale(rows[i - 1].price, PRICE_SCALE);
+        const curr = fromValueScale(rows[i].price, PRICE_SCALE);
+        if (prev > 0) {
+          dailyReturns[rows[i].date] = (curr - prev) / prev;
+        }
+      }
+      returnsMap[asset.id] = dailyReturns;
+    }
+
+    // Build the correlation matrix
+    const n = uniqueAssets.length;
+    const matrix = Array.from({ length: n }, () => Array(n).fill(null));
+
+    const pearson = (datesA, mapA, mapB) => {
+      const vals = datesA
+        .filter((d) => mapB[d] !== undefined)
+        .map((d) => [mapA[d], mapB[d]]);
+      const k = vals.length;
+      if (k < 2) return null;
+
+      const meanA = vals.reduce((s, v) => s + v[0], 0) / k;
+      const meanB = vals.reduce((s, v) => s + v[1], 0) / k;
+
+      let cov = 0;
+      let varA = 0;
+      let varB = 0;
+      for (const [a, b] of vals) {
+        cov += (a - meanA) * (b - meanB);
+        varA += Math.pow(a - meanA, 2);
+        varB += Math.pow(b - meanB, 2);
+      }
+      const denom = Math.sqrt(varA * varB);
+      return denom > 0 ? cov / denom : null;
+    };
+
+    for (let i = 0; i < n; i++) {
+      matrix[i][i] = 1.0;
+      const datesI = Object.keys(returnsMap[uniqueAssets[i].id]);
+      for (let j = i + 1; j < n; j++) {
+        const r = pearson(
+          datesI,
+          returnsMap[uniqueAssets[i].id],
+          returnsMap[uniqueAssets[j].id],
+        );
+        matrix[i][j] = r !== null ? Math.round(r * 1000) / 1000 : null;
+        matrix[j][i] = matrix[i][j];
+      }
+    }
+
+    return { assets: uniqueAssets, matrix };
   }
 
   // ── 10.3 Admin Overview ─────────────────────────────────────────────────────
