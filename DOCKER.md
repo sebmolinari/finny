@@ -1,112 +1,71 @@
-# Docker
+# Finny — Docker Setup
 
 ## Prerequisites
 
-- [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) installed and running
-- Logged in to Docker Hub: `docker login`
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) or Docker Engine (Linux/Raspberry Pi)
+  - Raspberry Pi / Linux: `curl -fsSL https://get.docker.com | sh`
 
 ---
 
-## Build and run locally (for testing)
+## First-time setup
 
-Builds a local image for your current machine only (not pushed anywhere) and starts the container.
+1. Create a `.env` file in your data folder and fill in the required values:
 
-```bat
-build-local.bat
+**Windows/Mac:** `C:\finny-data\.env`
+**Raspberry Pi / Linux:** `~/finny-data/.env`
+
+```
+DB_KEY=<your-database-password>   # min 8 chars
+JWT_SECRET=<a-random-string>      # min 32 chars
 ```
 
-The script will:
-1. Stop and remove any existing `finny` container
-2. Remove the old `finny:local` image
-3. Build a fresh image
-4. Start the container and print the assigned port
+To enable email notifications, add these optional values:
 
-Your data is preserved — the `finny_data` volume is not removed.
-
----
-
-## Publish to Docker Hub
-
-Builds for **both Windows/Linux (amd64) and Raspberry Pi (arm64)** and pushes to Docker Hub.
-
-Before running, set the version in `build-and-push.bat`:
-
-```bat
-set VERSION=1.0.0
+```
+EMAIL_ENABLED=true
+EMAIL_USER=your-email@example.com
+EMAIL_APP_PASSWORD=your-app-password
 ```
 
-Then run:
-
-```bat
-build-and-push.bat
-```
-
-This pushes two tags simultaneously — `sebmolinari/finny:1.0.0` and `sebmolinari/finny:latest`. Clients pulling `latest` always get the newest version; clients can also pin to a specific version (e.g. `finny:1.0.0`) if they want to control when they update.
-
-First run takes ~20-40 min (compiles native SQLite for both architectures). Subsequent runs are faster due to layer cache.
-
----
-
-## Client setup (any machine)
-
-Users only need Docker installed and a `.env` file. Send them `.env.example`.
-
-1. Install Docker:
-   - Windows/Mac: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-   - Raspberry Pi / Linux: `curl -fsSL https://get.docker.com | sh`
-
-2. Create a `.env` file from the example and fill in:
-
-```bash
-DB_KEY=their-chosen-password            # min 8 chars, write it down
-JWT_SECRET=generate-a-32-char-secret    # run: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-3. Run:
+2. Run the container:
 
 **Windows/Mac:**
+
 ```bat
-docker run -d -p 0:5000 -v C:\finny-data:/app/data --env-file .env --restart unless-stopped --name finny sebmolinari/finny:latest
+docker run -d -p 5000:5000 -v C:\finny-data:/app/data --env-file C:\finny-data\.env --restart unless-stopped --name finny sebmolinari/finny:latest
 docker port finny 5000
 ```
 
 **Raspberry Pi / Linux:**
+
 ```bash
-docker run -d -p 0:5000 -v ~/finny-data:/app/data --env-file .env --restart unless-stopped --name finny sebmolinari/finny:latest
+docker run -d -p 5000:5000 -v ~/finny-data:/app/data --env-file ~/finny-data/.env --restart unless-stopped --name finny sebmolinari/finny:latest
 docker port finny 5000
 ```
 
-Open `http://localhost:<assigned-port>`.
+3. Open `http://localhost:<port shown above>`.
 
-### Storage strategy
+> **Custom port:** Replace `-p 5000:5000` with `-p <your-port>:5000` to expose Finny on a different host port (e.g. `-p 8080:5000`). Use `-p 0:5000` to let Docker pick a free port automatically — run `docker port finny 5000` afterwards to see which one was assigned.
 
-The database file is stored directly on the host machine — accessible outside Docker at any time.
+---
 
-| Platform | Path |
-|----------|------|
-| Windows/Mac | `C:\finny-data\database.db` |
-| Raspberry Pi / Linux | `~/finny-data/database.db` |
+## Data
 
-**To back up**, copy the file to a safe location:
+Your database is stored directly on the host — accessible outside Docker at any time.
 
-**Windows/Mac:**
-```bat
-copy C:\finny-data\database.db C:\backups\database.db
-```
+| Platform             | File location               |
+| -------------------- | --------------------------- |
+| Windows/Mac          | `C:\finny-data\database.db` |
+| Raspberry Pi / Linux | `~/finny-data/database.db`  |
 
-**Raspberry Pi / Linux:**
+---
+
+## Updates
+
 ```bash
-cp ~/finny-data/database.db ~/backups/database.db
-```
-
-**To restore**, stop the container, replace the file, and restart.
-
-### Pull updates
-
-```bat
 docker stop finny
 docker rm finny
 docker pull sebmolinari/finny:latest
 ```
 
-Then run the same `docker run` command from step 3. Data is preserved — the local folder is not removed.
+Then run the same `docker run` command from setup step 2. Your data is preserved.

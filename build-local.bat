@@ -33,7 +33,7 @@ if errorlevel 1 (
 REM ── Run ────────────────────────────────────────────────────────────────────
 echo.
 echo Starting container...
-docker run -d -p 0:5000 -v finny_data:/app/data --env-file .\backend\.env --name %CONTAINER% %IMAGE%
+docker run -d -p 0:5000 -v C:\Users\sebmo\dev\finny\backend\data:/app/data --env-file .\backend\.env -e NODE_ENV=production --name %CONTAINER% %IMAGE%
 
 if errorlevel 1 (
     echo.
@@ -43,7 +43,7 @@ if errorlevel 1 (
 
 REM ── Show port ──────────────────────────────────────────────────────────────
 echo.
-for /f "tokens=*" %%p in ('docker port %CONTAINER% 5000') do set PORT_LINE=%%p
+for /f "tokens=*" %%p in ('docker port %CONTAINER% 5000 ^| findstr "0.0.0.0"') do set PORT_LINE=%%p
 echo Container running at http://localhost:%PORT_LINE:0.0.0.0:=%
 echo.
 echo To stop:  docker stop %CONTAINER% ^& docker rm %CONTAINER%
