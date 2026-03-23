@@ -41,7 +41,6 @@ jobs:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/finny
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
 
       - name: Build and push
