@@ -2039,7 +2039,9 @@ class AnalyticsService {
     // Recent scheduler run history
     const recentSchedulerRuns = db
       .prepare(
-        `SELECT s.name as scheduler_name, s.type, si.scheduled_run_at, si.executed_at,
+        `SELECT s.name as scheduler_name, s.type,
+                STRFTIME('%Y-%m-%d %H:%M:%S', si.scheduled_run_at) as scheduled_run_at,
+                STRFTIME('%Y-%m-%d %H:%M:%S', si.executed_at) as executed_at,
                 si.status, si.attempt, si.error_message
          FROM scheduler_instances si
          JOIN schedulers s ON s.id = si.scheduler_id

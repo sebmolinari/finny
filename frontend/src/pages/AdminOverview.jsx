@@ -38,7 +38,9 @@ import {
   notificationsAPI,
   schedulerAPI,
   databaseAPI,
+  settingsAPI,
 } from "../api/api";
+import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import SystemConfigCard from "../components/SystemConfigCard";
 import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
 import { formatNumber } from "../utils/formatNumber";
@@ -75,6 +77,8 @@ export default function AdminOverview() {
   const [deleteDataResult, setDeleteDataResult] = useState(null);
   const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
   const [deleteDataPhrase, setDeleteDataPhrase] = useState("delete all data");
+  const [userTimezone, setUserTimezone] = useState();
+  const [userDateFormat, setUserDateFormat] = useState();
 
   const handleSeedData = useCallback(async () => {
     setSeedingData(true);
@@ -157,8 +161,13 @@ export default function AdminOverview() {
     setLoading(true);
     setError(null);
     try {
-      const res = await analyticsAPI.getAdminOverview();
+      const [res, settingsRes] = await Promise.all([
+        analyticsAPI.getAdminOverview(),
+        settingsAPI.get(),
+      ]);
       setData(res.data);
+      setUserTimezone(settingsRes.data.timezone);
+      setUserDateFormat(settingsRes.data.date_format);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load admin overview.");
     } finally {
@@ -185,6 +194,11 @@ export default function AdminOverview() {
       </PageContainer>
     );
   }
+
+  const fmtDt = (val) =>
+    val && userDateFormat && userTimezone
+      ? formatDatetimeInTimezone(val, userDateFormat, userTimezone)
+      : "—";
 
   const failedRefreshes = data?.failed_refreshes ?? [];
   const recentRefreshes = data?.recent_price_refreshes ?? [];
@@ -449,9 +463,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {u.created_at
-                                ? new Date(u.created_at).toLocaleDateString()
-                                : "—"}
+                              {fmtDt(u.created_at)}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -587,9 +599,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {r.created_at
-                                ? new Date(r.created_at).toLocaleString()
-                                : "—"}
+                              {fmtDt(r.created_at)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -669,9 +679,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {r.created_at
-                                ? new Date(r.created_at).toLocaleString()
-                                : "—"}
+                              {fmtDt(r.created_at)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -753,9 +761,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {r.created_at
-                                ? new Date(r.created_at).toLocaleString()
-                                : "—"}
+                              {fmtDt(r.created_at)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -894,9 +900,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {r.scheduled_run_at
-                                ? new Date(r.scheduled_run_at).toLocaleString()
-                                : "—"}
+                              {fmtDt(r.scheduled_run_at)}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
@@ -904,9 +908,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {r.executed_at
-                                ? new Date(r.executed_at).toLocaleString()
-                                : "—"}
+                              {fmtDt(r.executed_at)}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
@@ -1028,9 +1030,7 @@ export default function AdminOverview() {
                               variant="caption"
                               color="text.secondary"
                             >
-                              {m.applied_at
-                                ? new Date(m.applied_at).toLocaleString()
-                                : "—"}
+                              {fmtDt(m.applied_at)}
                             </Typography>
                           </TableCell>
                         </TableRow>
