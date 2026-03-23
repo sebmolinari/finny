@@ -1,4 +1,4 @@
-Finny is a finance management app for tracking investments across multiple brokers, with analytics, tax reporting, and automated background jobs.
+Finny is a finance management web application for tracking investments across multiple brokers, with analytics, tax reporting, and automated background jobs.
 
 ---
 
