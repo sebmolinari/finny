@@ -1141,6 +1141,7 @@ router.post(
               req.user.username,
               "price_data",
               existing.id,
+              { price: existing.price, source: existing.source },
               { price, source: "yahoo" },
               req.ip,
               req.get("user-agent"),

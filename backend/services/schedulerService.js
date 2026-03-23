@@ -123,7 +123,7 @@ class SchedulerService {
           result = await priceService.refreshAllPrices();
 
           AuditLog.create({
-            action_type: "import",
+            action_type: "price_refresh_all",
             table_name: "price_data",
             new_values: {
               action: "refresh_all_prices",

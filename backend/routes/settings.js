@@ -142,6 +142,8 @@ router.put(
           lt_holding_period_days: lt_holding_period_days,
           risk_free_rate: risk_free_rate,
         },
+        ip_address: req.ip,
+        user_agent: req.get("user-agent"),
       });
 
       const settings = UserSettings.findByUserId(req.user.id);

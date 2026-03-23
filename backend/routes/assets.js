@@ -736,6 +736,8 @@ router.post(
         action_type: "import",
         table_name: "price_data",
         new_values: { asset_id: req.params.id, count: prices.length },
+        ip_address: req.ip,
+        user_agent: req.get("user-agent"),
       });
 
       res.json({
@@ -838,7 +840,7 @@ router.post("/prices/refresh-all", async (req, res) => {
     await AuditLog.create({
       user_id: userId,
       username,
-      action_type: "import",
+      action_type: "price_refresh_all",
       table_name: "price_data",
       new_values: {
         action: "refresh_all_prices",
@@ -847,6 +849,8 @@ router.post("/prices/refresh-all", async (req, res) => {
         failed: results.failed,
         total: results.total,
       },
+      ip_address: req.ip,
+      user_agent: req.get("user-agent"),
     });
 
     res.json({
@@ -890,20 +894,20 @@ router.post("/:id/prices/refresh", authMiddleware, async (req, res) => {
 
     // Log price refresh action
     if (result.success) {
-      AuditLog.logCreate(
-        req.user.id,
-        req.user.username,
-        "price_data",
-        result.price.id,
-        {
+      AuditLog.create({
+        user_id: req.user.id,
+        username: req.user.username,
+        action_type: "price_refresh",
+        table_name: "price_data",
+        new_values: {
           asset_id: req.params.id,
           date: result.price.date,
           price: result.price.price,
           source: result.price.source,
         },
-        req.ip,
-        req.get("user-agent"),
-      );
+        ip_address: req.ip,
+        user_agent: req.get("user-agent"),
+      });
     }
 
     res.json(result);
