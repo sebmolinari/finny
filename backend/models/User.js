@@ -1,59 +1,47 @@
 const db = require("../config/database");
 const bcrypt = require("bcryptjs");
-const UserSettings = require("./UserSettings");
 
 class User {
-  static create(username, email, password, role, createdBy) {
-    // Check if this is the first user
-    const countStmt = db.prepare("SELECT COUNT(*) as count FROM users");
-    const { count } = countStmt.get();
-    let finalRole = role;
-    if (count === 0) {
-      finalRole = "admin";
-    }
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const stmt = db.prepare(
-      "INSERT INTO users (username, email, password, role, active, created_by) VALUES (?, ?, ?, ?, 1, ?)",
-    );
-    const result = stmt.run(
-      username,
-      email,
-      hashedPassword,
-      finalRole,
-      createdBy,
-    );
-    const userId = result.lastInsertRowid;
-
-    return userId;
+  static async create(username, email, password, role, createdBy) {
+    const { count } = db.prepare("SELECT COUNT(*) as count FROM users").get();
+    const finalRole = count === 0 ? "admin" : role;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = db
+      .prepare(
+        "INSERT INTO users (username, email, password, role, active, created_by) VALUES (?, ?, ?, ?, 1, ?)",
+      )
+      .run(username, email, hashedPassword, finalRole, createdBy);
+    return result.lastInsertRowid;
   }
 
   static updateStatus(id, active, updatedBy) {
-    const stmt = db.prepare(
-      "UPDATE users SET active = ?, updated_by = ? WHERE id = ?",
-    );
-    return stmt.run(active, updatedBy, id);
+    return db
+      .prepare(
+        "UPDATE users SET active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      )
+      .run(active, updatedBy, id);
   }
 
   static updateRole(id, role, updatedBy) {
-    const stmt = db.prepare(
-      "UPDATE users SET role = ?, updated_by = ? WHERE id = ?",
-    );
-    return stmt.run(role, updatedBy, id);
+    return db
+      .prepare(
+        "UPDATE users SET role = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      )
+      .run(role, updatedBy, id);
   }
 
   static deleteById(id) {
-    UserSettings.deleteByUserId(id);
-
     const stmt = db.prepare("DELETE FROM users WHERE id = ?");
     return stmt.run(id);
   }
 
-  static changePassword(id, newPassword) {
-    const hashedPassword = bcrypt.hashSync(newPassword, 10);
-    const stmt = db.prepare(
-      "UPDATE users SET password = ?, updated_by = ? WHERE id = ?",
-    );
-    return stmt.run(hashedPassword, id, id);
+  static async changePassword(id, newPassword) {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    return db
+      .prepare(
+        "UPDATE users SET password = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      )
+      .run(hashedPassword, id, id);
   }
 
   static findByUsername(username) {

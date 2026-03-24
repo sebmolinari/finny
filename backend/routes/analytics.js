@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const logger = require("../utils/logger");
-const AnalyticsService = require("../services/analytics");
+const AnalyticsService = require("../services/analyticsService");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
 const Asset = require("../models/Asset");
@@ -18,36 +18,35 @@ const {
   incomeValidation,
 } = require("../middleware/validators/analyticsValidators");
 
-// Get broker summary (transaction counts and volumes)
+/**
+ * @swagger
+ * /analytics/brokers/overview:
+ *   get:
+ *     summary: Get broker summary (transaction counts and volumes)
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Broker summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     description: Broker name
+ *                   current_value:
+ *                     type: number
+ *                     description: Total market value of transactions
+ *       500:
+ *         description: Server error
+ */
 router.get("/brokers/overview", authMiddleware, (req, res) => {
   try {
-    /**
-     * @swagger
-     * /analytics/brokers/overview:
-     *   get:
-     *     summary: Get broker summary (transaction counts and volumes)
-     *     tags: [Analytics]
-     *     security:
-     *       - bearerAuth: []
-     *     responses:
-     *       200:
-     *         description: Broker summary
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: array
-     *               items:
-     *                 type: object
-     *                 properties:
-     *                   name:
-     *                     type: string
-     *                     description: Broker name
-     *                   current_value:
-     *                     type: number
-     *                     description: Total market value of transactions
-     *       500:
-     *         description: Server error
-     */
     const summary = AnalyticsService.getBrokerHoldings(req.user.id);
     res.json(summary);
   } catch (error) {
@@ -55,72 +54,71 @@ router.get("/brokers/overview", authMiddleware, (req, res) => {
   }
 });
 
-// Get market data trends for user's assets
+/**
+ * @swagger
+ * /analytics/market-trends:
+ *   get:
+ *     summary: Get market data trends with sparkline data for all active assets
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *         description: Number of days of price history (default 30)
+ *     responses:
+ *       200:
+ *         description: Market trends data for all active assets
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 trends:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       asset_id:
+ *                         type: integer
+ *                       symbol:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       asset_type:
+ *                         type: string
+ *                       currency:
+ *                         type: string
+ *                       current_price:
+ *                         type: number
+ *                       price_date:
+ *                         type: string
+ *                         format: date
+ *                       price_change_percent:
+ *                         type: number
+ *                       price_history:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             date:
+ *                               type: string
+ *                               format: date
+ *                             price:
+ *                               type: number
+ *                 days:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 router.get(
-  "/market-trends",
+  '/market-trends',
   authMiddleware,
   validate(marketTrendsValidation),
   (req, res) => {
     try {
-      /**
-       * @swagger
-       * /analytics/market-trends:
-       *   get:
-       *     summary: Get market data trends with sparkline data for all active assets
-       *     tags: [Analytics]
-       *     security:
-       *       - bearerAuth: []
-       *     parameters:
-       *       - in: query
-       *         name: days
-       *         schema:
-       *           type: integer
-       *         description: Number of days of price history (default 30)
-       *     responses:
-       *       200:
-       *         description: Market trends data for all active assets
-       *         content:
-       *           application/json:
-       *             schema:
-       *               type: object
-       *               properties:
-       *                 trends:
-       *                   type: array
-       *                   items:
-       *                     type: object
-       *                     properties:
-       *                       asset_id:
-       *                         type: integer
-       *                       symbol:
-       *                         type: string
-       *                       name:
-       *                         type: string
-       *                       asset_type:
-       *                         type: string
-       *                       currency:
-       *                         type: string
-       *                       current_price:
-       *                         type: number
-       *                       price_date:
-       *                         type: string
-       *                         format: date
-       *                       price_change_percent:
-       *                         type: number
-       *                       price_history:
-       *                         type: array
-       *                         items:
-       *                           type: object
-       *                           properties:
-       *                             date:
-       *                               type: string
-       *                               format: date
-       *                             price:
-       *                               type: number
-       *                 days:
-       *                   type: integer
-       *       500:
-       *         description: Server error
-       */
       const { days = 30 } = req.query;
       const result = AnalyticsService.getMarketTrends(req.user.id, days);
       res.json(result);
@@ -131,109 +129,110 @@ router.get(
 );
 
 // Get comprehensive portfolio analytics
+/**
+* @swagger
+* /analytics/portfolio/analytics:
+*   get:
+*     summary: Get comprehensive portfolio analytics
+*     tags: [Analytics]
+*     security:
+*       - bearerAuth: []
+*     parameters:
+*       - in: query
+*         name: exclude
+*         schema:
+*           type: string
+*         description: >
+*           Comma-separated list of asset types to exclude from holdings calculations
+*           (e.g. `realestate`, `crypto`). Excluded types are omitted from
+*           holdings_market_value, unrealized_gain, cost_basis, and asset_allocation.
+*           Valid values: crypto, currency, equity, fixedincome, realestate.
+*     responses:
+*       200:
+*         description: Portfolio analytics data
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 nav:
+*                   type: number
+*                   description: Net Asset Value - Total portfolio value including cash
+*                 transactions:
+*                   type: object
+*                   properties:
+*                     net_invested:
+*                       type: number
+*                     net_contributions:
+*                       type: number
+*                     holdings_market_value:
+*                       type: number
+*                       description: Market value of all holdings excluding cash (and any excluded asset types)
+*                     daily_pnl:
+*                       type: number
+*                       description: Daily profit or loss based on price changes from previous day
+*                     cash_balance:
+*                       type: number
+*                     liquidity_balance:
+*                       type: number
+*                     unrealized_gain:
+*                       type: number
+*                     unrealized_gain_percent:
+*                       type: number
+*                     liquidity_percent:
+*                       type: number
+*                     mwrr:
+*                       type: number
+*                       description: Money-Weighted Rate of Return (IRR)
+*                     cagr:
+*                       type: number
+*                       description: Compound Annual Growth Rate
+*                     holdings:
+*                       type: array
+*                       items:
+*                         type: object
+*                         properties:
+*                           asset_id:
+*                             type: integer
+*                           symbol:
+*                             type: string
+*                           name:
+*                             type: string
+*                           asset_type:
+*                             type: string
+*                           total_quantity:
+*                             type: number
+*                           cost_basis:
+*                             type: number
+*                           market_price:
+*                             type: number
+*                           market_value:
+*                             type: number
+*                           unrealized_gain:
+*                             type: number
+*                     asset_allocation:
+*                       type: array
+*                       items:
+*                         type: object
+*                         properties:
+*                           type:
+*                             type: string
+*                             description: Asset type name
+*                           value:
+*                             type: number
+*                             description: Total market value for this asset type
+*                           count:
+*                             type: integer
+*                             description: Number of holdings of this type
+*                           percentage:
+*                             type: number
+*                             description: Percentage of total portfolio
+*       500:
+*         description: Server error
+*/
+
 router.get("/portfolio/analytics", authMiddleware, (req, res) => {
   try {
-    /**
-     * @swagger
-     * /analytics/portfolio/analytics:
-     *   get:
-     *     summary: Get comprehensive portfolio analytics
-     *     tags: [Analytics]
-     *     security:
-     *       - bearerAuth: []
-     *     parameters:
-     *       - in: query
-     *         name: exclude
-     *         schema:
-     *           type: string
-     *         description: >
-     *           Comma-separated list of asset types to exclude from holdings calculations
-     *           (e.g. `realestate`, `crypto`). Excluded types are omitted from
-     *           holdings_market_value, unrealized_gain, cost_basis, and asset_allocation.
-     *           Valid values: crypto, currency, equity, fixedincome, realestate.
-     *     responses:
-     *       200:
-     *         description: Portfolio analytics data
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: object
-     *               properties:
-     *                 nav:
-     *                   type: number
-     *                   description: Net Asset Value - Total portfolio value including cash
-     *                 transactions:
-     *                   type: object
-     *                   properties:
-     *                     net_invested:
-     *                       type: number
-     *                     net_contributions:
-     *                       type: number
-     *                     holdings_market_value:
-     *                       type: number
-     *                       description: Market value of all holdings excluding cash (and any excluded asset types)
-     *                     daily_pnl:
-     *                       type: number
-     *                       description: Daily profit or loss based on price changes from previous day
-     *                     cash_balance:
-     *                       type: number
-     *                     liquidity_balance:
-     *                       type: number
-     *                     unrealized_gain:
-     *                       type: number
-     *                     unrealized_gain_percent:
-     *                       type: number
-     *                     liquidity_percent:
-     *                       type: number
-     *                     mwrr:
-     *                       type: number
-     *                       description: Money-Weighted Rate of Return (IRR)
-     *                     cagr:
-     *                       type: number
-     *                       description: Compound Annual Growth Rate
-     *                     holdings:
-     *                       type: array
-     *                       items:
-     *                         type: object
-     *                         properties:
-     *                           asset_id:
-     *                             type: integer
-     *                           symbol:
-     *                             type: string
-     *                           name:
-     *                             type: string
-     *                           asset_type:
-     *                             type: string
-     *                           total_quantity:
-     *                             type: number
-     *                           cost_basis:
-     *                             type: number
-     *                           market_price:
-     *                             type: number
-     *                           market_value:
-     *                             type: number
-     *                           unrealized_gain:
-     *                             type: number
-     *                     asset_allocation:
-     *                       type: array
-     *                       items:
-     *                         type: object
-     *                         properties:
-     *                           type:
-     *                             type: string
-     *                             description: Asset type name
-     *                           value:
-     *                             type: number
-     *                             description: Total market value for this asset type
-     *                           count:
-     *                             type: integer
-     *                             description: Number of holdings of this type
-     *                           percentage:
-     *                             type: number
-     *                             description: Percentage of total portfolio
-     *       500:
-     *         description: Server error
-     */
     const { exclude } = req.query;
     const excludeTypes = exclude
       ? exclude
@@ -253,88 +252,89 @@ router.get("/portfolio/analytics", authMiddleware, (req, res) => {
 });
 
 // Get detailed cash balance breakdown
+/**
+* @swagger
+* /analytics/portfolio/cash-details:
+*   get:
+*     summary: Get detailed cash balance breakdown
+*     tags: [Analytics]
+*     security:
+*       - bearerAuth: []
+*     responses:
+*       200:
+*         description: Cash balance details
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 summary:
+*                   type: object
+*                   properties:
+*                     total_deposits:
+*                       type: number
+*                     total_withdrawals:
+*                       type: number
+*                     total_buy:
+*                       type: number
+*                     total_sell:
+*                       type: number
+*                     total_dividends:
+*                       type: number
+*                     total_interest:
+*                       type: number
+*                     total_coupons:
+*                       type: number
+*                     total_rentals:
+*                       type: number
+*                     net_inflow:
+*                       type: number
+*                     net_trading:
+*                       type: number
+*                     current_balance:
+*                       type: number
+*                 cash_flows:
+*                   type: array
+*                   items:
+*                     type: object
+*                     properties:
+*                       id:
+*                         type: integer
+*                       date:
+*                         type: string
+*                         format: date
+*                       transaction_type:
+*                         type: string
+*                       asset_id:
+*                         type: integer
+*                       symbol:
+*                         type: string
+*                       asset_name:
+*                         type: string
+*                       broker_id:
+*                         type: integer
+*                       broker_name:
+*                         type: string
+*                       quantity:
+*                         type: number
+*                       price:
+*                         type: number
+*                       total_amount:
+*                         type: number
+*                       cash_effect:
+*                         type: number
+*                         description: Impact on cash balance (+ or -)
+*                       running_balance:
+*                         type: number
+*                         description: Cumulative cash balance
+*                 transaction_count:
+*                   type: integer
+*       500:
+*         description: Server error
+*/
+
 router.get("/portfolio/cash-details", authMiddleware, (req, res) => {
   try {
-    /**
-     * @swagger
-     * /analytics/portfolio/cash-details:
-     *   get:
-     *     summary: Get detailed cash balance breakdown
-     *     tags: [Analytics]
-     *     security:
-     *       - bearerAuth: []
-     *     responses:
-     *       200:
-     *         description: Cash balance details
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: object
-     *               properties:
-     *                 summary:
-     *                   type: object
-     *                   properties:
-     *                     total_deposits:
-     *                       type: number
-     *                     total_withdrawals:
-     *                       type: number
-     *                     total_buy:
-     *                       type: number
-     *                     total_sell:
-     *                       type: number
-     *                     total_dividends:
-     *                       type: number
-     *                     total_interest:
-     *                       type: number
-     *                     total_coupons:
-     *                       type: number
-     *                     total_rentals:
-     *                       type: number
-     *                     net_inflow:
-     *                       type: number
-     *                     net_trading:
-     *                       type: number
-     *                     current_balance:
-     *                       type: number
-     *                 cash_flows:
-     *                   type: array
-     *                   items:
-     *                     type: object
-     *                     properties:
-     *                       id:
-     *                         type: integer
-     *                       date:
-     *                         type: string
-     *                         format: date
-     *                       transaction_type:
-     *                         type: string
-     *                       asset_id:
-     *                         type: integer
-     *                       symbol:
-     *                         type: string
-     *                       asset_name:
-     *                         type: string
-     *                       broker_id:
-     *                         type: integer
-     *                       broker_name:
-     *                         type: string
-     *                       quantity:
-     *                         type: number
-     *                       price:
-     *                         type: number
-     *                       total_amount:
-     *                         type: number
-     *                       cash_effect:
-     *                         type: number
-     *                         description: Impact on cash balance (+ or -)
-     *                       running_balance:
-     *                         type: number
-     *                         description: Cumulative cash balance
-     *                 transaction_count:
-     *                   type: integer
-     *       500:
-     *         description: Server error
-     */
     const details = AnalyticsService.getCashBalanceDetails(req.user.id);
     res.json(details);
   } catch (error) {
@@ -343,75 +343,76 @@ router.get("/portfolio/cash-details", authMiddleware, (req, res) => {
 });
 
 // Get portfolio performance
+/**
+* @swagger
+* /analytics/portfolio/performance:
+*   get:
+*     summary: Get portfolio performance over time
+*     tags: [Analytics]
+*     security:
+*       - bearerAuth: []
+*     parameters:
+*       - in: query
+*         name: days
+*         schema:
+*           type: integer
+*           default: 30
+*         description: Number of days to include in the performance history. Ignored when start_date/end_date are provided.
+*       - in: query
+*         name: start_date
+*         schema:
+*           type: string
+*           format: date
+*         description: Start date (YYYY-MM-DD). When provided together with end_date, overrides days.
+*       - in: query
+*         name: end_date
+*         schema:
+*           type: string
+*           format: date
+*         description: End date (YYYY-MM-DD). When provided together with start_date, overrides days.
+*       - in: query
+*         name: exclude
+*         schema:
+*           type: string
+*         description: >
+*           Comma-separated list of asset types to exclude from the portfolio value calculation
+*           (e.g. `realestate,crypto`). Valid values: crypto, currency, equity, fixedincome, realestate.
+*       - in: query
+*         name: debug
+*         schema:
+*           type: boolean
+*           default: false
+*         description: >
+*           When true, each day entry includes cash_balance, holdings_value,
+*           transactions_applied (list of transactions applied on that day), and
+*           holdings_breakdown (per-asset quantity, price, value, price_updated_today flag).
+*           Useful for diagnosing unexpected value changes.
+*     responses:
+*       200:
+*         description: Portfolio performance data
+*         content:
+*           application/json:
+*             schema:
+*               type: array
+*               items:
+*                 type: object
+*                 properties:
+*                   date:
+*                     type: string
+*                     format: date
+*                   total_value:
+*                     type: number
+*                     description: Total portfolio value (holdings + cash)
+*       500:
+*         description: Server error
+*/
+
 router.get(
   "/portfolio/performance",
   authMiddleware,
   validate(portfolioPerformanceValidation),
   (req, res) => {
     try {
-      /**
-       * @swagger
-       * /analytics/portfolio/performance:
-       *   get:
-       *     summary: Get portfolio performance over time
-       *     tags: [Analytics]
-       *     security:
-       *       - bearerAuth: []
-       *     parameters:
-       *       - in: query
-       *         name: days
-       *         schema:
-       *           type: integer
-       *           default: 30
-       *         description: Number of days to include in the performance history. Ignored when start_date/end_date are provided.
-       *       - in: query
-       *         name: start_date
-       *         schema:
-       *           type: string
-       *           format: date
-       *         description: Start date (YYYY-MM-DD). When provided together with end_date, overrides days.
-       *       - in: query
-       *         name: end_date
-       *         schema:
-       *           type: string
-       *           format: date
-       *         description: End date (YYYY-MM-DD). When provided together with start_date, overrides days.
-       *       - in: query
-       *         name: exclude
-       *         schema:
-       *           type: string
-       *         description: >
-       *           Comma-separated list of asset types to exclude from the portfolio value calculation
-       *           (e.g. `realestate,crypto`). Valid values: crypto, currency, equity, fixedincome, realestate.
-       *       - in: query
-       *         name: debug
-       *         schema:
-       *           type: boolean
-       *           default: false
-       *         description: >
-       *           When true, each day entry includes cash_balance, holdings_value,
-       *           transactions_applied (list of transactions applied on that day), and
-       *           holdings_breakdown (per-asset quantity, price, value, price_updated_today flag).
-       *           Useful for diagnosing unexpected value changes.
-       *     responses:
-       *       200:
-       *         description: Portfolio performance data
-       *         content:
-       *           application/json:
-       *             schema:
-       *               type: array
-       *               items:
-       *                 type: object
-       *                 properties:
-       *                   date:
-       *                     type: string
-       *                     format: date
-       *                   total_value:
-       *                     type: number
-       *                     description: Total portfolio value (holdings + cash)
-       *       500:
-       *         description: Server error
-       */
       const { days, exclude, start_date, end_date, debug } = req.query;
       const excludeTypes = exclude
         ? exclude
@@ -435,97 +436,98 @@ router.get(
 );
 
 // Get detailed return calculations (MWRR & CAGR)
+/**
+* @swagger
+* /analytics/portfolio/returns/details:
+*   get:
+*     summary: Get detailed return calculations (MWRR & CAGR)
+*     tags: [Analytics]
+*     security:
+*       - bearerAuth: []
+*     responses:
+*       200:
+*         description: Return details
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 current_total_value:
+*                   type: number
+*                 cash_balance:
+*                   type: number
+*                 holdings_market_value:
+*                   type: number
+*                 mwrr:
+*                   type: number
+*                   description: Money-Weighted Rate of Return as decimal
+*                 mwrr_cash_flows:
+*                   type: array
+*                   items:
+*                     type: object
+*                     properties:
+*                       date:
+*                         type: string
+*                         format: date
+*                       type:
+*                         type: string
+*                         enum: [deposit, withdraw, current]
+*                       amount:
+*                         type: number
+*                       yearsSince:
+*                         type: number
+*                       signedAmount:
+*                         type: number
+*                         description: Negative for deposits, positive for withdrawals and current value
+*                 mwrr_iterations:
+*                   type: array
+*                   items:
+*                     type: object
+*                     properties:
+*                       iteration:
+*                         type: integer
+*                       rate:
+*                         type: number
+*                         description: IRR rate at this iteration
+*                       npv:
+*                         type: number
+*                         description: Net Present Value at this rate
+*                 cagr:
+*                   type: number
+*                   description: Compound Annual Growth Rate as decimal
+*                 cagr_details:
+*                   type: object
+*                   properties:
+*                     cagr:
+*                       type: number
+*                     firstDate:
+*                       type: string
+*                       format: date
+*                     years:
+*                       type: number
+*                     netDeposits:
+*                       type: number
+*                     endingValue:
+*                       type: number
+*                 cagr_evolution:
+*                   type: array
+*                   items:
+*                     type: object
+*                     properties:
+*                       year:
+*                         type: integer
+*                       mtm:
+*                         type: number
+*                         description: Mark-to-market value at end of year
+*                       cagr:
+*                         type: number
+*                         description: CAGR from year 1 to this year
+*       500:
+*         description: Server error
+*/
+
 router.get("/portfolio/returns/details", authMiddleware, (req, res) => {
   try {
-    /**
-     * @swagger
-     * /analytics/portfolio/returns/details:
-     *   get:
-     *     summary: Get detailed return calculations (MWRR & CAGR)
-     *     tags: [Analytics]
-     *     security:
-     *       - bearerAuth: []
-     *     responses:
-     *       200:
-     *         description: Return details
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: object
-     *               properties:
-     *                 current_total_value:
-     *                   type: number
-     *                 cash_balance:
-     *                   type: number
-     *                 holdings_market_value:
-     *                   type: number
-     *                 mwrr:
-     *                   type: number
-     *                   description: Money-Weighted Rate of Return as decimal
-     *                 mwrr_cash_flows:
-     *                   type: array
-     *                   items:
-     *                     type: object
-     *                     properties:
-     *                       date:
-     *                         type: string
-     *                         format: date
-     *                       type:
-     *                         type: string
-     *                         enum: [deposit, withdraw, current]
-     *                       amount:
-     *                         type: number
-     *                       yearsSince:
-     *                         type: number
-     *                       signedAmount:
-     *                         type: number
-     *                         description: Negative for deposits, positive for withdrawals and current value
-     *                 mwrr_iterations:
-     *                   type: array
-     *                   items:
-     *                     type: object
-     *                     properties:
-     *                       iteration:
-     *                         type: integer
-     *                       rate:
-     *                         type: number
-     *                         description: IRR rate at this iteration
-     *                       npv:
-     *                         type: number
-     *                         description: Net Present Value at this rate
-     *                 cagr:
-     *                   type: number
-     *                   description: Compound Annual Growth Rate as decimal
-     *                 cagr_details:
-     *                   type: object
-     *                   properties:
-     *                     cagr:
-     *                       type: number
-     *                     firstDate:
-     *                       type: string
-     *                       format: date
-     *                     years:
-     *                       type: number
-     *                     netDeposits:
-     *                       type: number
-     *                     endingValue:
-     *                       type: number
-     *                 cagr_evolution:
-     *                   type: array
-     *                   items:
-     *                     type: object
-     *                     properties:
-     *                       year:
-     *                         type: integer
-     *                       mtm:
-     *                         type: number
-     *                         description: Mark-to-market value at end of year
-     *                       cagr:
-     *                         type: number
-     *                         description: CAGR from year 1 to this year
-     *       500:
-     *         description: Server error
-     */
     const details = AnalyticsService.getReturnDetails(req.user.id);
     res.json(details);
   } catch (error) {
@@ -534,105 +536,106 @@ router.get("/portfolio/returns/details", authMiddleware, (req, res) => {
 });
 
 // Get tax report for a specific year
+/**
+* @swagger
+* /analytics/tax-report:
+*   get:
+*     summary: Get tax report with holdings at year-end
+*     tags: [Analytics]
+*     security:
+*       - bearerAuth: []
+*     parameters:
+*       - in: query
+*         name: year
+*         required: true
+*         schema:
+*           type: integer
+*         description: Year for tax report (e.g., 2025)
+*       - in: query
+*         name: exclude_asset_types
+*         schema:
+*           type: string
+*         description: Comma-separated asset types to exclude
+*       - in: query
+*         name: exclude_brokers
+*         schema:
+*           type: string
+*         description: Comma-separated broker names to exclude
+*     responses:
+*       200:
+*         description: Tax report data
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 year:
+*                   type: integer
+*                 year_end_date:
+*                   type: string
+*                   format: date
+*                 fx_rate_asset:
+*                   type: string
+*                   description: Symbol of FX rate asset used
+*                 fx_rate:
+*                   type: number
+*                   description: FX rate at year-end
+*                 holdings:
+*                   type: array
+*                   items:
+*                     type: object
+*                     properties:
+*                       asset_id:
+*                         type: integer
+*                       asset:
+*                         type: string
+*                         description: Asset symbol
+*                       asset_name:
+*                         type: string
+*                       asset_type:
+*                         type: string
+*                       currency:
+*                         type: string
+*                       broker:
+*                         type: string
+*                       quantity:
+*                         type: number
+*                       price:
+*                         type: number
+*                         description: Price in USD at year-end
+*                       price_date:
+*                         type: string
+*                         format: date
+*                       market_value:
+*                         type: number
+*                         description: Market value in USD
+*                       usdars_bna:
+*                         type: number
+*                         description: FX rate used
+*                       price_in_ccy:
+*                         type: number
+*                         description: Price in local currency
+*                       market_value_in_ccy:
+*                         type: number
+*                         description: Market value in local currency
+*                 total_market_value:
+*                   type: number
+*                   description: Total market value in USD
+*                 total_market_value_in_ccy:
+*                   type: number
+*                   description: Total market value in local currency
+*       400:
+*         description: Missing or invalid year parameter
+*       500:
+*         description: Server error
+*/
+
 router.get(
   "/tax-report",
   authMiddleware,
   validate(taxReportValidation),
   (req, res) => {
     try {
-      /**
-       * @swagger
-       * /analytics/tax-report:
-       *   get:
-       *     summary: Get tax report with holdings at year-end
-       *     tags: [Analytics]
-       *     security:
-       *       - bearerAuth: []
-       *     parameters:
-       *       - in: query
-       *         name: year
-       *         required: true
-       *         schema:
-       *           type: integer
-       *         description: Year for tax report (e.g., 2025)
-       *       - in: query
-       *         name: exclude_asset_types
-       *         schema:
-       *           type: string
-       *         description: Comma-separated asset types to exclude
-       *       - in: query
-       *         name: exclude_brokers
-       *         schema:
-       *           type: string
-       *         description: Comma-separated broker names to exclude
-       *     responses:
-       *       200:
-       *         description: Tax report data
-       *         content:
-       *           application/json:
-       *             schema:
-       *               type: object
-       *               properties:
-       *                 year:
-       *                   type: integer
-       *                 year_end_date:
-       *                   type: string
-       *                   format: date
-       *                 fx_rate_asset:
-       *                   type: string
-       *                   description: Symbol of FX rate asset used
-       *                 fx_rate:
-       *                   type: number
-       *                   description: FX rate at year-end
-       *                 holdings:
-       *                   type: array
-       *                   items:
-       *                     type: object
-       *                     properties:
-       *                       asset_id:
-       *                         type: integer
-       *                       asset:
-       *                         type: string
-       *                         description: Asset symbol
-       *                       asset_name:
-       *                         type: string
-       *                       asset_type:
-       *                         type: string
-       *                       currency:
-       *                         type: string
-       *                       broker:
-       *                         type: string
-       *                       quantity:
-       *                         type: number
-       *                       price:
-       *                         type: number
-       *                         description: Price in USD at year-end
-       *                       price_date:
-       *                         type: string
-       *                         format: date
-       *                       market_value:
-       *                         type: number
-       *                         description: Market value in USD
-       *                       usdars_bna:
-       *                         type: number
-       *                         description: FX rate used
-       *                       price_in_ccy:
-       *                         type: number
-       *                         description: Price in local currency
-       *                       market_value_in_ccy:
-       *                         type: number
-       *                         description: Market value in local currency
-       *                 total_market_value:
-       *                   type: number
-       *                   description: Total market value in USD
-       *                 total_market_value_in_ccy:
-       *                   type: number
-       *                   description: Total market value in local currency
-       *       400:
-       *         description: Missing or invalid year parameter
-       *       500:
-       *         description: Server error
-       */
       const { year, exclude_asset_types, exclude_brokers } = req.query;
 
       if (!year) {

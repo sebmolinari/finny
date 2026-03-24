@@ -8,7 +8,7 @@ const logger = require("../utils/logger");
 
 /**
  * @swagger
- * /api/v1/schedulers:
+ * /schedulers:
  *   get:
  *     summary: Get all schedulers
  *     tags: [Schedulers]
@@ -58,7 +58,7 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/v1/schedulers:
+ * /schedulers:
  *   post:
  *     summary: Create a new scheduler
  *     tags: [Schedulers]
@@ -169,7 +169,7 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/v1/schedulers/{id}:
+ * /schedulers/{id}:
  *   get:
  *     summary: Get a scheduler by ID
  *     tags: [Schedulers]
@@ -209,7 +209,7 @@ router.get("/:id", authMiddleware, adminMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/v1/schedulers/{id}:
+ * /schedulers/{id}:
  *   put:
  *     summary: Update a scheduler
  *     tags: [Schedulers]
@@ -346,7 +346,7 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/v1/schedulers/instances:
+ * /schedulers/instances:
  *   delete:
  *     summary: Purge all scheduler instances (execution history)
  *     tags: [Schedulers]
@@ -383,7 +383,7 @@ router.delete("/instances", authMiddleware, adminMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/v1/schedulers/{id}:
+ * /schedulers/{id}:
  *   delete:
  *     summary: Delete a scheduler
  *     tags: [Schedulers]
@@ -441,7 +441,7 @@ router.delete("/:id", authMiddleware, adminMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/v1/schedulers/{id}/instances:
+ * /schedulers/{id}/instances:
  *   get:
  *     summary: Get execution history for a scheduler
  *     tags: [Schedulers]

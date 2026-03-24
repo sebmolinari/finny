@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Stack from "@mui/material/Stack";
 import Divider from "@mui/material/Divider";
 import Badge from "@mui/material/Badge";
@@ -57,6 +57,10 @@ export default function Header({ onOpenMobileNav }) {
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch (_) {}
   };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const open = Boolean(anchorEl);
 

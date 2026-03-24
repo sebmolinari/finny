@@ -705,7 +705,7 @@ router.post("/transfer", authMiddleware, (req, res) => {
     }
 
     // Get current FIFO cost basis at source to preserve cost basis in transfer
-    const AnalyticsService = require("../services/analytics");
+    const AnalyticsService = require("../services/analyticsService");
     const sourceHoldings = AnalyticsService.getPortfolioHoldings(
       req.user.id,
     ).filter(

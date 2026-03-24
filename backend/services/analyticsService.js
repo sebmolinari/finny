@@ -45,7 +45,6 @@ class AnalyticsService {
 
   // Calculate daily P&L based on yesterday's prices
   static _calculateDailyPnL(userId, holdings) {
-    const db = require("../config/database");
     const userSettings = UserSettings.findByUserId(userId);
     const yesterday = getYesterdayInTimezone(userSettings.timezone);
 
@@ -53,26 +52,18 @@ class AnalyticsService {
     let todayMarketValue = 0;
 
     for (const holding of holdings) {
-      // Today's market value (already calculated)
       todayMarketValue += holding.market_value;
 
-      // Get yesterday's price for this asset
-      const stmt = db.prepare(`
-        SELECT price FROM price_data
-        WHERE asset_id = ? AND date <= ?
-        ORDER BY date DESC
-        LIMIT 1
-      `);
-      const yesterdayPriceRow = stmt.get(holding.asset_id, yesterday);
+      const yesterdayPriceRow = PriceData.getLatestPriceAsOf(
+        holding.asset_id,
+        yesterday,
+      );
 
       if (yesterdayPriceRow) {
-        const yesterdayPrice = fromValueScale(
-          yesterdayPriceRow.price,
-          PRICE_SCALE,
-        );
-        yesterdayMarketValue += holding.total_quantity * yesterdayPrice;
+        yesterdayMarketValue +=
+          holding.total_quantity * yesterdayPriceRow.price;
       } else {
-        // If no yesterday price, use today's price (no change)
+        // No historical price available — treat as no change
         yesterdayMarketValue += holding.market_value;
       }
     }
@@ -124,24 +115,16 @@ class AnalyticsService {
         ? holding.total_quantity * latestPrice.price
         : 0;
       // Calculate yesterday's market value and daily P&L for this holding
-      const db = require("../config/database");
       const userSettings = UserSettings.findByUserId(userId);
       const yesterday = getYesterdayInTimezone(userSettings.timezone);
 
-      const priceStmt = db.prepare(`
-        SELECT price FROM price_data
-        WHERE asset_id = ? AND date <= ?
-        ORDER BY date DESC
-        LIMIT 1
-      `);
-      const yesterdayPriceRow = priceStmt.get(holding.asset_id, yesterday);
+      const yesterdayPriceRow = PriceData.getLatestPriceAsOf(
+        holding.asset_id,
+        yesterday,
+      );
       let yesterdayMarketValue = 0;
       if (yesterdayPriceRow) {
-        const yesterdayPrice = fromValueScale(
-          yesterdayPriceRow.price,
-          PRICE_SCALE,
-        );
-        yesterdayMarketValue = holding.total_quantity * yesterdayPrice;
+        yesterdayMarketValue = holding.total_quantity * yesterdayPriceRow.price;
       } else {
         yesterdayMarketValue = marketValue;
       }
@@ -1480,13 +1463,12 @@ class AnalyticsService {
       const navEnd = performance[performance.length - 1].total_value;
       const nDays = returns.length;
       const annualizedReturn =
-        navStart > 0
-          ? Math.pow(navEnd / navStart, 252 / nDays) - 1
-          : 0;
+        navStart > 0 ? Math.pow(navEnd / navStart, 252 / nDays) - 1 : 0;
 
       // Full-period annualised volatility (std dev of all daily returns × √252)
       const allReturns = returns.map((r) => r.return);
-      const meanReturn = allReturns.reduce((s, r) => s + r, 0) / allReturns.length;
+      const meanReturn =
+        allReturns.reduce((s, r) => s + r, 0) / allReturns.length;
       const fullVariance =
         allReturns.reduce((s, r) => s + Math.pow(r - meanReturn, 2), 0) /
         (allReturns.length - 1);
@@ -1504,7 +1486,8 @@ class AnalyticsService {
       // Downside deviation: std dev of negative daily returns, annualized
       const negReturns = allReturns.filter((r) => r < 0);
       if (negReturns.length > 1) {
-        const meanNeg = negReturns.reduce((s, r) => s + r, 0) / negReturns.length;
+        const meanNeg =
+          negReturns.reduce((s, r) => s + r, 0) / negReturns.length;
         const variance =
           negReturns.reduce((s, r) => s + Math.pow(r - meanNeg, 2), 0) /
           (negReturns.length - 1);
@@ -1606,7 +1589,13 @@ class AnalyticsService {
   // Fetches a market index price series from Yahoo Finance (e.g. "^GSPC") and
   // returns both portfolio NAV and benchmark series normalized to base 100 at
   // the first overlapping date, enabling a fair relative-return comparison.
-  static async getBenchmarkSeries(userId, symbol, startDate, endDate, days = 365) {
+  static async getBenchmarkSeries(
+    userId,
+    symbol,
+    startDate,
+    endDate,
+    days = 365,
+  ) {
     const PriceService = require("./priceService");
 
     const userSettings = UserSettings.findByUserId(userId);
@@ -1620,7 +1609,9 @@ class AnalyticsService {
       resolvedStart = cutoff.toISOString().split("T")[0];
     }
 
-    logger.info(`[Benchmark] Requested symbol=${symbol} range=${resolvedStart}→${resolvedEnd} userId=${userId}`);
+    logger.info(
+      `[Benchmark] Requested symbol=${symbol} range=${resolvedStart}→${resolvedEnd} userId=${userId}`,
+    );
 
     // Portfolio NAV series
     const navSeries = this.getPortfolioPerformance(
@@ -1632,17 +1623,33 @@ class AnalyticsService {
     );
 
     if (navSeries.length === 0) {
-      logger.warn(`[Benchmark] No portfolio NAV data for userId=${userId} in range`);
-      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+      logger.warn(
+        `[Benchmark] No portfolio NAV data for userId=${userId} in range`,
+      );
+      return {
+        portfolio_series: [],
+        benchmark_series: [],
+        symbol,
+        name: symbol,
+      };
     }
 
     logger.info(`[Benchmark] Portfolio has ${navSeries.length} NAV points`);
 
     // Fetch benchmark price series from Yahoo Finance
-    const rawSeries = await PriceService.fetchHistoricalPriceSeries(symbol, resolvedStart, resolvedEnd);
+    const rawSeries = await PriceService.fetchHistoricalPriceSeries(
+      symbol,
+      resolvedStart,
+      resolvedEnd,
+    );
     if (!rawSeries || rawSeries.length === 0) {
       logger.warn(`[Benchmark] No price data returned for ${symbol}`);
-      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+      return {
+        portfolio_series: [],
+        benchmark_series: [],
+        symbol,
+        name: symbol,
+      };
     }
 
     // Find the first date present in both series
@@ -1650,30 +1657,55 @@ class AnalyticsService {
     const firstCommon = navSeries.find((d) => benchDateSet.has(d.date))?.date;
 
     if (!firstCommon) {
-      logger.warn(`[Benchmark] No overlapping dates between portfolio and ${symbol} series`);
-      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+      logger.warn(
+        `[Benchmark] No overlapping dates between portfolio and ${symbol} series`,
+      );
+      return {
+        portfolio_series: [],
+        benchmark_series: [],
+        symbol,
+        name: symbol,
+      };
     }
 
-    logger.info(`[Benchmark] Anchor date=${firstCommon}, normalizing both series to base 100`);
+    logger.info(
+      `[Benchmark] Anchor date=${firstCommon}, normalizing both series to base 100`,
+    );
 
     // Normalize portfolio to base 100 from firstCommon
     const anchorNav = navSeries.find((d) => d.date === firstCommon).total_value;
     const portfolio_series = navSeries
       .filter((d) => d.date >= firstCommon)
-      .map((d) => ({ date: d.date, value: parseFloat(((d.total_value / anchorNav) * 100).toFixed(4)) }));
+      .map((d) => ({
+        date: d.date,
+        value: parseFloat(((d.total_value / anchorNav) * 100).toFixed(4)),
+      }));
 
     // Normalize benchmark to base 100 from firstCommon
-    const anchorBench = rawSeries.find((d) => d.date === firstCommon)?.price
-      ?? rawSeries.find((d) => d.date >= firstCommon)?.price;
+    const anchorBench =
+      rawSeries.find((d) => d.date === firstCommon)?.price ??
+      rawSeries.find((d) => d.date >= firstCommon)?.price;
     if (!anchorBench) {
-      logger.warn(`[Benchmark] Could not find anchor price for ${symbol} on or after ${firstCommon}`);
-      return { portfolio_series: [], benchmark_series: [], symbol, name: symbol };
+      logger.warn(
+        `[Benchmark] Could not find anchor price for ${symbol} on or after ${firstCommon}`,
+      );
+      return {
+        portfolio_series: [],
+        benchmark_series: [],
+        symbol,
+        name: symbol,
+      };
     }
     const benchmark_series = rawSeries
       .filter((d) => d.date >= firstCommon)
-      .map((d) => ({ date: d.date, value: parseFloat(((d.price / anchorBench) * 100).toFixed(4)) }));
+      .map((d) => ({
+        date: d.date,
+        value: parseFloat(((d.price / anchorBench) * 100).toFixed(4)),
+      }));
 
-    logger.info(`[Benchmark] Done — portfolio ${portfolio_series.length} pts, ${symbol} ${benchmark_series.length} pts`);
+    logger.info(
+      `[Benchmark] Done — portfolio ${portfolio_series.length} pts, ${symbol} ${benchmark_series.length} pts`,
+    );
     return { portfolio_series, benchmark_series, symbol, name: symbol };
   }
 
@@ -1690,7 +1722,11 @@ class AnalyticsService {
       false,
       startDate,
     );
-    const endHoldings = Transaction.getPortfolioHoldings(userId, false, endDate);
+    const endHoldings = Transaction.getPortfolioHoldings(
+      userId,
+      false,
+      endDate,
+    );
 
     // Build maps keyed by asset_id (grouped across brokers)
     const startMap = {};
@@ -1720,10 +1756,15 @@ class AnalyticsService {
 
     // Gather all unique asset IDs that had any position, limited to active assets
     const activeAssetIds = new Set(
-      db.prepare("SELECT id FROM assets WHERE active = 1").all().map((r) => String(r.id))
+      db
+        .prepare("SELECT id FROM assets WHERE active = 1")
+        .all()
+        .map((r) => String(r.id)),
     );
     const allAssetIds = new Set(
-      [...Object.keys(startMap), ...Object.keys(endMap)].filter((id) => activeAssetIds.has(id))
+      [...Object.keys(startMap), ...Object.keys(endMap)].filter((id) =>
+        activeAssetIds.has(id),
+      ),
     );
 
     // Get beginning NAV (portfolio performance on startDate)
@@ -1965,7 +2006,7 @@ class AnalyticsService {
         `SELECT username, error_message, created_at
          FROM audit_logs
          WHERE action_type IN ('price_refresh', 'price_refresh_all', 'refresh_prices')
-           AND success = 0
+           AND (success = 0 OR json_extract(new_values, '$.failed') != 0)
          ORDER BY created_at DESC
          LIMIT 20`,
       )

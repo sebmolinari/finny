@@ -135,7 +135,7 @@ Finny is a finance management web application for tracking investments across mu
 
 ## 🔔 Notifications
 
-- Bell icon in the header with live unread-count badge
+- Bell icon in the header with unread-count badge, populated automatically on page load
 - Notification feed with mark-as-read and mark-all-read actions
 
 ## ⚙️ Settings
