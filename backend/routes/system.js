@@ -7,7 +7,7 @@ const mask = (value) => (value ? "••••••••" : "(not set)");
 
 /**
  * @swagger
- * /api/v1/system/config:
+ * /system/config:
  *   get:
  *     summary: Get sanitized server configuration
  *     tags: [System]

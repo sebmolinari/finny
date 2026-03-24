@@ -19,7 +19,12 @@ npm run build # production build
 npm run lint  # ESLint (frontend only)
 ```
 
-No test framework is currently configured.
+**Backend tests** (from `/backend`):
+
+```bash
+npm test              # run all tests
+npm test -- --coverage  # with coverage report
+```
 
 Swagger UI is available at `http://localhost:5000/api/v1/api-docs` in development.
 
@@ -33,7 +38,7 @@ Express.js 5 + SQLite (encrypted via `better-sqlite3-multiple-ciphers`). All rou
 
 ```
 backend/
-  config/        # database.js (schema + encryption), swagger.js
+  config/        # database.js (opens encrypted DB, no schema), swagger.js
   middleware/    # auth.js, admin.js, validators/
   models/        # Static-method classes wrapping SQLite (User, Asset, Transaction, AuditLog…)
   routes/        # One file per resource; mounted in server.js
@@ -112,6 +117,27 @@ Never use `REAL` or `FLOAT` for any column. Use:
 1. Create `backend/routes/myRoute.js`
 2. Mount in `backend/server.js` under `/api/v1/myroute`
 3. If new DB columns are needed: add a numbered migration in `backend/migrations/`
+
+### Testing
+
+Jest is configured in `backend/`. Tests live under `backend/tests/`:
+
+```
+backend/tests/
+  unit/          # isolated tests — models, services, utils, middleware, routes
+  integration/   # full request-cycle tests using supertest
+  setup/
+    testDb.js    # in-memory SQLite built from real migrations (auto-mapped via moduleNameMapper)
+    testApp.js   # Express app wired up for integration tests
+    env.js       # test env vars
+```
+
+**Rules:**
+- Every new function or method **must** have a corresponding unit test in `backend/tests/unit/`.
+- Unit tests for a file at `backend/foo/bar.js` go in `backend/tests/unit/foo/bar.test.js`.
+- Use `testDb.clearAll()` in `beforeEach` to reset state between tests — never share state across tests.
+- The test DB schema is kept in sync automatically: adding a migration file is all that's needed.
+- Coverage thresholds are enforced at 80% (branches, functions, lines, statements) — keep them green.
 
 ### Frontend import conventions
 - Do **not** add `import React from "react"` — React 19 + Vite use the automatic JSX transform; the default import is never needed

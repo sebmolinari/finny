@@ -1,5 +1,15 @@
 All notable changes to this project are documented below.
 
+## [1.0.1] – 2026-03-24
+
+### Fixed
+
+- Notification badge and feed now populate immediately on page load instead of requiring a manual interaction to trigger the first fetch
+
+### Changed
+
+- Backend test suite introduced (Jest): unit tests for all models, services, middleware, routes and utilities
+
 ## [1.0.0] – 2026-03-22
 
 ### Added

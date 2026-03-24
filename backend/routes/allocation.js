@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { validationResult } = require("express-validator");
 const AssetAllocationTarget = require("../models/AssetAllocationTarget");
-const AnalyticsService = require("../services/analytics");
+const AnalyticsService = require("../services/analyticsService");
 const auth = require("../middleware/auth");
 const {
   allocationTargetValidation,

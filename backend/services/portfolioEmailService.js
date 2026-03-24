@@ -1,4 +1,4 @@
-const AnalyticsService = require("./analytics");
+const AnalyticsService = require("./analyticsService");
 const UserSettings = require("../models/UserSettings");
 const { getTodayInTimezone } = require("../utils/dateUtils");
 const { formatCurrency, formatPercent } = require("../utils/formatters");

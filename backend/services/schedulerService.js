@@ -1,4 +1,5 @@
-const db = require("../config/database");
+const Scheduler = require("../models/Scheduler");
+const SchedulerInstance = require("../models/SchedulerInstance");
 const portfolioEmailService = require("./portfolioEmailService");
 const priceService = require("./priceService");
 const emailService = require("./emailService");
@@ -7,19 +8,16 @@ const User = require("../models/User");
 const UserSettings = require("../models/UserSettings");
 const { getSchedulerNow } = require("../utils/dateUtils");
 const logger = require("../utils/logger");
+const Notification = require("../models/Notification");
 
 class SchedulerService {
   /**
-   * Check for due schedules and execute them
-   * Called every 60 seconds from the background worker
+   * Check for due schedules and execute them.
+   * Called every 60 seconds from the background worker in server.js.
    */
   static async checkDueSchedules() {
     try {
-      // Get all enabled schedulers
-      const stmt = db.prepare(`
-        SELECT * FROM schedulers WHERE enabled = 1
-      `);
-      const schedulers = stmt.all();
+      const schedulers = Scheduler.findAllEnabled();
 
       for (const scheduler of schedulers) {
         try {
@@ -29,30 +27,19 @@ class SchedulerService {
             UserSettings.findByUserId(scheduler.created_by)?.timezone || "UTC";
           const nowParts = getSchedulerNow(creatorTimezone);
 
-          const due = this.isScheduleDue(scheduler, nowParts);
+          if (!this.isScheduleDue(scheduler, nowParts)) continue;
 
-          // Check if this scheduler is due
-          if (due) {
-            // Check if already executed today (in the creator's timezone)
-            const alreadyExecuted = db
-              .prepare(
-                `
-              SELECT id FROM scheduler_instances
-              WHERE scheduler_id = ?
-              AND status IN ('success', 'pending')
-              AND DATE(scheduled_run_at) = ?
-              LIMIT 1
-            `,
-              )
-              .get(scheduler.id, nowParts.today);
+          const alreadyExecuted = SchedulerInstance.findTodayExecution(
+            scheduler.id,
+            nowParts.today,
+          );
 
-            if (alreadyExecuted) {
-              logger.info(
-                `Scheduler "${scheduler.name}" already executed today, skipping`,
-              );
-            } else {
-              await this.executeWithRetry(scheduler);
-            }
+          if (alreadyExecuted) {
+            logger.info(
+              `Scheduler "${scheduler.name}" already executed today, skipping`,
+            );
+          } else {
+            await this.executeWithRetry(scheduler);
           }
         } catch (error) {
           logger.error(
@@ -66,30 +53,23 @@ class SchedulerService {
   }
 
   /**
-   * Check if a scheduler is due based on frequency and time
+   * Check if a scheduler is due based on frequency and current time.
    */
   static isScheduleDue(scheduler, nowParts) {
+    if (nowParts.time !== scheduler.time_of_day) return false;
+
     const metadata = scheduler.metadata ? JSON.parse(scheduler.metadata) : {};
-    const scheduledTime = scheduler.time_of_day; // HH:MM format
 
-    // Check if current time matches scheduled time (within same minute)
-    if (nowParts.time !== scheduledTime) {
-      return false;
-    }
-
-    // Check frequency
     switch (scheduler.frequency) {
       case "daily":
         return true;
 
       case "weekly": {
-        // Execute on Monday (day 1) by default, unless specified in metadata
         const dayOfWeek = metadata.day_of_week || 1;
         return nowParts.dayOfWeek === dayOfWeek;
       }
 
       case "monthly": {
-        // Execute on specific day of month, default to 1st
         const dayOfMonth = metadata.day_of_month || 1;
         return nowParts.dayOfMonth === dayOfMonth;
       }
@@ -100,26 +80,21 @@ class SchedulerService {
   }
 
   /**
-   * Execute a schedule with retry logic
+   * Execute a schedule with retry logic.
    */
   static async executeWithRetry(scheduler, attempt = 1) {
-    const maxRetries = 3;
-    const schedulerId = scheduler.id;
+    const maxRetries = 4;
+    const delay = Math.pow(2, attempt - 1) * 60 * 1000; // 1m, 2m, 4m...
+    const scheduledRunAt = new Date().toISOString();
 
     try {
-      const now = new Date();
-      const scheduledRunAt = now.toISOString();
-
-      // Execute the job based on type
       let result;
       switch (scheduler.type) {
-        case "send_report": {
+        case "send_report":
           result = await portfolioEmailService.sendBatchEmails();
           break;
-        }
 
         case "asset_refresh": {
-          // Use system user (ID 1) for automated refreshes
           result = await priceService.refreshAllPrices();
 
           AuditLog.create({
@@ -132,6 +107,7 @@ class SchedulerService {
               failed: result.failed,
               total: result.total,
             },
+            error_message: result.errors?.join(" | ") || null,
           });
 
           if (result.failed > 0) {
@@ -146,14 +122,14 @@ class SchedulerService {
           throw new Error(`Unknown scheduler type: ${scheduler.type}`);
       }
 
-      // Log successful execution
-      await this.logExecution(
-        schedulerId,
+      SchedulerInstance.create(
+        scheduler.id,
+        scheduledRunAt,
+        new Date().toISOString(),
         "success",
+        attempt,
         result,
         null,
-        attempt,
-        scheduledRunAt,
       );
 
       logger.info(
@@ -161,27 +137,28 @@ class SchedulerService {
       );
     } catch (error) {
       logger.error(
-        `Scheduler ${schedulerId} execution failed (attempt ${attempt}/${maxRetries}): ${error.message}`,
+        `Scheduler ${scheduler.id} execution failed (attempt ${attempt}/${maxRetries}): ${error.message}`,
       );
 
       if (attempt < maxRetries) {
-        // Retry after a short delay
+        logger.info(
+          `Retrying scheduler ${scheduler.id} in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`,
+        );
         setTimeout(() => {
           this.executeWithRetry(scheduler, attempt + 1);
-        }, 30000); // Retry after 30 seconds
+        }, delay);
       } else {
-        // Max retries reached, log as failed
-        const now = new Date();
-        await this.logExecution(
-          schedulerId,
+        SchedulerInstance.create(
+          scheduler.id,
+          scheduledRunAt,
+          new Date().toISOString(),
           "failed",
+          attempt,
           null,
           error.message,
-          attempt,
-          now.toISOString(),
         );
         await this.notifyAdminsOfFailure(
-          schedulerId,
+          scheduler.id,
           scheduler.name,
           error.message,
           scheduler.type,
@@ -192,7 +169,7 @@ class SchedulerService {
   }
 
   /**
-   * Send failure notification email to all active admin users
+   * Send failure notification email to all active admin users.
    */
   static async notifyAdminsOfFailure(
     schedulerId,
@@ -208,6 +185,12 @@ class SchedulerService {
         limit: 100,
       });
       for (const admin of admins) {
+        Notification.create(
+          admin.id,
+          `Scheduler "${schedulerName}" failed after ${attempts} attempts`,
+          errorMessage,
+          schedulerType,
+        );
         if (!admin.email) continue;
         const label = schedulerName ?? `#${schedulerId}`;
         await emailService.sendEmail(
@@ -228,9 +211,62 @@ class SchedulerService {
     }
   }
 
-  /**
-   * Generate a styled HTML email for scheduler failure notifications
-   */
+  // ── CRUD (delegated to model, kept here for route convenience) ────────────
+
+  static getSchedulers(limit = 50, offset = 0) {
+    return Scheduler.findAll(limit, offset);
+  }
+
+  static getSchedulersCount() {
+    return Scheduler.count();
+  }
+
+  static getSchedulerById(id) {
+    return Scheduler.findById(id);
+  }
+
+  static createScheduler(name, type, frequency, timeOfDay, createdBy) {
+    return Scheduler.create(name, type, frequency, timeOfDay, createdBy);
+  }
+
+  static updateScheduler(
+    id,
+    name,
+    type,
+    frequency,
+    timeOfDay,
+    enabled,
+    updatedBy,
+  ) {
+    return Scheduler.update(
+      id,
+      name,
+      type,
+      frequency,
+      timeOfDay,
+      enabled,
+      updatedBy,
+    );
+  }
+
+  static deleteScheduler(id) {
+    return Scheduler.disable(id);
+  }
+
+  static getSchedulerInstances(schedulerId, limit = 50, offset = 0) {
+    return SchedulerInstance.findBySchedulerId(schedulerId, limit, offset);
+  }
+
+  static getSchedulerInstancesCount(schedulerId) {
+    return SchedulerInstance.countBySchedulerId(schedulerId);
+  }
+
+  static purgeAllInstances() {
+    return SchedulerInstance.purgeAll();
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
   static _generateFailureEmail(
     schedulerName,
     errorMessage,
@@ -271,11 +307,9 @@ class SchedulerService {
           <tr>
             <td style="padding:32px 36px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; color:#333333;">
 
-              <!-- HEADER -->
               <p style="font-size:20px; font-weight:700; color:#1976d2; margin:0 0 4px 0;">Finny</p>
               <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:#888888; margin:0 0 24px 0;">Portfolio Manager</p>
 
-              <!-- ALERT BANNER -->
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                 <tr>
                   <td style="background-color:#fdecea; border-left:4px solid #d32f2f; padding:16px 20px; border-radius:2px;">
@@ -285,7 +319,6 @@ class SchedulerService {
                 </tr>
               </table>
 
-              <!-- DETAILS TABLE -->
               <h2 style="color:#1976d2; font-size:15px; font-weight:700; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:0.03em;">Details</h2>
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                 <tr>
@@ -306,7 +339,6 @@ class SchedulerService {
                 </tr>
               </table>
 
-              <!-- ERROR MESSAGE -->
               <h2 style="color:#1976d2; font-size:15px; font-weight:700; margin:0 0 12px 0; text-transform:uppercase; letter-spacing:0.03em;">Error</h2>
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                 <tr>
@@ -316,7 +348,6 @@ class SchedulerService {
                 </tr>
               </table>
 
-              <!-- FOOTER -->
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #e0e0e0;">
                 <tr>
                   <td style="padding-top:16px; font-size:11px; color:#aaaaaa; text-align:center; line-height:1.6;">
@@ -335,176 +366,6 @@ class SchedulerService {
 
 </body>
 </html>`;
-  }
-
-  /**
-   * Log scheduler execution to database
-   */
-  static async logExecution(
-    schedulerId,
-    status,
-    result,
-    errorMessage,
-    attempt,
-    scheduledRunAt,
-  ) {
-    try {
-      const stmt = db.prepare(`
-        INSERT INTO scheduler_instances
-        (scheduler_id, scheduled_run_at, executed_at, status, attempt, result, error_message)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      stmt.run(
-        schedulerId,
-        scheduledRunAt,
-        new Date().toISOString(),
-        status,
-        attempt,
-        result ? JSON.stringify(result) : null,
-        errorMessage || null,
-      );
-    } catch (error) {
-      logger.error(`Error logging scheduler execution: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get all schedulers with pagination
-   */
-  static getSchedulers(limit = 50, offset = 0) {
-    const stmt = db.prepare(`
-      SELECT * FROM schedulers
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-    `);
-    return stmt.all(limit, offset);
-  }
-
-  /**
-   * Get total count of schedulers
-   */
-  static getSchedulersCount() {
-    const stmt = db.prepare("SELECT COUNT(*) as count FROM schedulers");
-    return stmt.get().count;
-  }
-
-  /**
-   * Get scheduler by ID
-   */
-  static getSchedulerById(id) {
-    const stmt = db.prepare("SELECT * FROM schedulers WHERE id = ?");
-    return stmt.get(id);
-  }
-
-  /**
-   * Create a new scheduler
-   */
-  static createScheduler(name, type, frequency, timeOfDay, createdBy) {
-    // Validate time format HH:MM
-    if (!/^\d{2}:\d{2}$/.test(timeOfDay)) {
-      throw new Error("Invalid time format. Use HH:MM");
-    }
-
-    const stmt = db.prepare(`
-      INSERT INTO schedulers
-      (name, type, frequency, time_of_day, created_by, updated_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
-      name,
-      type,
-      frequency,
-      timeOfDay,
-      createdBy,
-      createdBy,
-    );
-
-    return result.lastInsertRowid;
-  }
-
-  /**
-   * Update an existing scheduler
-   */
-  static updateScheduler(
-    id,
-    name,
-    type,
-    frequency,
-    timeOfDay,
-    enabled,
-    updatedBy,
-  ) {
-    // Validate time format HH:MM
-    if (!/^\d{2}:\d{2}$/.test(timeOfDay)) {
-      throw new Error("Invalid time format. Use HH:MM");
-    }
-
-    const stmt = db.prepare(`
-      UPDATE schedulers
-      SET name = ?,
-          type = ?,
-          frequency = ?,
-          time_of_day = ?,
-          enabled = ?,
-          updated_by = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    const result = stmt.run(
-      name,
-      type,
-      frequency,
-      timeOfDay,
-      enabled,
-      updatedBy,
-      id,
-    );
-
-    return result.changes;
-  }
-
-  /**
-   * Delete (soft delete) a scheduler
-   */
-  static deleteScheduler(id) {
-    const stmt = db.prepare(
-      "UPDATE schedulers SET enabled = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-    );
-    return stmt.run(id).changes;
-  }
-
-  /**
-   * Get execution history for a scheduler
-   */
-  static getSchedulerInstances(schedulerId, limit = 50, offset = 0) {
-    const stmt = db.prepare(`
-      SELECT * FROM scheduler_instances
-      WHERE scheduler_id = ?
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-    `);
-    return stmt.all(schedulerId, limit, offset);
-  }
-
-  /**
-   * Get total count of instances for a scheduler
-   */
-  static getSchedulerInstancesCount(schedulerId) {
-    const stmt = db.prepare(
-      "SELECT COUNT(*) as count FROM scheduler_instances WHERE scheduler_id = ?",
-    );
-    return stmt.get(schedulerId).count;
-  }
-
-  /**
-   * Delete all rows from scheduler_instances
-   */
-  static purgeAllInstances() {
-    const stmt = db.prepare("DELETE FROM scheduler_instances");
-    return stmt.run().changes;
   }
 }
 

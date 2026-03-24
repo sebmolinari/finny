@@ -26,6 +26,7 @@ const databaseRoutes = require("./routes/database");
 const systemRoutes = require("./routes/system");
 const { runSchemaMigrations } = require("./scripts/migrationRunner");
 const SchedulerService = require("./services/schedulerService");
+const errorHandler = require("./middleware/errorHandler");
 
 const SCHEDULER_INTERVAL_SECONDS = 60;
 let schedulerInterval;
@@ -177,26 +178,8 @@ app.use((req, res) => {
   });
 });
 
-// Global error handling
-app.use((err, req, res, next) => {
-  // Log full error details
-  logger.error(err.message);
-  logger.error(`  Path: ${req.method} ${req.path}`);
-  if (process.env.NODE_ENV === "development") {
-    logger.error(`  Stack:`, err.stack);
-  }
-
-  // Determine status code
-  const statusCode = err.statusCode || err.status || 500;
-
-  // Send appropriate response
-  const response = {
-    message: err.message || "Internal server error",
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
-  };
-
-  res.status(statusCode).json(response);
-});
+// Global error handling — translates AppError subclasses to correct HTTP status
+app.use(errorHandler);
 
 // Run DB migrations before starting the server
 runSchemaMigrations();

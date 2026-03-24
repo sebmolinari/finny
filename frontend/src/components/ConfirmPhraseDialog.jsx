@@ -29,6 +29,7 @@ export default function ConfirmPhraseDialog({
   title = "Confirm Action",
   phrase,
   description,
+  extraContent,
   onConfirm,
   onClose,
   confirmLabel = "Delete",
@@ -54,6 +55,7 @@ export default function ConfirmPhraseDialog({
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
+        {extraContent && <>{extraContent}</>}
         {description && (
           <DialogContentText sx={{ mb: 2 }}>{description}</DialogContentText>
         )}

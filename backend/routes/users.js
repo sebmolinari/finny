@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const UserSettings = require("../models/UserSettings");
 const AuditLog = require("../models/AuditLog");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
@@ -290,6 +291,7 @@ router.delete("/:id", (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    UserSettings.deleteByUserId(id);
     User.deleteById(id);
 
     logger.info(
