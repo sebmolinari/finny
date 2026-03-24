@@ -11,6 +11,12 @@ jest.mock("../../../models/Transaction");
 jest.mock("../../../services/priceService");
 jest.mock("../../../models/PriceData");
 jest.mock("../../../models/AuditLog");
+jest.mock("../../../models/Asset");
+jest.mock("yahoo-finance2", () => ({
+  default: jest.fn().mockImplementation(() => ({
+    quoteSummary: jest.fn().mockResolvedValue({}),
+  })),
+}));
 
 const request = require("supertest");
 const express = require("express");
@@ -19,6 +25,8 @@ const AnalyticsService = require("../../../services/analyticsService");
 const Transaction = require("../../../models/Transaction");
 const PriceData = require("../../../models/PriceData");
 const PriceService = require("../../../services/priceService");
+const Asset = require("../../../models/Asset");
+const YahooFinanceMock = require("yahoo-finance2");
 
 const ERR = new Error("simulated db error");
 
@@ -472,5 +480,140 @@ describe("POST /analytics/missing-prices/apply — update/create coverage", () =
     });
     expect(res.status).toBe(200);
     expect(res.body.errors.length).toBeGreaterThan(0);
+  });
+});
+
+// ── GET /economic-calendar ────────────────────────────────────────────────────
+
+describe("GET /analytics/economic-calendar", () => {
+  let quoteSummaryMock;
+
+  beforeEach(() => {
+    quoteSummaryMock = jest.fn().mockResolvedValue({});
+    YahooFinanceMock.default.mockImplementation(() => ({ quoteSummary: quoteSummaryMock }));
+    // Default: no holdings → assetList empty → events empty
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([]);
+    Asset.findById.mockReturnValue(null);
+  });
+
+  it("returns 200 with empty events when no holdings", async () => {
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+
+  it("skips asset when Asset.findById returns null (null asset branch)", async () => {
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([
+      { asset_id: 1, symbol: "AAPL" },
+    ]);
+    Asset.findById.mockReturnValue(null);
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+
+  it("skips asset with manual price_source", async () => {
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([
+      { asset_id: 1, symbol: "USD" },
+    ]);
+    Asset.findById.mockReturnValue({ price_source: "manual", asset_type: "currency" });
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+
+  it("skips asset with crypto asset_type", async () => {
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([
+      { asset_id: 2, symbol: "BTC" },
+    ]);
+    Asset.findById.mockReturnValue({ price_source: "coingecko", asset_type: "crypto" });
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+
+  it("queries yahoo-finance2 for eligible equity asset and returns events", async () => {
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([
+      { asset_id: 3, symbol: "AAPL" },
+    ]);
+    Asset.findById.mockReturnValue({
+      price_source: "yahoo",
+      asset_type: "equity",
+      price_symbol: "AAPL",
+    });
+    quoteSummaryMock.mockResolvedValue({
+      calendarEvents: {
+        earnings: {
+          earningsDate: [new Date("2024-07-25")],
+          isEarningsDateEstimate: true,
+          earningsAverage: 1.5,
+          earningsLow: 1.3,
+          earningsHigh: 1.7,
+          revenueAverage: 80000000,
+          earningsCallDate: [new Date("2024-07-25")],
+        },
+        exDividendDate: new Date("2024-08-09"),
+        dividendDate: new Date("2024-08-15"),
+      },
+      summaryDetail: { dividendRate: 0.96, navPrice: null, yield: 0.005 },
+      defaultKeyStatistics: {},
+    });
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(200);
+    expect(res.body.events.length).toBeGreaterThan(0);
+    const types = res.body.events.map((e) => e.type);
+    expect(types).toContain("earnings");
+    expect(types).toContain("earnings_call");
+    expect(types).toContain("dividend_ex_date");
+    expect(types).toContain("dividend_payment");
+  });
+
+  it("records fund_stats when totalAssets present in defaultKeyStatistics", async () => {
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([
+      { asset_id: 4, symbol: "VTI" },
+    ]);
+    Asset.findById.mockReturnValue({
+      price_source: "yahoo",
+      asset_type: "equity",
+      price_symbol: "VTI",
+    });
+    quoteSummaryMock.mockResolvedValue({
+      calendarEvents: null,
+      summaryDetail: { navPrice: 230, yield: 0.013 },
+      defaultKeyStatistics: {
+        totalAssets: 1000000000,
+        ytdReturn: 0.08,
+        threeYearAverageReturn: 0.12,
+        fiveYearAverageReturn: 0.15,
+        fundFamily: "Vanguard",
+        legalType: "Open-End Fund",
+      },
+    });
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(200);
+    expect(res.body.fund_stats.length).toBe(1);
+    expect(res.body.fund_stats[0].fund_family).toBe("Vanguard");
+  });
+
+  it("logs warning and continues when quoteSummary throws for one asset", async () => {
+    AnalyticsService.getPortfolioHoldings.mockReturnValue([
+      { asset_id: 5, symbol: "ERR" },
+    ]);
+    Asset.findById.mockReturnValue({
+      price_source: "yahoo",
+      asset_type: "equity",
+      price_symbol: "ERR",
+    });
+    quoteSummaryMock.mockRejectedValue(new Error("yahoo down"));
+    const res = await request(app).get("/analytics/economic-calendar");
+    // Route should still return 200; the failed symbol is just skipped
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+
+  it("returns 500 when getPortfolioHoldings throws", async () => {
+    AnalyticsService.getPortfolioHoldings.mockImplementation(() => { throw ERR; });
+    const res = await request(app).get("/analytics/economic-calendar");
+    expect(res.status).toBe(500);
   });
 });

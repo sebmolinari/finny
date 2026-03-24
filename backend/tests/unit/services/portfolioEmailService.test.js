@@ -160,6 +160,24 @@ describe("PortfolioEmailService._generateChartImg", () => {
 
 describe("PortfolioEmailService.sendBatchEmails", () => {
   const origEnv = process.env.EMAIL_ENABLED;
+  const db = require("../../../config/database");
+
+  function seedEmailUser() {
+    // Disable FK so we can cleanly wipe and re-seed without cascade conflicts
+    db.pragma("foreign_keys = OFF");
+    db.prepare("DELETE FROM user_settings").run();
+    db.prepare("DELETE FROM users").run();
+    db.prepare("INSERT INTO users (id, username, email, password, role, active) VALUES (1, 'alice', 'alice@test.com', 'x', 'user', 1)").run();
+    db.prepare("INSERT INTO user_settings (user_id, email_notifications_enabled, timezone, created_by) VALUES (1, 1, 'UTC', 1)").run();
+    db.pragma("foreign_keys = ON");
+  }
+
+  function cleanupEmailUser() {
+    db.pragma("foreign_keys = OFF");
+    db.prepare("DELETE FROM user_settings").run();
+    db.prepare("DELETE FROM users").run();
+    db.pragma("foreign_keys = ON");
+  }
 
   afterEach(() => {
     process.env.EMAIL_ENABLED = origEnv;
@@ -174,12 +192,7 @@ describe("PortfolioEmailService.sendBatchEmails", () => {
 
   it("sends emails to users with notifications enabled", async () => {
     process.env.EMAIL_ENABLED = "true";
-    const db = require("../../../config/database");
-    // Seed a user with email notifications enabled
-    db.prepare("DELETE FROM users").run();
-    db.prepare("INSERT INTO users (id, username, email, password, role, active) VALUES (1, 'alice', 'alice@test.com', 'x', 'user', 1)").run();
-    db.prepare("DELETE FROM user_settings").run();
-    db.prepare("INSERT INTO user_settings (user_id, email_notifications_enabled, timezone, created_by) VALUES (1, 1, 'UTC', 1)").run();
+    seedEmailUser();
 
     UserSettings.findByUserId.mockReturnValue({ timezone: "UTC" });
     AnalyticsService.getPortfolioAnalytics.mockReturnValue(mockAnalytics());
@@ -190,17 +203,12 @@ describe("PortfolioEmailService.sendBatchEmails", () => {
     expect(result.sent).toBe(1);
     expect(result.failed).toBe(0);
 
-    db.prepare("DELETE FROM users").run();
-    db.prepare("DELETE FROM user_settings").run();
+    cleanupEmailUser();
   });
 
   it("counts failed when sendEmail fails", async () => {
     process.env.EMAIL_ENABLED = "true";
-    const db = require("../../../config/database");
-    db.prepare("DELETE FROM users").run();
-    db.prepare("INSERT INTO users (id, username, email, password, role, active) VALUES (1, 'alice', 'alice@test.com', 'x', 'user', 1)").run();
-    db.prepare("DELETE FROM user_settings").run();
-    db.prepare("INSERT INTO user_settings (user_id, email_notifications_enabled, timezone, created_by) VALUES (1, 1, 'UTC', 1)").run();
+    seedEmailUser();
 
     UserSettings.findByUserId.mockReturnValue({ timezone: "UTC" });
     AnalyticsService.getPortfolioAnalytics.mockReturnValue(mockAnalytics());
@@ -210,24 +218,18 @@ describe("PortfolioEmailService.sendBatchEmails", () => {
     const result = await PortfolioEmailService.sendBatchEmails();
     expect(result.failed).toBe(1);
 
-    db.prepare("DELETE FROM users").run();
-    db.prepare("DELETE FROM user_settings").run();
+    cleanupEmailUser();
   });
 
   it("counts failed when email content generation fails", async () => {
     process.env.EMAIL_ENABLED = "true";
-    const db = require("../../../config/database");
-    db.prepare("DELETE FROM users").run();
-    db.prepare("INSERT INTO users (id, username, email, password, role, active) VALUES (1, 'alice', 'alice@test.com', 'x', 'user', 1)").run();
-    db.prepare("DELETE FROM user_settings").run();
-    db.prepare("INSERT INTO user_settings (user_id, email_notifications_enabled, timezone, created_by) VALUES (1, 1, 'UTC', 1)").run();
+    seedEmailUser();
 
     AnalyticsService.getPortfolioAnalytics.mockImplementation(() => { throw new Error("analytics error"); });
 
     const result = await PortfolioEmailService.sendBatchEmails();
     expect(result.failed).toBe(1);
 
-    db.prepare("DELETE FROM users").run();
-    db.prepare("DELETE FROM user_settings").run();
+    cleanupEmailUser();
   });
 });

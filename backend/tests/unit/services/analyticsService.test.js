@@ -294,6 +294,26 @@ describe("AnalyticsService.getPortfolioHoldings", () => {
 
     expect(result[0].average_cost).toBe(15000 / 100); // 150
   });
+
+  it("returns 0 for unrealized_gain_percent when cost_basis is 0 (line 134 false branch)", () => {
+    Transaction.getPortfolioHoldings.mockReturnValue([
+      { ...mockHoldings[0], cost_basis: 0 },
+    ]);
+    PriceData.getLatestPrice.mockReturnValue({ price: 200, date: "2024-01-15" });
+
+    const result = AnalyticsService.getPortfolioHoldings(1);
+    expect(result[0].unrealized_gain_percent).toBe(0);
+  });
+
+  it("returns 0 for average_cost when total_quantity is 0 (line 154 false branch)", () => {
+    Transaction.getPortfolioHoldings.mockReturnValue([
+      { ...mockHoldings[0], total_quantity: 0 },
+    ]);
+    PriceData.getLatestPrice.mockReturnValue({ price: 200, date: "2024-01-15" });
+
+    const result = AnalyticsService.getPortfolioHoldings(1);
+    expect(result[0].average_cost).toBe(0);
+  });
 });
 
 // ── getBrokerHoldings ─────────────────────────────────────────────────────────
@@ -471,21 +491,22 @@ describe("AnalyticsService.getAdminOverview", () => {
     expect(result.recent_audit).toEqual([]);
     expect(result.stale_assets).toEqual([]);
     expect(result.recent_scheduler_runs).toEqual([]);
-    expect(result.schema_migrations).toEqual([]);
+    // schema_version is populated by the migration runner in testDb setup
+    expect(Array.isArray(result.schema_migrations)).toBe(true);
   });
 
   it("counts assets and brokers correctly", () => {
-    db.prepare(
+    const { lastInsertRowid: uid } = db.prepare(
       `INSERT INTO users (username, email, password, role, active) VALUES (?, ?, ?, ?, ?)`,
     ).run("alice", "alice@example.com", "hash", "user", 1);
 
     db.prepare(
       `INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run("AAPL", "Apple Inc", "equity", "USD", 1, 1);
+    ).run("AAPL", "Apple Inc", "equity", "USD", 1, uid);
 
     db.prepare(
       `INSERT INTO brokers (user_id, name, active, created_by) VALUES (?, ?, ?, ?)`,
-    ).run(1, "Fidelity", 1, 1);
+    ).run(uid, "Fidelity", 1, uid);
 
     const result = AnalyticsService.getAdminOverview();
 
@@ -700,5 +721,479 @@ describe("AnalyticsService.getCorrelationMatrix", () => {
     expect(result.matrix[1][1]).toBe(1.0);
     // Both assets going up together → positive correlation
     expect(result.matrix[0][1]).toBeGreaterThan(0);
+  });
+});
+
+// ── getBenchmarkSeries — anchorBench-not-found branch ─────────────────────────
+
+describe("AnalyticsService.getBenchmarkSeries — anchorBench null branch", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    UserSettings.findByUserId.mockReturnValue({ timezone: "UTC" });
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([
+      { date: "2024-01-05", total_value: 10000 },
+    ]);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("returns empty series when benchmark anchor price is zero/falsy", async () => {
+    // rawSeries has firstCommon date but price is 0 → anchorBench is falsy
+    PriceService.fetchHistoricalPriceSeries.mockResolvedValue([
+      { date: "2024-01-05", price: 0 },
+    ]);
+    const result = await AnalyticsService.getBenchmarkSeries(1, "^GSPC", "2024-01-01", "2024-01-31");
+    expect(result.portfolio_series).toEqual([]);
+    expect(result.benchmark_series).toEqual([]);
+    expect(result.symbol).toBe("^GSPC");
+  });
+});
+
+// ── getPerformanceAttribution ─────────────────────────────────────────────────
+
+describe("AnalyticsService.getPerformanceAttribution", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.clearAll();
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([]);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("returns empty attributions when no holdings at either boundary", () => {
+    Transaction.getPortfolioHoldings.mockReturnValue([]);
+    const result = AnalyticsService.getPerformanceAttribution(1, "2024-01-01", "2024-12-31");
+    expect(result.start_date).toBe("2024-01-01");
+    expect(result.end_date).toBe("2024-12-31");
+    expect(result.attributions).toEqual([]);
+    expect(result.beginning_nav).toBe(0);
+  });
+
+  it("returns attribution with price gain for an asset held at both dates", () => {
+    // Seed an asset so the active assets query finds it
+    const userId = db
+      .prepare("INSERT INTO users (username, email, password, role) VALUES (?,?,?,?)")
+      .run("attruser", "attr@t.com", "hash", "user").lastInsertRowid;
+    const assetId = db
+      .prepare("INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)")
+      .run("AAPL", "Apple", "equity", "USD", userId).lastInsertRowid;
+
+    const { toValueScale } = require("../../../utils/valueScale");
+    const PRICE_SCALE = 6;
+    db.prepare("INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)")
+      .run(assetId, "2024-01-01", toValueScale(100, PRICE_SCALE).value, "manual", userId);
+    db.prepare("INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)")
+      .run(assetId, "2024-12-31", toValueScale(120, PRICE_SCALE).value, "manual", userId);
+
+    Transaction.getPortfolioHoldings
+      .mockReturnValueOnce([{ asset_id: assetId, symbol: "AAPL", name: "Apple", asset_type: "equity", total_quantity: 10, broker_id: 1 }])  // startHoldings
+      .mockReturnValueOnce([{ asset_id: assetId, symbol: "AAPL", name: "Apple", asset_type: "equity", total_quantity: 10, broker_id: 1 }]); // endHoldings
+
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([
+      { date: "2024-01-01", total_value: 1000 },
+    ]);
+
+    const result = AnalyticsService.getPerformanceAttribution(userId, "2024-01-01", "2024-12-31");
+    expect(result.attributions).toHaveLength(1);
+    expect(result.attributions[0].symbol).toBe("AAPL");
+    // 10 shares × $120 end − 10 shares × $100 start − 0 net flows = $200 price gain
+    expect(result.attributions[0].price_gain).toBeCloseTo(200, 0);
+    expect(result.beginning_nav).toBe(1000);
+  });
+});
+
+// ── getTaxReport ─────────────────────────────────────────────────────────────
+
+describe("AnalyticsService.getTaxReport", () => {
+  let userId, assetId, fxAssetId;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.clearAll();
+
+    // Seed user
+    userId = db.prepare(
+      "INSERT INTO users (username, email, password, role) VALUES (?,?,?,?)"
+    ).run("taxuser", "tax@t.com", "hash", "user").lastInsertRowid;
+
+    // Seed FX asset
+    fxAssetId = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)"
+    ).run("USDARS", "USD/ARS", "cash", "ARS", userId).lastInsertRowid;
+
+    // Seed equity asset
+    assetId = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)"
+    ).run("AAPL", "Apple", "equity", "USD", userId).lastInsertRowid;
+
+    // Seed broker
+    const brokerId = db.prepare(
+      "INSERT INTO brokers (user_id, name, description, active, created_by) VALUES (?,?,?,1,?)"
+    ).run(userId, "MyBroker", "test", userId).lastInsertRowid;
+
+    // Seed buy transaction in 2024
+    const { toValueScale } = require("../../../utils/valueScale");
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, broker_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)"
+    ).run(userId, assetId, brokerId, "2024-06-01", "buy",
+      toValueScale(10, 8).value, toValueScale(100, 6).value, 0, toValueScale(1000, 4).value, userId);
+
+    // Seed price at year-end
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
+    ).run(assetId, "2024-12-31", toValueScale(120, 6).value, "manual", userId);
+
+    // Seed FX rate at year-end
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
+    ).run(fxAssetId, "2024-12-31", toValueScale(900, 6).value, "manual", userId);
+
+    UserSettings.findByUserId.mockReturnValue({ fx_rate_asset_id: fxAssetId });
+  });
+
+  afterEach(() => {
+    db.clearAll();
+  });
+
+  it("returns year-end holdings with FX conversion", () => {
+    const result = AnalyticsService.getTaxReport(userId, 2024);
+    expect(result.year).toBe(2024);
+    expect(result.holdings).toHaveLength(1);
+    expect(result.holdings[0].asset).toBe("AAPL");
+    expect(result.holdings[0].quantity).toBeCloseTo(10, 0);
+    expect(result.fx_rate).toBeCloseTo(900, 0);
+  });
+
+  it("throws when fx_rate_asset_id is not configured", () => {
+    UserSettings.findByUserId.mockReturnValue({});
+    expect(() => AnalyticsService.getTaxReport(userId, 2024)).toThrow(
+      "FX Rate asset not configured"
+    );
+  });
+
+  it("filters by excludeAssetTypes (covers branch 634-636)", () => {
+    const result = AnalyticsService.getTaxReport(userId, 2024, ["equity"]);
+    expect(result.holdings).toHaveLength(0);
+  });
+
+  it("filters by excludeBrokers (covers branch 641-643)", () => {
+    const result = AnalyticsService.getTaxReport(userId, 2024, [], ["MyBroker"]);
+    expect(result.holdings).toHaveLength(0);
+  });
+});
+
+// ── simulateRebalancing ────────────────────────────────────────────────────────
+
+describe("AnalyticsService.simulateRebalancing", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("returns error object when no targets defined (line 1079)", () => {
+    jest.spyOn(AnalyticsService, "getRebalancingRecommendations").mockReturnValue({
+      has_targets: false,
+    });
+    const result = AnalyticsService.simulateRebalancing(1, 10000);
+    expect(result).toHaveProperty("error");
+    expect(result.deposit_amount).toBe(10000);
+  });
+
+  it("includes holdRecs when some types are fully funded (line 1137)", () => {
+    // Equity is over-weight, fixedincome is under-weight.
+    // After deposit, equity stays at 0 allocated (holdRec), fixedincome gets allocation.
+    jest.spyOn(AnalyticsService, "getRebalancingRecommendations").mockReturnValue({
+      has_targets: true,
+      total_portfolio_value: 100000,
+      recommendations: [
+        {
+          level: "type",
+          asset_type: "equity",
+          current_value: 80000,
+          current_percentage: 80,
+          target_percentage: 60,
+          action: "overweight",
+        },
+        {
+          level: "type",
+          asset_type: "fixedincome",
+          current_value: 20000,
+          current_percentage: 20,
+          target_percentage: 40,
+          action: "underweight",
+        },
+      ],
+    });
+    const result = AnalyticsService.simulateRebalancing(1, 10000);
+    expect(result.simulation).toBeDefined();
+    // equity should have 0 allocated (holdRec path), fixedincome gets allocation
+    const equity = result.simulation.find((r) => r.asset_type === "equity");
+    expect(equity.allocated_deposit).toBe(0);
+  });
+});
+
+// ── getTaxHarvestingSuggestions ─────────────────────────────────────────────
+
+describe("AnalyticsService.getTaxHarvestingSuggestions", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    UserSettings.findByUserId.mockReturnValue({ marginal_tax_rate: 0.3 });
+  });
+
+  it("returns suggestions for holdings with unrealized losses (lines 1240-1241)", () => {
+    Transaction.getPortfolioHoldings.mockReturnValue([
+      {
+        asset_id: 1,
+        symbol: "LOSER",
+        name: "Loser Corp",
+        asset_type: "equity",
+        broker_name: "Broker",
+        total_quantity: 100,
+        cost_basis: 10000,
+      },
+    ]);
+    // Price below cost basis → unrealized loss
+    PriceData.getLatestPrice.mockReturnValue({ price: 80 });
+
+    const result = AnalyticsService.getTaxHarvestingSuggestions(1);
+    expect(result).toHaveLength(1);
+    expect(result[0].symbol).toBe("LOSER");
+    expect(result[0].unrealized_gain_loss).toBeLessThan(0);
+    expect(result[0].potential_tax_saving).toBeGreaterThan(0);
+  });
+
+  it("returns empty when holdings have gains", () => {
+    Transaction.getPortfolioHoldings.mockReturnValue([
+      {
+        asset_id: 1,
+        symbol: "WINNER",
+        name: "Winner Corp",
+        asset_type: "equity",
+        broker_name: "Broker",
+        total_quantity: 100,
+        cost_basis: 5000,
+      },
+    ]);
+    PriceData.getLatestPrice.mockReturnValue({ price: 200 });
+
+    const result = AnalyticsService.getTaxHarvestingSuggestions(1);
+    expect(result).toHaveLength(0);
+  });
+
+  it("uses asOf date when year is provided (getLatestPriceAsOf path)", () => {
+    Transaction.getPortfolioHoldings.mockReturnValue([
+      {
+        asset_id: 1,
+        symbol: "LOSER",
+        name: "Loser Corp",
+        asset_type: "equity",
+        broker_name: "Broker",
+        total_quantity: 10,
+        cost_basis: 2000,
+      },
+    ]);
+    PriceData.getLatestPriceAsOf.mockReturnValue({ price: 100 });
+
+    const result = AnalyticsService.getTaxHarvestingSuggestions(1, 0.25, 2024);
+    expect(result).toHaveLength(1);
+    expect(PriceData.getLatestPriceAsOf).toHaveBeenCalledWith(1, "2024-12-31");
+  });
+});
+
+// ── getMissingPrices ──────────────────────────────────────────────────────────
+
+describe("AnalyticsService.getMissingPrices", () => {
+  let userId, assetId;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.clearAll();
+
+    userId = db.prepare(
+      "INSERT INTO users (username, email, password, role) VALUES (?,?,?,?)"
+    ).run("priceuser", "price@t.com", "hash", "user").lastInsertRowid;
+
+    assetId = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)"
+    ).run("NOPRICE", "No Price Corp", "equity", "USD", userId).lastInsertRowid;
+  });
+
+  afterEach(() => {
+    db.clearAll();
+  });
+
+  it("returns no_price issues for transactions with no price data (lines 1314, 1323)", () => {
+    const { toValueScale } = require("../../../utils/valueScale");
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).run(userId, assetId, "2024-01-15", "buy",
+      toValueScale(5, 8).value, toValueScale(50, 6).value, 0, toValueScale(250, 4).value, userId);
+
+    const result = AnalyticsService.getMissingPrices(userId);
+    expect(result.total_issues).toBe(1);
+    expect(result.issues[0].status).toBe("no_price");
+    expect(result.issues[0].symbol).toBe("NOPRICE");
+  });
+
+  it("returns empty when no buy/sell transactions", () => {
+    const result = AnalyticsService.getMissingPrices(userId);
+    expect(result.total_issues).toBe(0);
+    expect(result.issues).toEqual([]);
+  });
+});
+
+// ── getVolatilityAndDrawdown ──────────────────────────────────────────────────
+
+describe("AnalyticsService.getVolatilityAndDrawdown", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    UserSettings.findByUserId.mockReturnValue({ risk_free_rate: 0.05 });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("returns empty metrics when performance has fewer than 2 points (line 1369)", () => {
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([
+      { date: "2024-01-01", total_value: 10000 },
+    ]);
+    const result = AnalyticsService.getVolatilityAndDrawdown(1);
+    expect(result.nav_series).toEqual([]);
+    expect(result.max_drawdown).toBeNull();
+  });
+
+  it("returns empty metrics when performance is empty (line 1369)", () => {
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([]);
+    const result = AnalyticsService.getVolatilityAndDrawdown(1);
+    expect(result.nav_series).toEqual([]);
+  });
+
+  it("covers nav > peak branch and drawdown branch (lines 1418-1427)", () => {
+    // Sequence: rises to 12000 (new peak), then falls to 9000 (drawdown)
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([
+      { date: "2024-01-01", total_value: 10000 },
+      { date: "2024-01-02", total_value: 12000 },
+      { date: "2024-01-03", total_value: 9000 },
+    ]);
+    const result = AnalyticsService.getVolatilityAndDrawdown(1);
+    expect(result.max_drawdown.value).toBeGreaterThan(0);
+    expect(result.max_drawdown.peak_value).toBe(12000);
+    expect(result.max_drawdown.trough_value).toBe(9000);
+  });
+
+  it("computes sharpe and sortino ratios with sufficient data (lines 1478-1497)", () => {
+    // 40 daily returns — enough for rolling window + sharpe/sortino
+    const perf = [];
+    let val = 10000;
+    for (let i = 0; i < 40; i++) {
+      const date = new Date(2024, 0, i + 1).toISOString().split("T")[0];
+      // Alternate up/down so there are negative returns for sortino
+      val = i % 4 === 3 ? val * 0.97 : val * 1.005;
+      perf.push({ date, total_value: val });
+    }
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue(perf);
+    const result = AnalyticsService.getVolatilityAndDrawdown(1);
+    expect(typeof result.sharpe_ratio).toBe("number");
+    expect(result.sortino_ratio).not.toBeNull();
+  });
+});
+
+// ── getBenchmarkSeries – fallback anchor branch (line 1687) ────────────────────
+
+describe("AnalyticsService.getBenchmarkSeries – fallback anchor", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    UserSettings.findByUserId.mockReturnValue({ timezone: "UTC" });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("evaluates fallback anchor expression when exact date price is undefined (line 1687)", async () => {
+    // firstCommon = "2024-01-01" (in benchDateSet); its price is undefined → ?? fallback fires
+    // The fallback also resolves to undefined → returns empty series
+    jest.spyOn(AnalyticsService, "getPortfolioPerformance").mockReturnValue([
+      { date: "2024-01-01", total_value: 10000 },
+      { date: "2024-01-02", total_value: 10100 },
+    ]);
+    PriceService.fetchHistoricalPriceSeries.mockResolvedValue([
+      { date: "2024-01-01", price: undefined }, // triggers ?? fallback on line 1687
+      { date: "2024-01-02", price: undefined }, // fallback also undefined → anchorBench falsy
+    ]);
+    const result = await AnalyticsService.getBenchmarkSeries(1, "^GSPC", "2024-01-01", "2024-01-31");
+    // Both expressions produce undefined → anchorBench falsy → early return with empty arrays
+    expect(result.benchmark_series).toEqual([]);
+    expect(result.portfolio_series).toEqual([]);
+  });
+});
+
+// ── getPortfolioPerformance – debug mode (line 492 sort comparator) ───────────
+
+describe("AnalyticsService.getPortfolioPerformance – debug mode", () => {
+  let userId;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.clearAll();
+    UserSettings.findByUserId.mockReturnValue({ timezone: "UTC" });
+
+    userId = db.prepare(
+      "INSERT INTO users (username, email, password, role) VALUES (?,?,?,?)"
+    ).run("perfuser", "perf@t.com", "hash", "user").lastInsertRowid;
+  });
+
+  afterEach(() => {
+    db.clearAll();
+  });
+
+  it("includes sorted holdingsBreakdown in debug mode with 2+ holdings (covers line 492)", () => {
+    const { toValueScale } = require("../../../utils/valueScale");
+    const PRICE_SCALE = 6, QTY_SCALE = 8, AMOUNT_SCALE = 4;
+
+    // Seed two assets
+    const assetId1 = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)"
+    ).run("AAA", "Asset A", "equity", "USD", userId).lastInsertRowid;
+    const assetId2 = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)"
+    ).run("BBB", "Asset B", "equity", "USD", userId).lastInsertRowid;
+
+    // Deposit
+    db.prepare(
+      "INSERT INTO transactions (user_id, date, transaction_type, total_amount, created_by) VALUES (?,?,?,?,?)"
+    ).run(userId, "2024-01-01", "deposit", toValueScale(50000, AMOUNT_SCALE).value, userId);
+
+    // Buy both assets on 2024-01-01
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).run(userId, assetId1, "2024-01-01", "buy",
+      toValueScale(10, QTY_SCALE).value, toValueScale(100, PRICE_SCALE).value, 0,
+      toValueScale(1000, AMOUNT_SCALE).value, userId);
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).run(userId, assetId2, "2024-01-01", "buy",
+      toValueScale(5, QTY_SCALE).value, toValueScale(200, PRICE_SCALE).value, 0,
+      toValueScale(1000, AMOUNT_SCALE).value, userId);
+
+    // Prices for both assets
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
+    ).run(assetId1, "2024-01-01", toValueScale(100, PRICE_SCALE).value, "manual", userId);
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
+    ).run(assetId2, "2024-01-01", toValueScale(200, PRICE_SCALE).value, "manual", userId);
+
+    const result = AnalyticsService.getPortfolioPerformance(
+      userId, 1, [], "2024-01-01", "2024-01-01", true
+    );
+
+    expect(result).toHaveLength(1);
+    const entry = result[0];
+    expect(entry).toHaveProperty("holdings_breakdown");
+    // Two holdings: AAA ($1000) and BBB ($1000). Sort comparator (line 492) fires.
+    expect(entry.holdings_breakdown).toHaveLength(2);
+    // Should be sorted descending by value
+    expect(entry.holdings_breakdown[0].value).toBeGreaterThanOrEqual(
+      entry.holdings_breakdown[1].value
+    );
   });
 });

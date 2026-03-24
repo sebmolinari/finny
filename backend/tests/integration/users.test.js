@@ -26,10 +26,17 @@ describe("GET /api/v1/users", () => {
   });
 });
 
+function deleteNonAdminUsers() {
+  db.pragma("foreign_keys = OFF");
+  db.prepare("DELETE FROM user_settings WHERE user_id IN (SELECT id FROM users WHERE username != 'admin')").run();
+  db.prepare("DELETE FROM users WHERE username != 'admin'").run();
+  db.pragma("foreign_keys = ON");
+}
+
 describe("PATCH /api/v1/users/:id/status", () => {
   let userId;
   beforeEach(async () => {
-    db.prepare("DELETE FROM users WHERE username != 'admin'").run();
+    deleteNonAdminUsers();
     const reg = await request(app).post("/api/v1/auth/register").send({
       username: "bob", email: "bob@test.com", password: "Bob12345",
     });
@@ -50,7 +57,7 @@ describe("PATCH /api/v1/users/:id/status", () => {
 describe("PATCH /api/v1/users/:id/role", () => {
   let userId;
   beforeEach(async () => {
-    db.prepare("DELETE FROM users WHERE username != 'admin'").run();
+    deleteNonAdminUsers();
     const reg = await request(app).post("/api/v1/auth/register").send({
       username: "bob", email: "bob@test.com", password: "Bob12345",
     });
@@ -65,7 +72,7 @@ describe("PATCH /api/v1/users/:id/role", () => {
 
 describe("DELETE /api/v1/users/:id", () => {
   it("deletes a non-admin user", async () => {
-    db.prepare("DELETE FROM users WHERE username != 'admin'").run();
+    deleteNonAdminUsers();
     const reg = await request(app).post("/api/v1/auth/register").send({
       username: "todelete", email: "del@test.com", password: "Del12345",
     });

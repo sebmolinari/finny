@@ -77,6 +77,7 @@ export default function AdminOverview() {
   const [deleteDataResult, setDeleteDataResult] = useState(null);
   const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
   const [deleteDataPhrase, setDeleteDataPhrase] = useState("delete all data");
+  const [purgeHistoryDialogOpen, setPurgeHistoryDialogOpen] = useState(false);
   const [userTimezone, setUserTimezone] = useState();
   const [userDateFormat, setUserDateFormat] = useState();
 
@@ -213,6 +214,17 @@ export default function AdminOverview() {
     data?.assets?.total > 0
       ? Math.round((data.assets.with_prices / data.assets.total) * 100)
       : 0;
+
+  const env = import.meta.env.MODE;
+  const envBadge = (
+    <Chip
+      label={env.toUpperCase()}
+      color={env === "production" ? "error" : "warning"}
+      size="small"
+      variant="outlined"
+      sx={{ mb: 1.5 }}
+    />
+  );
 
   return (
     <PageContainer>
@@ -1110,7 +1122,7 @@ export default function AdminOverview() {
                             <DeleteSweepIcon fontSize="small" />
                           )
                         }
-                        onClick={handlePurgeSchedulerHistory}
+                        onClick={() => setPurgeHistoryDialogOpen(true)}
                         disabled={purgingHistory}
                       >
                         Purge Scheduler History
@@ -1285,10 +1297,23 @@ export default function AdminOverview() {
       </Grid>
 
       <ConfirmPhraseDialog
+        open={purgeHistoryDialogOpen}
+        title="Purge Scheduler History"
+        phrase="purge history"
+        description="Permanently deletes all scheduler execution history (scheduler_instances table). Schedulers themselves are not affected. This cannot be undone."
+        extraContent={envBadge}
+        onConfirm={handlePurgeSchedulerHistory}
+        onClose={() => setPurgeHistoryDialogOpen(false)}
+        confirmLabel="Purge History"
+        confirmColor="error"
+      />
+
+      <ConfirmPhraseDialog
         open={deleteDataDialogOpen}
         title="Delete All Data"
         phrase={deleteDataPhrase}
         description="Permanently deletes all transactions, price data, assets (except USD, USDARS_BNA, USDARS_CCL), brokers, allocation targets, and audit logs. This cannot be undone."
+        extraContent={envBadge}
         onConfirm={handleDeleteAllData}
         onClose={() => setDeleteDataDialogOpen(false)}
         confirmLabel="Delete All Data"

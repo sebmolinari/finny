@@ -531,3 +531,223 @@ describe("Transaction.calculateCAGRDetails", () => {
     expect(result.firstDate).toBeNull();
   });
 });
+
+// ── getCashBalanceDetails ──────────────────────────────────────────────────────
+
+describe("Transaction.getCashBalanceDetails", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+  });
+
+  it("returns empty cash_flows and zeroed summary when no transactions", () => {
+    const result = Transaction.getCashBalanceDetails(1);
+    expect(result.cash_flows).toEqual([]);
+    expect(result.summary.total_deposits).toBe(0);
+    expect(result.summary.total_withdrawals).toBe(0);
+  });
+
+  it("covers withdraw branch — subtracts from running balance", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "withdraw", total_amount: 300 }), 1);
+    const result = Transaction.getCashBalanceDetails(1);
+    const row = result.cash_flows.find((r) => r.type === "Withdrawal");
+    expect(row).toBeDefined();
+    expect(result.summary.total_withdrawals).toBeCloseTo(300, 2);
+    expect(row.cash_effect).toBeCloseTo(-300, 2);
+  });
+
+  it("covers rental branch — adds to running balance", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "rental", total_amount: 500 }), 1);
+    const result = Transaction.getCashBalanceDetails(1);
+    const row = result.cash_flows.find((r) => r.type === "Rental");
+    expect(row).toBeDefined();
+    expect(result.summary.total_rentals).toBeCloseTo(500, 2);
+    expect(row.cash_effect).toBeCloseTo(500, 2);
+  });
+
+  it("covers coupon branch — adds to running balance", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "coupon", total_amount: 200 }), 1);
+    const result = Transaction.getCashBalanceDetails(1);
+    const row = result.cash_flows.find((r) => r.type === "Coupon");
+    expect(row).toBeDefined();
+    expect(result.summary.total_coupons).toBeCloseTo(200, 2);
+    expect(row.cash_effect).toBeCloseTo(200, 2);
+  });
+
+  it("covers transfer branch — zero cash effect", () => {
+    seedBroker(2, 1);
+    Transaction.create(1, makeTxData({
+      transaction_type: "transfer",
+      broker_id: 1,
+      destination_broker_id: 2,
+      total_amount: 1000,
+    }), 1);
+    const result = Transaction.getCashBalanceDetails(1);
+    const row = result.cash_flows.find((r) => r.type === "Transfer");
+    expect(row).toBeDefined();
+    expect(row.cash_effect).toBe(0);
+  });
+});
+
+// ── getIncomeReport ────────────────────────────────────────────────────────────
+
+describe("Transaction.getIncomeReport", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+  });
+
+  it("filters by startDate/endDate when year is null", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "dividend", total_amount: 100, date: "2024-01-15" }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "dividend", total_amount: 200, date: "2024-03-01" }), 1);
+    // Only the Jan transaction falls within the range
+    const report = Transaction.getIncomeReport(1, null, "2024-01-01", "2024-02-01");
+    expect(report.summary.total_income).toBeCloseTo(100, 2);
+  });
+
+  it("computes projected_annual when startDate is provided", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "dividend", total_amount: 120, date: "2024-06-01" }), 1);
+    const report = Transaction.getIncomeReport(1, null, "2024-01-01", "2024-12-31");
+    // projected_ttm_months should be 1 (only one month with data)
+    expect(report.summary.projected_ttm_months).toBe(1);
+    expect(report.summary.projected_annual).toBeCloseTo(120 * 12, 0);
+  });
+
+  it("populates best_year when multiple years have data", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "dividend", total_amount: 100, date: "2022-06-01" }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "dividend", total_amount: 300, date: "2023-06-01" }), 1);
+    const report = Transaction.getIncomeReport(1, null, null, null);
+    expect(report.summary.best_year).toBeDefined();
+    expect(report.summary.best_year.year).toBe("2023");
+    expect(report.summary.best_year.amount).toBeCloseTo(300, 2);
+  });
+
+  it("includes coupon and rental in totals (lines 1284-1285)", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "coupon", total_amount: 50, date: "2024-03-01", asset_id: null }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "rental", total_amount: 80, date: "2024-04-01", asset_id: null }), 1);
+    const report = Transaction.getIncomeReport(1, null, null, null);
+    expect(report.summary.total_coupons).toBeCloseTo(50, 2);
+    expect(report.summary.total_rentals).toBeCloseTo(80, 2);
+  });
+});
+
+// ── calculateMWRR / calculateMWRRDetails with withdraw ────────────────────────
+
+describe("Transaction.calculateMWRR – with withdraw (lines 735-736)", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedUserSettings(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+  });
+
+  it("includes withdraw transactions in MWRR cash flows", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "deposit", total_amount: 10000, date: "2022-01-01", asset_id: null, broker_id: null }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "withdraw", total_amount: 2000, date: "2022-06-01", asset_id: null, broker_id: null }), 1);
+    const rate = Transaction.calculateMWRR(1, 9000);
+    expect(typeof rate).toBe("number");
+  });
+});
+
+describe("Transaction.calculateMWRRDetails – with withdraw (lines 795-796)", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedUserSettings(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+  });
+
+  it("includes withdraw in cashFlows details", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "deposit", total_amount: 10000, date: "2022-01-01", asset_id: null, broker_id: null }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "withdraw", total_amount: 2000, date: "2022-06-01", asset_id: null, broker_id: null }), 1);
+    const result = Transaction.calculateMWRRDetails(1, 9000);
+    const withdrawFlow = result.cashFlows.find((cf) => cf.type === "withdraw");
+    expect(withdrawFlow).toBeDefined();
+    expect(withdrawFlow.signedAmount).toBeGreaterThan(0);
+  });
+});
+
+// ── calculateCAGRDetails / calculateCAGREvolution with withdraw ───────────────
+
+describe("Transaction.calculateCAGRDetails – with withdraw (line 887)", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedUserSettings(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+  });
+
+  it("includes withdraw in netDeposits calculation", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "deposit", total_amount: 10000, date: "2022-01-01", asset_id: null, broker_id: null }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "withdraw", total_amount: 2000, date: "2022-06-01", asset_id: null, broker_id: null }), 1);
+    const result = Transaction.calculateCAGRDetails(1, 9000);
+    // net deposits = 10000 - 2000 = 8000
+    expect(result.netDeposits).toBeCloseTo(8000, 0);
+  });
+});
+
+describe("Transaction.calculateCAGREvolution – with withdraw (lines 927-928)", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedUserSettings(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+  });
+
+  it("deducts withdraw from netDeposits in evolution", () => {
+    Transaction.create(1, makeTxData({ transaction_type: "deposit", total_amount: 10000, date: "2022-01-01", asset_id: null, broker_id: null }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "withdraw", total_amount: 2000, date: "2022-06-01", asset_id: null, broker_id: null }), 1);
+    const evolution = Transaction.calculateCAGREvolution(1);
+    // Should have at least one entry for 2022
+    expect(Array.isArray(evolution)).toBe(true);
+    expect(evolution.length).toBeGreaterThan(0);
+  });
+});
+
+// ── getRealizedGainsReport – multiple positions and transfer FIFO ─────────────
+
+describe("Transaction.getRealizedGainsReport – sort comparator and transfer FIFO", () => {
+  beforeEach(() => {
+    seedUser(1);
+    seedAsset(1);
+    seedBroker(1, 1);
+    seedBroker(2, 1);
+  });
+
+  it("sorts 2 closed positions by disposal date (line 527 comparator)", () => {
+    // Position 1: buy in 2022, sell in 2023
+    Transaction.create(1, makeTxData({ quantity: 5, price: 100, total_amount: 500, date: "2022-01-01", broker_id: 1 }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "sell", quantity: 5, price: 120, total_amount: 600, date: "2023-01-15", broker_id: 1 }), 1);
+    // Position 2: buy in 2023, sell in 2023 (later date)
+    Transaction.create(1, makeTxData({ quantity: 5, price: 120, total_amount: 600, date: "2023-02-01", broker_id: 1 }), 1);
+    Transaction.create(1, makeTxData({ transaction_type: "sell", quantity: 5, price: 130, total_amount: 650, date: "2023-06-01", broker_id: 1 }), 1);
+
+    const report = Transaction.getRealizedGainsReport(1);
+    expect(report).toHaveLength(2);
+    // Sorted descending by disposal date: Jun before Jan
+    expect(report[0].disposal_date >= report[1].disposal_date).toBe(true);
+  });
+
+  it("processes outgoing transfer and deducts full lot from FIFO (lines 502-503)", () => {
+    // Buy 5 at broker 1 (one lot)
+    Transaction.create(1, makeTxData({ quantity: 5, price: 100, total_amount: 500, date: "2023-01-01", broker_id: 1 }), 1);
+    // Transfer all 5 from broker 1 to broker 2 (lot.quantityValue 5 <= remaining 5 → lines 502-503)
+    Transaction.create(1, makeTxData({
+      transaction_type: "transfer",
+      quantity: 5,
+      price: 100,
+      total_amount: 500,
+      date: "2023-06-01",
+      broker_id: 1,
+      destination_broker_id: 2,
+    }), 1);
+    // Sell at broker 2
+    Transaction.create(1, makeTxData({ transaction_type: "sell", quantity: 5, price: 120, total_amount: 600, date: "2023-12-01", broker_id: 2 }), 1);
+
+    const report = Transaction.getRealizedGainsReport(1);
+    expect(report).toHaveLength(1);
+    expect(report[0].gain_loss).toBeCloseTo(100, 0); // 600 - 500 = 100
+  });
+});
