@@ -1996,7 +1996,7 @@ class AnalyticsService {
          FROM audit_logs
          WHERE action_type IN ('price_refresh', 'price_refresh_all', 'refresh_prices')
          ORDER BY created_at DESC
-         LIMIT 10`,
+         LIMIT 5`,
       )
       .all();
 
@@ -2008,7 +2008,7 @@ class AnalyticsService {
          WHERE action_type IN ('price_refresh', 'price_refresh_all', 'refresh_prices')
            AND (success = 0 OR json_extract(new_values, '$.failed') != 0)
          ORDER BY created_at DESC
-         LIMIT 20`,
+         LIMIT 5`,
       )
       .all();
 
@@ -2059,7 +2059,7 @@ class AnalyticsService {
         `SELECT action_type, username, table_name, record_id, ip_address, success, error_message, created_at
          FROM audit_logs
          ORDER BY created_at DESC
-         LIMIT 10`,
+         LIMIT 5`,
       )
       .all();
 
@@ -2073,7 +2073,7 @@ class AnalyticsService {
          GROUP BY a.id, a.symbol, a.name, a.asset_type
          HAVING last_price_date IS NULL OR last_price_date < date('now', '-7 days')
          ORDER BY last_price_date ASC
-         LIMIT 20`,
+         LIMIT 5`,
       )
       .all();
 
@@ -2087,7 +2087,7 @@ class AnalyticsService {
          FROM scheduler_instances si
          JOIN schedulers s ON s.id = si.scheduler_id
          ORDER BY si.created_at DESC
-         LIMIT 10`,
+         LIMIT 5`,
       )
       .all();
 
