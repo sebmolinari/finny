@@ -1,5 +1,5 @@
 # ── Stage 1: Build frontend ───────────────────────────────────────────────────
-FROM node:24-bookworm-slim AS frontend-builder
+FROM node:current-slim AS frontend-builder
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ RUN npm run build
 # Output: /frontend/dist/
 
 # ── Stage 2: Install backend deps (needs build tools for native module) ───────
-FROM node:24-bookworm-slim AS backend-builder
+FROM node:current-slim AS backend-builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ libsqlite3-dev \
  && rm -rf /var/lib/apt/lists/*
@@ -18,7 +18,7 @@ RUN npm ci --omit=dev
 COPY backend/ .
 
 # ── Stage 3: Production image ─────────────────────────────────────────────────
-FROM node:24-bookworm-slim
+FROM node:current-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
  && rm -rf /var/lib/apt/lists/*
