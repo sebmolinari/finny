@@ -177,3 +177,29 @@ Rules:
 
 ### After adding or changing features
 - Run `/update-docs` to update `frontend/src/assets/CHANGELOG.md` and `README.md`
+
+## Release Process
+
+1. **Commit and push** your changes to the `develop` branch.
+
+2. **Open a PR** from `develop` → `master` on GitHub and merge it.
+
+3. **Re-sync `develop`** with master after the merge:
+
+   ```bash
+   git checkout develop
+   git fetch origin
+   git merge origin/master
+   git push origin develop
+   ```
+
+4. **Tag the release** on master:
+
+   ```bash
+   git checkout master
+   git pull origin master
+   git tag -a v1.x.y -m "Release v1.x.y"
+   git push origin --tags
+   ```
+
+   Follow [semver](https://semver.org): increment patch for fixes, minor for features, major for breaking changes.
