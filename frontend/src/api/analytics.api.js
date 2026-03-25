@@ -103,6 +103,15 @@ export const analyticsAPI = {
 
   getAdminOverview: () => api.get("/analytics/admin/overview"),
 
+  getUnrealizedPnlHistory: (days = 31, excludeTypes = [], signal) =>
+    api.get("/analytics/portfolio/unrealized-pnl-history", {
+      params: {
+        days,
+        ...(excludeTypes.length ? { exclude: excludeTypes.join(",") } : {}),
+      },
+      signal,
+    }),
+
   getMissingPrices: () => api.get("/analytics/missing-prices"),
 
   fetchMissingPrices: (items) =>

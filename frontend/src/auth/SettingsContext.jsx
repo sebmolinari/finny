@@ -10,14 +10,14 @@ export const SettingsProvider = ({ children }) => {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsError, setSettingsError] = useState(null);
 
-  const fetchSettings = useCallback(() => {
+  const fetchSettings = useCallback((signal) => {
     setSettingsLoading(true);
     setSettingsError(null);
     settingsAPI
-      .get()
-      .then((res) => setSettings(res.data))
-      .catch((err) => setSettingsError(err))
-      .finally(() => setSettingsLoading(false));
+      .get(signal)
+      .then((res) => { if (!signal?.aborted) setSettings(res.data); })
+      .catch((err) => { if (err.name !== "CanceledError") setSettingsError(err); })
+      .finally(() => { if (!signal?.aborted) setSettingsLoading(false); });
   }, []);
 
   useEffect(() => {
@@ -27,7 +27,9 @@ export const SettingsProvider = ({ children }) => {
       setSettingsLoading(false);
       return;
     }
-    fetchSettings();
+    const controller = new AbortController();
+    fetchSettings(controller.signal);
+    return () => controller.abort();
   }, [isAuthenticated, authLoading, fetchSettings]);
 
   const value = {

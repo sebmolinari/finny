@@ -499,6 +499,156 @@ class AnalyticsService {
     return performance;
   }
 
+  // 30-day historical unrealized P&L for sparkline display
+  static getPortfolioUnrealizedPnlHistory(userId, days = 31, excludeAssetTypes = []) {
+    const db = require("../config/database");
+    const userSettings = UserSettings.findByUserId(userId);
+    const today = getTodayInTimezone(userSettings.timezone);
+
+    // Build set of excluded asset IDs
+    let excludedAssetIds = new Set();
+    if (excludeAssetTypes.length > 0) {
+      const placeholders = excludeAssetTypes.map(() => "?").join(",");
+      const excludedAssets = db
+        .prepare(
+          `SELECT id FROM assets WHERE LOWER(asset_type) IN (${placeholders})`,
+        )
+        .all(...excludeAssetTypes.map((t) => t.toLowerCase()));
+      excludedAssetIds = new Set(excludedAssets.map((a) => String(a.id)));
+    }
+
+    // Build date range (ASC)
+    const dates = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().split("T")[0]);
+    }
+
+    // Load all transactions up to today
+    const transactions = db
+      .prepare(
+        `SELECT id, date, transaction_type, asset_id, quantity, total_amount
+         FROM transactions
+         WHERE user_id = ? AND date <= ?
+         ORDER BY date ASC, id ASC`,
+      )
+      .all(userId, today);
+
+    // Load all prices up to today
+    const prices = db
+      .prepare(
+        `SELECT asset_id, date, price
+         FROM price_data
+         WHERE date <= ?
+         ORDER BY asset_id ASC, date ASC`,
+      )
+      .all(today);
+
+    // Group prices by asset for forward-walk
+    const priceStreams = {};
+    for (const p of prices) {
+      if (!priceStreams[p.asset_id]) priceStreams[p.asset_id] = [];
+      priceStreams[p.asset_id].push(p);
+    }
+
+    const priceIndex = {};
+    const lastPrice = {};
+    Object.keys(priceStreams).forEach((a) => (priceIndex[a] = 0));
+
+    let txIndex = 0;
+    const holdings = {}; // assetId -> total quantity (scaled int)
+    const lots = {}; // assetId -> [{ quantityValue, totalCostValue }]
+
+    const result = [];
+
+    for (const date of dates) {
+      // Apply transactions up to this date
+      while (
+        txIndex < transactions.length &&
+        transactions[txIndex].date <= date
+      ) {
+        const tx = transactions[txIndex];
+        const qtyValue = tx.quantity || 0;
+
+        if (tx.transaction_type === "buy" || tx.transaction_type === "sell") {
+          if (!holdings[tx.asset_id]) holdings[tx.asset_id] = 0;
+          holdings[tx.asset_id] +=
+            tx.transaction_type === "buy" ? qtyValue : -qtyValue;
+
+          if (!lots[tx.asset_id]) lots[tx.asset_id] = [];
+
+          if (tx.transaction_type === "buy") {
+            lots[tx.asset_id].push({
+              quantityValue: qtyValue,
+              totalCostValue: tx.total_amount || 0,
+            });
+          } else {
+            // Sell: deduct FIFO
+            let remaining = qtyValue;
+            while (remaining > 0 && lots[tx.asset_id].length > 0) {
+              const oldest = lots[tx.asset_id][0];
+              if (oldest.quantityValue <= remaining) {
+                remaining -= oldest.quantityValue;
+                lots[tx.asset_id].shift();
+              } else {
+                const costOfPartial = Math.round(
+                  (remaining * oldest.totalCostValue) / oldest.quantityValue,
+                );
+                oldest.quantityValue -= remaining;
+                oldest.totalCostValue -= costOfPartial;
+                remaining = 0;
+              }
+            }
+          }
+        }
+
+        txIndex++;
+      }
+
+      // Advance prices to this date
+      for (const assetId of Object.keys(priceStreams)) {
+        const stream = priceStreams[assetId];
+        let idx = priceIndex[assetId];
+        while (idx < stream.length && stream[idx].date <= date) {
+          lastPrice[assetId] = stream[idx].price;
+          idx++;
+        }
+        priceIndex[assetId] = idx;
+      }
+
+      // Compute holdings market value and cost basis (excluded assets skipped)
+      let holdingsValue = 0;
+      let costBasisValue = 0;
+
+      for (const [assetId, qtyValue] of Object.entries(holdings)) {
+        if (qtyValue <= 0) continue;
+        if (excludedAssetIds.has(assetId)) continue;
+        const priceValue = lastPrice[assetId];
+        if (!priceValue) continue;
+
+        holdingsValue +=
+          fromValueScale(qtyValue, QUANTITY_SCALE) *
+          fromValueScale(priceValue, PRICE_SCALE);
+
+        if (lots[assetId]) {
+          costBasisValue += lots[assetId].reduce(
+            (sum, lot) => sum + lot.totalCostValue,
+            0,
+          );
+        }
+      }
+
+      result.push({
+        date,
+        unrealized_gain:
+          holdingsValue - fromValueScale(costBasisValue, AMOUNT_SCALE),
+      });
+    }
+
+    return result;
+  }
+
   // Detailed return calculations (MWRR & CAGR)
   static getReturnDetails(userId) {
     // Build current portfolio value (holdings + cash)

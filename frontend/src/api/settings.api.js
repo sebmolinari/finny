@@ -1,7 +1,7 @@
 import api from "./client";
 
 export const settingsAPI = {
-  get: () => api.get("/settings"),
+  get: (signal) => api.get("/settings", { signal }),
 
   update: (data) => api.put("/settings", data),
 

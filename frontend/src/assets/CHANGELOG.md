@@ -1,5 +1,22 @@
 All notable changes to this project are documented below.
 
+## [1.0.3] – 2026-03-25
+
+### Changed
+
+- Skeleton loaders shown across pages while data is being fetched, replacing blank states for a smoother experience
+- All page bundles are now loaded on demand (code splitting), reducing initial app load time
+- Dashboard charts and timeline labels now consistently use the user-configured date format
+- Frontend dependencies upgraded to latest compatible versions
+
+### Fixed
+
+- Dashboard no longer shows a blank screen on initial load; data and charts render correctly after fetch
+- Pages that previously showed a blank screen when an API call failed now display an error message and a Retry button
+- Navigating away from a page mid-load no longer causes stale data to flash on return — in-flight requests are cancelled automatically
+
+---
+
 ## [1.0.2] – 2026-03-24
 
 ### Changed

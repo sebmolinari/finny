@@ -1197,3 +1197,229 @@ describe("AnalyticsService.getPortfolioPerformance – debug mode", () => {
     );
   });
 });
+
+// ── getPortfolioUnrealizedPnlHistory ──────────────────────────────────────────
+
+describe("AnalyticsService.getPortfolioUnrealizedPnlHistory", () => {
+  let userId;
+  const { toValueScale } = require("../../../utils/valueScale");
+  const QTY_SCALE = 8, PRICE_SCALE = 6, AMOUNT_SCALE = 4;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.clearAll();
+    UserSettings.findByUserId.mockReturnValue({ timezone: "UTC" });
+
+    userId = db
+      .prepare(
+        "INSERT INTO users (username, email, password, role) VALUES (?,?,?,?)",
+      )
+      .run("pnluser", "pnl@t.com", "hash", "user").lastInsertRowid;
+  });
+
+  afterEach(() => {
+    db.clearAll();
+  });
+
+  it("returns zeros for all dates when portfolio is empty", () => {
+    const result = AnalyticsService.getPortfolioUnrealizedPnlHistory(
+      userId,
+      2,
+      [],
+    );
+
+    expect(result).toHaveLength(2);
+    result.forEach((entry) => {
+      expect(entry).toHaveProperty("date");
+      expect(entry.unrealized_gain).toBe(0);
+    });
+  });
+
+  it("returns positive unrealized gain when price exceeds cost basis", () => {
+    const assetId = db
+      .prepare(
+        "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)",
+      )
+      .run("TST", "Test Asset", "equity", "USD", userId).lastInsertRowid;
+
+    // Buy 10 units at $100 each → cost basis $1000
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId,
+      assetId,
+      "2023-01-01",
+      "buy",
+      toValueScale(10, QTY_SCALE).value,
+      toValueScale(100, PRICE_SCALE).value,
+      0,
+      toValueScale(1000, AMOUNT_SCALE).value,
+      userId,
+    );
+
+    // Current price: $150 → unrealized gain = 10 * 150 - 1000 = $500
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)",
+    ).run(
+      assetId,
+      "2023-01-01",
+      toValueScale(150, PRICE_SCALE).value,
+      "manual",
+      userId,
+    );
+
+    const result = AnalyticsService.getPortfolioUnrealizedPnlHistory(
+      userId,
+      2,
+      [],
+    );
+
+    expect(result).toHaveLength(2);
+    result.forEach((entry) => {
+      expect(entry.unrealized_gain).toBeCloseTo(500, 2);
+    });
+  });
+
+  it("correctly reduces cost basis after a partial FIFO sell", () => {
+    const assetId = db
+      .prepare(
+        "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)",
+      )
+      .run("TST2", "Test Asset 2", "equity", "USD", userId).lastInsertRowid;
+
+    // Buy 10 units at $100 each → cost $1000
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId,
+      assetId,
+      "2023-01-01",
+      "buy",
+      toValueScale(10, QTY_SCALE).value,
+      toValueScale(100, PRICE_SCALE).value,
+      0,
+      toValueScale(1000, AMOUNT_SCALE).value,
+      userId,
+    );
+
+    // Sell 5 units → FIFO removes half the lot; remaining cost basis = $500
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId,
+      assetId,
+      "2023-06-01",
+      "sell",
+      toValueScale(5, QTY_SCALE).value,
+      toValueScale(150, PRICE_SCALE).value,
+      0,
+      toValueScale(750, AMOUNT_SCALE).value,
+      userId,
+    );
+
+    // Current price $150 → unrealized gain = 5 * 150 - 500 = $250
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)",
+    ).run(
+      assetId,
+      "2023-01-01",
+      toValueScale(150, PRICE_SCALE).value,
+      "manual",
+      userId,
+    );
+
+    const result = AnalyticsService.getPortfolioUnrealizedPnlHistory(
+      userId,
+      2,
+      [],
+    );
+
+    expect(result).toHaveLength(2);
+    result.forEach((entry) => {
+      expect(entry.unrealized_gain).toBeCloseTo(250, 2);
+    });
+  });
+
+  it("excludes specified asset types from unrealized gain computation", () => {
+    const equityId = db
+      .prepare(
+        "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)",
+      )
+      .run("EQ", "Equity", "equity", "USD", userId).lastInsertRowid;
+
+    const realEstateId = db
+      .prepare(
+        "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)",
+      )
+      .run("RE", "Real Estate", "realestate", "USD", userId).lastInsertRowid;
+
+    // Buy equity: cost $1000, price $150 → gain $500
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId,
+      equityId,
+      "2023-01-01",
+      "buy",
+      toValueScale(10, QTY_SCALE).value,
+      toValueScale(100, PRICE_SCALE).value,
+      0,
+      toValueScale(1000, AMOUNT_SCALE).value,
+      userId,
+    );
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)",
+    ).run(
+      equityId,
+      "2023-01-01",
+      toValueScale(150, PRICE_SCALE).value,
+      "manual",
+      userId,
+    );
+
+    // Buy real estate: cost $1000, price $300 → gain $500 (if included)
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId,
+      realEstateId,
+      "2023-01-01",
+      "buy",
+      toValueScale(5, QTY_SCALE).value,
+      toValueScale(200, PRICE_SCALE).value,
+      0,
+      toValueScale(1000, AMOUNT_SCALE).value,
+      userId,
+    );
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)",
+    ).run(
+      realEstateId,
+      "2023-01-01",
+      toValueScale(300, PRICE_SCALE).value,
+      "manual",
+      userId,
+    );
+
+    const withExclusion = AnalyticsService.getPortfolioUnrealizedPnlHistory(
+      userId,
+      2,
+      ["realestate"],
+    );
+    const withoutExclusion = AnalyticsService.getPortfolioUnrealizedPnlHistory(
+      userId,
+      2,
+      [],
+    );
+
+    // Excluding real estate: only equity gain ($500)
+    withExclusion.forEach((entry) => {
+      expect(entry.unrealized_gain).toBeCloseTo(500, 2);
+    });
+
+    // Including all: equity ($500) + real estate ($500) = $1000
+    withoutExclusion.forEach((entry) => {
+      expect(entry.unrealized_gain).toBeCloseTo(1000, 2);
+    });
+  });
+});

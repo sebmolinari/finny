@@ -2,7 +2,9 @@ const express = require("express");
 const router = express.Router();
 const { validationResult } = require("express-validator");
 const AssetAllocationTarget = require("../models/AssetAllocationTarget");
+const Asset = require("../models/Asset");
 const AnalyticsService = require("../services/analyticsService");
+const AuditLog = require("../models/AuditLog");
 const auth = require("../middleware/auth");
 const {
   allocationTargetValidation,
@@ -41,11 +43,7 @@ router.get("/targets", auth, async (req, res) => {
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
       // Build list of all asset types from assets table and compute excludes
-      const db = require("../config/database");
-      const rows = db.prepare("SELECT DISTINCT asset_type FROM assets").all();
-      const allTypes = rows
-        .map((r) => (r.asset_type || "").toLowerCase())
-        .filter(Boolean);
+      const allTypes = Asset.getDistinctAssetTypes();
       excludeAssetTypes = allTypes.filter(
         (t) => !includeAssetTypes.includes(t),
       );
@@ -165,6 +163,16 @@ router.post("/targets", auth, allocationTargetValidation, async (req, res) => {
       req.user.id,
     );
 
+    AuditLog.logCreate(
+      req.user.id,
+      req.user.username,
+      "asset_allocation_targets",
+      target.id,
+      { asset_type, asset_id, target_percentage, notes },
+      req.ip,
+      req.get("user-agent"),
+    );
+
     res.json(target);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -220,6 +228,17 @@ router.post(
         targets,
         req.user.id,
       );
+
+      AuditLog.logCreate(
+        req.user.id,
+        req.user.username,
+        "asset_allocation_targets",
+        null,
+        { batch_count: targets.length },
+        req.ip,
+        req.get("user-agent"),
+      );
+
       res.json(result);
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -253,6 +272,16 @@ router.delete("/targets/:id", auth, async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ message: "Allocation target not found" });
     }
+
+    AuditLog.logDelete(
+      req.user.id,
+      req.user.username,
+      "asset_allocation_targets",
+      parseInt(req.params.id),
+      req.ip,
+      req.get("user-agent"),
+    );
+
     res.json({ message: "Allocation target deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -282,11 +311,7 @@ router.get("/rebalancing", auth, async (req, res) => {
         .split(",")
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
-      const db = require("../config/database");
-      const rows = db.prepare("SELECT DISTINCT asset_type FROM assets").all();
-      const allTypes = rows
-        .map((r) => (r.asset_type || "").toLowerCase())
-        .filter(Boolean);
+      const allTypes = Asset.getDistinctAssetTypes();
       excludeAssetTypes = allTypes.filter(
         (t) => !includeAssetTypes.includes(t),
       );
@@ -358,11 +383,7 @@ router.post("/simulate", auth, async (req, res) => {
       Array.isArray(include_asset_types) &&
       include_asset_types.length > 0
     ) {
-      const db = require("../config/database");
-      const rows = db.prepare("SELECT DISTINCT asset_type FROM assets").all();
-      const allTypes = rows
-        .map((r) => (r.asset_type || "").toLowerCase())
-        .filter(Boolean);
+      const allTypes = Asset.getDistinctAssetTypes();
       const included = include_asset_types.map((t) => t.toLowerCase());
       excludeAssetTypes = allTypes.filter((t) => !included.includes(t));
     }

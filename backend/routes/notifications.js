@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Notification = require("../models/Notification");
+const AuditLog = require("../models/AuditLog");
 const authMiddleware = require("../middleware/auth");
 const adminMiddleware = require("../middleware/admin");
 
@@ -90,6 +91,15 @@ router.get("/", (req, res) => {
 router.patch("/read-all", (req, res) => {
   try {
     const changed = Notification.markAllRead(req.user.id);
+    AuditLog.logUpdate(
+      req.user.id,
+      req.user.username,
+      "notifications",
+      null,
+      { action: "mark_all_read", changed },
+      req.ip,
+      req.get("user-agent"),
+    );
     res.json({ changed });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -132,6 +142,15 @@ router.patch("/:id/read", (req, res) => {
     if (!changed) {
       return res.status(404).json({ message: "Notification not found" });
     }
+    AuditLog.logUpdate(
+      req.user.id,
+      req.user.username,
+      "notifications",
+      parseInt(req.params.id),
+      { action: "mark_read" },
+      req.ip,
+      req.get("user-agent"),
+    );
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -166,6 +185,15 @@ router.patch("/:id/read", (req, res) => {
 router.delete("/admin/purge", adminMiddleware, (req, res) => {
   try {
     const deleted = Notification.deleteAll(req.user.id);
+    AuditLog.logDelete(
+      req.user.id,
+      req.user.username,
+      "notifications",
+      null,
+      { action: "purge_all", deleted },
+      req.ip,
+      req.get("user-agent"),
+    );
     res.json({ deleted });
   } catch (error) {
     res.status(500).json({ message: error.message });

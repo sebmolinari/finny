@@ -11,6 +11,7 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
   const [brokerSummary, setBrokerSummary] = useState([]);
   const [sparklineData, setSparklineData] = useState([]);
   const [holdingsSparklineData, setHoldingsSparklineData] = useState([]);
+  const [pnlSparklineData, setPnlSparklineData] = useState([]);
   const [mtmEvolution, setMtmEvolution] = useState([]);
   const [performanceData, setPerformanceData] = useState([]);
   const [rangeMetrics, setRangeMetrics] = useState(null);
@@ -75,6 +76,16 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     } catch (error) {
       if (error.name === "CanceledError") return;
       console.error("Error loading holdings sparkline data:", error);
+    }
+  }, []);
+
+  const loadPnlSparklineData = useCallback(async (signal) => {
+    try {
+      const response = await analyticsAPI.getUnrealizedPnlHistory(31, [ASSET_TYPE_REALESTATE], signal);
+      setPnlSparklineData(response.data.map((item) => ({ date: item.date, value: item.unrealized_gain })));
+    } catch (error) {
+      if (error.name === "CanceledError") return;
+      console.error("Error loading P&L sparkline data:", error);
     }
   }, []);
 
@@ -143,6 +154,7 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
       loadBrokerData(signal),
       loadSparklineData(signal),
       loadHoldingsSparklineData(signal),
+      loadPnlSparklineData(signal),
       loadReturnDetails(signal),
       loadInceptionDate(signal),
     ]).then(() => {
@@ -183,6 +195,7 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     brokerSummary,
     sparklineData,
     holdingsSparklineData,
+    pnlSparklineData,
     mtmEvolution,
     performanceData,
     rangeMetrics,

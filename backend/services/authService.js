@@ -13,6 +13,7 @@ const {
   ValidationError,
 } = require("../errors/AppError");
 const logger = require("../utils/logger");
+const { getTodayInTimezone } = require("../utils/dateUtils");
 
 /**
  * Default assets seeded for every new installation.
@@ -120,7 +121,8 @@ class AuthService {
 
       // Seed USD with a $1 price if none exists yet
       if (usdAsset && !Asset.getLatestPrice(usdAsset.id)) {
-        const today = new Date().toISOString().split("T")[0];
+        const tz = UserSettings.findByUserId(userId)?.timezone || "UTC";
+        const today = getTodayInTimezone(tz);
         PriceData.create(usdAsset.id, today, 1, "manual", userId);
       }
 

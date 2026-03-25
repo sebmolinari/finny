@@ -55,6 +55,7 @@ const Dashboard = () => {
     brokerSummary,
     sparklineData,
     holdingsSparklineData,
+    pnlSparklineData,
     mtmEvolution,
     performanceData,
     rangeMetrics,
@@ -116,10 +117,6 @@ const Dashboard = () => {
   const navTrend = navChangePct > 0 ? "up" : navChangePct < 0 ? "down" : "neutral";
   const navTrendLabel =
     navChangePct >= 0 ? `+${navChangePct.toFixed(2)}%` : `${navChangePct.toFixed(2)}%`;
-  const navInterval =
-    sparklineData.length >= 2
-      ? `Period: ${formatDate(sparklineData[0].date, userDateFormat)} – ${formatDate(sparklineData[sparklineData.length - 1].date, userDateFormat)}`
-      : "Last 30 days";
 
   // Derive Liquid Holdings sparkline (30 days, real estate excluded)
   const holdingsSparkValues = holdingsSparklineData.map((d) => d.value);
@@ -134,10 +131,14 @@ const Dashboard = () => {
     holdingsChangePct >= 0
       ? `+${holdingsChangePct.toFixed(2)}%`
       : `${holdingsChangePct.toFixed(2)}%`;
-  const holdingsInterval =
-    holdingsSparklineData.length >= 2
-      ? `Period: ${formatDate(holdingsSparklineData[0].date, userDateFormat)} – ${formatDate(holdingsSparklineData[holdingsSparklineData.length - 1].date, userDateFormat)}`
-      : "Last 30 days";
+
+  // Derive Unrealized P&L sparkline (30 days, real estate excluded)
+  const pnlSparkValues = pnlSparklineData.map((d) => d.value);
+  const pnlXAxisData = pnlSparklineData.map((d) => formatDate(d.date, userDateFormat));
+  const pnlInterval =
+    dashboard?.transactions?.daily_pnl !== undefined
+      ? `Daily P&L: ${dashboard.transactions.daily_pnl >= 0 ? "+" : ""}${formatCurrency(dashboard.transactions.daily_pnl, 0)}`
+      : "Daily P&L unavailable";
 
   // Best & Worst performers from holdings
   const holdings = dashboard?.transactions?.holdings || [];
@@ -161,7 +162,6 @@ const Dashboard = () => {
                 title="Net Asset Value"
                 icon={<AccountBalanceIcon color="primary" />}
                 value={formatCurrency(dashboard?.nav || 0, 0)}
-                interval={navInterval}
                 trend={navTrend}
                 trendLabel={navTrendLabel}
                 data={navSparkData.length > 1 ? navSparkData : [0, 0]}
@@ -181,7 +181,6 @@ const Dashboard = () => {
                 title="Liquid Holdings"
                 icon={<TrendingUpIcon color="primary" />}
                 value={formatCurrency(dashboard?.transactions?.holdings_market_value || 0, 0)}
-                interval={holdingsInterval}
                 trend={holdingsTrend}
                 trendLabel={holdingsTrendLabel}
                 data={holdingsSparkValues.length > 1 ? holdingsSparkValues : [0, 0]}
@@ -208,11 +207,7 @@ const Dashboard = () => {
                       ? theme.palette.error.main
                       : theme.palette.text.secondary
                 }
-                interval={
-                  dashboard?.transactions?.daily_pnl !== undefined
-                    ? `Daily P&L: ${dashboard.transactions.daily_pnl >= 0 ? "+" : ""}${formatCurrency(dashboard.transactions.daily_pnl, 0)}`
-                    : "Daily P&L unavailable"
-                }
+                interval={pnlInterval}
                 intervalColor={
                   dashboard?.transactions?.daily_pnl > 0
                     ? theme.palette.success.main
@@ -232,6 +227,8 @@ const Dashboard = () => {
                     ? `+${(dashboard?.transactions?.unrealized_gain_percent || 0).toFixed(2)}%`
                     : `${(dashboard?.transactions?.unrealized_gain_percent || 0).toFixed(2)}%`
                 }
+                data={pnlSparkValues.length > 1 ? pnlSparkValues : [0, 0]}
+                xAxisData={pnlXAxisData.length > 1 ? pnlXAxisData : ["–", "–"]}
               />
             </Box>
           </Tooltip>
