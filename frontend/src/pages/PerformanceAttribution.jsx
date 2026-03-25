@@ -7,6 +7,8 @@ import {
   ToggleButton,
   TextField,
   Chip,
+  Alert,
+  Button,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -20,7 +22,7 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/StyledCard";
@@ -28,6 +30,7 @@ import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -147,23 +150,20 @@ const columns = [
 
 export default function PerformanceAttribution() {
   const theme = useTheme();
+  const { timezone: userTimezone } = useUserSettings();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [rangeMode, setRangeMode] = useState("ytd");
   const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [customEnd, setCustomEnd] = useState(() => getTodayInTimezone("UTC"));
   const [inceptionDate, setInceptionDate] = useState(null);
-  const [userTimezone, setUserTimezone] = useState("UTC");
 
   useEffect(() => {
-    settingsAPI
-      .get()
-      .then((res) => {
-        const tz = res.data?.timezone || "UTC";
-        setUserTimezone(tz);
-        setCustomEnd(getTodayInTimezone(tz));
-      })
-      .catch(() => setCustomEnd(getTodayInTimezone("UTC")));
+    setCustomEnd(getTodayInTimezone(userTimezone || "UTC"));
+  }, [userTimezone]);
+
+  useEffect(() => {
     analyticsAPI
       .getInceptionDate()
       .then((res) => setInceptionDate(res.data?.inception_date || null))
@@ -212,6 +212,7 @@ export default function PerformanceAttribution() {
     const range = getDateRange();
     if (!range) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await analyticsAPI.getAttribution(
         range.startDate,
@@ -220,6 +221,7 @@ export default function PerformanceAttribution() {
       setData(res.data);
     } catch (err) {
       console.error("Error loading attribution:", err);
+      setError("Failed to load attribution data. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -230,6 +232,16 @@ export default function PerformanceAttribution() {
   }, [loadData]);
 
   if (loading) return <LoadingSpinner maxWidth="lg" />;
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert severity="error" action={<Button onClick={loadData}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
+  }
 
   const attributions = data?.attributions ?? [];
   const totalGain = attributions.reduce((s, a) => s + (a.price_gain ?? 0), 0);

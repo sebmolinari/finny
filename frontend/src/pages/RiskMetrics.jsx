@@ -36,7 +36,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import {
   formatCurrency,
@@ -47,6 +47,7 @@ import { MetricCard, StyledCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 
 const RANGE_OPTIONS = [
@@ -62,11 +63,12 @@ const RANGE_OPTIONS = [
 export default function RiskMetrics() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const { timezone } = useUserSettings();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rangeMode, setRangeMode] = useState("ytd");
   const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [customEnd, setCustomEnd] = useState(() => getTodayInTimezone("UTC"));
   const [corrData, setCorrData] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -86,8 +88,7 @@ export default function RiskMetrics() {
         endDate = customEnd;
         days = 365;
       } else if (rangeMode === "ytd") {
-        const settingsRes = await settingsAPI.get().catch(() => ({ data: {} }));
-        const todayStr = getTodayInTimezone(settingsRes.data?.timezone || "UTC");
+        const todayStr = getTodayInTimezone(timezone || "UTC");
         startDate = `${todayStr.substring(0, 4)}-01-01`;
         endDate = todayStr;
         days = 365;
@@ -106,14 +107,11 @@ export default function RiskMetrics() {
     } finally {
       setLoading(false);
     }
-  }, [rangeMode, customStart, customEnd]);
+  }, [rangeMode, customStart, customEnd, timezone]);
 
   useEffect(() => {
-    settingsAPI
-      .get()
-      .then((res) => setCustomEnd(getTodayInTimezone(res.data?.timezone || "UTC")))
-      .catch(() => setCustomEnd(getTodayInTimezone("UTC")));
-  }, []);
+    setCustomEnd(getTodayInTimezone(timezone || "UTC"));
+  }, [timezone]);
 
   useEffect(() => {
     loadData();

@@ -8,6 +8,8 @@ import {
   FormControlLabel,
   TextField,
   Typography,
+  Alert,
+  Button,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -18,7 +20,7 @@ import { MetricCard } from "../components/StyledCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StyledDataGrid from "../components/StyledDataGrid";
 
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import {
   formatNumber,
@@ -27,19 +29,27 @@ import {
 } from "../utils/formatNumber";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Holdings() {
   const [holdings, setHoldings] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Historical mode
   const [isHistorical, setIsHistorical] = useState(false);
-  const [asOfDate, setAsOfDate] = useState("");
   const [historicalData, setHistoricalData] = useState(null);
   const [historicalLoading, setHistoricalLoading] = useState(false);
 
   const theme = useTheme();
+  const { timezone } = useUserSettings();
+  const [asOfDate, setAsOfDate] = useState(() => getTodayInTimezone("UTC"));
+
+  // Sync asOfDate when timezone loads
+  useEffect(() => {
+    setAsOfDate(getTodayInTimezone(timezone));
+  }, [timezone]);
 
   const loadData = useCallback(async () => {
     try {
@@ -50,6 +60,7 @@ export default function Holdings() {
       setLoading(false);
     } catch (error) {
       console.error("Error loading holdings and analytics:", error);
+      setError("Failed to load data. Please try again.");
       setLoading(false);
     }
   }, []);
@@ -73,13 +84,6 @@ export default function Holdings() {
   }, [loadData]);
 
   useEffect(() => {
-    settingsAPI
-      .get()
-      .then((res) => setAsOfDate(getTodayInTimezone(res.data?.timezone || "UTC")))
-      .catch(() => setAsOfDate(getTodayInTimezone("UTC")));
-  }, []);
-
-  useEffect(() => {
     if (isHistorical && asOfDate) {
       loadHistoricalData(asOfDate);
     }
@@ -87,6 +91,16 @@ export default function Holdings() {
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert severity="error" action={<Button onClick={loadData}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   // Determine which data to show

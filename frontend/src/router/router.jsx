@@ -1,36 +1,38 @@
 import { createBrowserRouter } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import Layout from "../layouts/Layout";
 import RouteErrorBoundary from "../components/RouteErrorBoundary";
+import LoadingSpinner from "../components/LoadingSpinner";
 
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import Dashboard from "../pages/Dashboard";
-import Holdings from "../pages/Holdings";
-import Users from "../pages/Users";
-import Profile from "../pages/Profile";
-import Blotter from "../pages/Blotter";
-import Assets from "../pages/Assets";
-import ReturnDetails from "../pages/ReturnDetails";
-import CashDetails from "../pages/CashDetails";
-import IncomeAnalytics from "../pages/IncomeAnalytics";
-import Brokers from "../pages/Brokers";
-import Settings from "../pages/Settings";
-import AuditLogs from "../pages/AuditLogs";
-import HostMetrics from "../pages/HostMetrics";
-import MarketTrends from "../pages/MarketTrends";
-import TaxReport from "../pages/TaxReport";
-import ChangePassword from "../pages/ChangePassword";
-import AssetAllocation from "../pages/AssetAllocation";
-import Changelog from "../pages/Changelog";
-import RiskMetrics from "../pages/RiskMetrics";
-import EconomicCalendar from "../pages/EconomicCalendar";
-import AdminOverview from "../pages/AdminOverview";
-import Scheduler from "../pages/Scheduler";
-import GettingStarted from "../pages/GettingStarted";
-import MissingPrices from "../pages/MissingPrices";
-import Features from "../pages/Features";
-import PerformanceAttribution from "../pages/PerformanceAttribution";
+const Login = lazy(() => import("../pages/Login"));
+const Register = lazy(() => import("../pages/Register"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Holdings = lazy(() => import("../pages/Holdings"));
+const Users = lazy(() => import("../pages/Users"));
+const Profile = lazy(() => import("../pages/Profile"));
+const Blotter = lazy(() => import("../pages/Blotter"));
+const Assets = lazy(() => import("../pages/Assets"));
+const ReturnDetails = lazy(() => import("../pages/ReturnDetails"));
+const CashDetails = lazy(() => import("../pages/CashDetails"));
+const IncomeAnalytics = lazy(() => import("../pages/IncomeAnalytics"));
+const Brokers = lazy(() => import("../pages/Brokers"));
+const Settings = lazy(() => import("../pages/Settings"));
+const AuditLogs = lazy(() => import("../pages/AuditLogs"));
+const HostMetrics = lazy(() => import("../pages/HostMetrics"));
+const MarketTrends = lazy(() => import("../pages/MarketTrends"));
+const TaxReport = lazy(() => import("../pages/TaxReport"));
+const ChangePassword = lazy(() => import("../pages/ChangePassword"));
+const AssetAllocation = lazy(() => import("../pages/AssetAllocation"));
+const Changelog = lazy(() => import("../pages/Changelog"));
+const RiskMetrics = lazy(() => import("../pages/RiskMetrics"));
+const EconomicCalendar = lazy(() => import("../pages/EconomicCalendar"));
+const AdminOverview = lazy(() => import("../pages/AdminOverview"));
+const Scheduler = lazy(() => import("../pages/Scheduler"));
+const GettingStarted = lazy(() => import("../pages/GettingStarted"));
+const MissingPrices = lazy(() => import("../pages/MissingPrices"));
+const Features = lazy(() => import("../pages/Features"));
+const PerformanceAttribution = lazy(() => import("../pages/PerformanceAttribution"));
 
 export const router = createBrowserRouter([
   {
@@ -39,16 +41,26 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "login",
-        element: <Login />,
+        element: (
+          <Suspense fallback={<LoadingSpinner />}>
+            <Login />
+          </Suspense>
+        ),
       },
       {
         path: "register",
-        element: <Register />,
+        element: (
+          <Suspense fallback={<LoadingSpinner />}>
+            <Register />
+          </Suspense>
+        ),
       },
       {
         element: (
           <ProtectedRoute>
-            <Layout />
+            <Suspense fallback={<LoadingSpinner />}>
+              <Layout />
+            </Suspense>
           </ProtectedRoute>
         ),
         children: [

@@ -26,11 +26,12 @@ import ChartCard from "../components/ChartCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StyledDataGrid from "../components/StyledDataGrid";
 import PageContainer from "../components/PageContainer";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
 import { formatDate, getTodayInTimezone } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 const INCOME_TYPES = ["dividend", "interest", "coupon", "rental"];
 
@@ -56,12 +57,10 @@ function typeLabel(type) {
 export default function IncomeAnalytics() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const { timezone, dateFormat, settingsLoading } = useUserSettings();
 
   const [report, setReport] = useState(null);
-  const [userSettings, setUserSettings] = useState(null);
-  const [timezone, setTimezone] = useState("UTC");
   const [incomeLoading, setIncomeLoading] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(null);
   const [error, setError] = useState(null);
 
@@ -95,23 +94,9 @@ export default function IncomeAnalytics() {
     }
   }, [selectedYear, timezone]);
 
-  const loadUserSettings = useCallback(async () => {
-    setSettingsLoading(true);
-    try {
-      const res = await settingsAPI.get();
-      setUserSettings(res.data);
-      setTimezone(res.data?.timezone || "UTC");
-    } catch {
-      setUserSettings({ date_format: "YYYY-MM-DD", timezone: "UTC" });
-    } finally {
-      setSettingsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadIncome();
-    loadUserSettings();
-  }, [loadIncome, loadUserSettings]);
+  }, [loadIncome]);
 
   if (incomeLoading || settingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
@@ -354,7 +339,7 @@ export default function IncomeAnalytics() {
       width: 110,
       renderCell: (params) =>
         params.value
-          ? formatDate(params.value, userSettings?.date_format)
+          ? formatDate(params.value, dateFormat)
           : "—",
     },
   ];
@@ -367,7 +352,7 @@ export default function IncomeAnalytics() {
       headerAlign: "center",
       width: 100,
       renderCell: (params) =>
-        formatDate(params.value, userSettings?.date_format),
+        formatDate(params.value, dateFormat),
     },
     {
       field: "transaction_type",

@@ -38,7 +38,6 @@ import {
   notificationsAPI,
   schedulerAPI,
   databaseAPI,
-  settingsAPI,
 } from "../api/api";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import SystemConfigCard from "../components/SystemConfigCard";
@@ -47,6 +46,7 @@ import { formatNumber } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/StyledCard";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 import {
   StyledTable,
   StyledHeaderRow,
@@ -78,8 +78,7 @@ export default function AdminOverview() {
   const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
   const [deleteDataPhrase, setDeleteDataPhrase] = useState("delete all data");
   const [purgeHistoryDialogOpen, setPurgeHistoryDialogOpen] = useState(false);
-  const [userTimezone, setUserTimezone] = useState();
-  const [userDateFormat, setUserDateFormat] = useState();
+  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
 
   const handleSeedData = useCallback(async () => {
     setSeedingData(true);
@@ -162,13 +161,8 @@ export default function AdminOverview() {
     setLoading(true);
     setError(null);
     try {
-      const [res, settingsRes] = await Promise.all([
-        analyticsAPI.getAdminOverview(),
-        settingsAPI.get(),
-      ]);
+      const res = await analyticsAPI.getAdminOverview();
       setData(res.data);
-      setUserTimezone(settingsRes.data.timezone);
-      setUserDateFormat(settingsRes.data.date_format);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load admin overview.");
     } finally {
