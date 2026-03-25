@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Chip,
@@ -6,12 +6,12 @@ import {
   Switch,
   Typography,
   Tooltip,
+  Skeleton,
 } from "@mui/material";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import AssetDialog from "../components/dialogs/AssetDialog";
 import AssetPriceDialog from "../components/dialogs/AssetPriceDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
 import PageContainer from "../components/layout/PageContainer";
 import {
   Add as AddIcon,
@@ -389,7 +389,14 @@ export default function Assets() {
   ];
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return (
+      <PageContainer>
+        <Skeleton variant="rounded" height={46} sx={{ mb: 0.5 }} />
+        {[...Array(10)].map((_, i) => (
+          <Skeleton key={i} variant="rounded" height={52} sx={{ mt: 0.5 }} />
+        ))}
+      </PageContainer>
+    );
   }
 
   return (

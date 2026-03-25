@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Container, Typography, Stack } from "@mui/material";
 import { fadeInUpSx } from "../../utils/animations";
 

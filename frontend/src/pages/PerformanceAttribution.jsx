@@ -9,6 +9,7 @@ import {
   Chip,
   Alert,
   Button,
+  Skeleton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -27,7 +28,6 @@ import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
 import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
@@ -164,10 +164,12 @@ export default function PerformanceAttribution() {
   }, [userTimezone]);
 
   useEffect(() => {
+    const controller = new AbortController();
     analyticsAPI
-      .getInceptionDate()
+      .getInceptionDate(controller.signal)
       .then((res) => setInceptionDate(res.data?.inception_date || null))
-      .catch(() => {});
+      .catch((err) => { if (err.name !== "CanceledError") console.error(err); });
+    return () => controller.abort();
   }, []);
 
   const getDateRange = useCallback(() => {
@@ -208,7 +210,7 @@ export default function PerformanceAttribution() {
     }
   }, [rangeMode, customStart, customEnd, inceptionDate, userTimezone]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal) => {
     const range = getDateRange();
     if (!range) return;
     setLoading(true);
@@ -217,21 +219,40 @@ export default function PerformanceAttribution() {
       const res = await analyticsAPI.getAttribution(
         range.startDate,
         range.endDate,
+        signal,
       );
       setData(res.data);
     } catch (err) {
+      if (err.name === "CanceledError") return;
       console.error("Error loading attribution:", err);
       setError("Failed to load attribution data. Please try again.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [getDateRange]);
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
+    return () => controller.abort();
   }, [loadData]);
 
-  if (loading) return <LoadingSpinner maxWidth="lg" />;
+  if (loading) return (
+    <PageContainer>
+      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+        <Skeleton variant="rounded" width={420} height={36} />
+      </Box>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {[...Array(4)].map((_, i) => (
+          <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+            <Skeleton variant="rounded" height={100} />
+          </Grid>
+        ))}
+      </Grid>
+      <Skeleton variant="rounded" height={320} sx={{ mb: 3 }} />
+      <Skeleton variant="rounded" height={400} />
+    </PageContainer>
+  );
 
   if (error) {
     return (

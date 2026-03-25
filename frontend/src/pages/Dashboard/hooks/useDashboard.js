@@ -20,22 +20,23 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (signal) => {
     try {
       setError(null);
-      const response = await analyticsAPI.getPortfolioAnalytics([ASSET_TYPE_REALESTATE]);
+      const response = await analyticsAPI.getPortfolioAnalytics([ASSET_TYPE_REALESTATE], signal);
       setDashboard(response.data);
     } catch (err) {
+      if (err.name === "CanceledError") return;
       console.error("Error loading dashboard:", err);
       setError("Failed to load dashboard data. Please try again.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
-  const loadBrokerData = useCallback(async () => {
+  const loadBrokerData = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getBrokerOverview();
+      const response = await analyticsAPI.getBrokerOverview(signal);
       if (response.data && Array.isArray(response.data)) {
         const chartData = response.data
           .map((broker) => ({ name: broker.name, value: broker.current_value || 0 }))
@@ -44,40 +45,44 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
         setBrokerSummary(chartData);
       }
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading broker data:", error);
     }
   }, []);
 
-  const loadInceptionDate = useCallback(async () => {
+  const loadInceptionDate = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getInceptionDate();
+      const response = await analyticsAPI.getInceptionDate(signal);
       setInceptionDate(response.data.inception_date || null);
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading inception date:", error);
     }
   }, []);
 
-  const loadSparklineData = useCallback(async () => {
+  const loadSparklineData = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getPortfolioPerformance(31);
+      const response = await analyticsAPI.getPortfolioPerformance(31, [], null, null, signal);
       setSparklineData(response.data.map((item) => ({ date: item.date, value: item.total_value })));
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading sparkline data:", error);
     }
   }, []);
 
-  const loadHoldingsSparklineData = useCallback(async () => {
+  const loadHoldingsSparklineData = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getPortfolioPerformance(31, [ASSET_TYPE_REALESTATE]);
+      const response = await analyticsAPI.getPortfolioPerformance(31, [ASSET_TYPE_REALESTATE], null, null, signal);
       setHoldingsSparklineData(response.data.map((item) => ({ date: item.date, value: item.total_value })));
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading holdings sparkline data:", error);
     }
   }, []);
 
-  const loadReturnDetails = useCallback(async () => {
+  const loadReturnDetails = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getReturnDetails();
+      const response = await analyticsAPI.getReturnDetails(signal);
       const details = response.data;
       if (details && Array.isArray(details.cagr_evolution)) {
         setMtmEvolution(
@@ -89,11 +94,12 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
         );
       }
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading return details:", error);
     }
   }, []);
 
-  const loadPerformanceForRange = useCallback(async () => {
+  const loadPerformanceForRange = useCallback(async (signal) => {
     const range = getActiveRange();
     if (!range) return;
     try {
@@ -102,14 +108,16 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
         undefined,
         range.startDate,
         range.endDate,
+        signal,
       );
       setPerformanceData(response.data.map((item) => ({ date: item.date, value: item.total_value })));
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading performance data:", error);
     }
   }, [getActiveRange]);
 
-  const loadRangeMetrics = useCallback(async () => {
+  const loadRangeMetrics = useCallback(async (signal) => {
     const range = getActiveRange();
     if (!range) {
       setRangeMetrics(null);
@@ -117,31 +125,37 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     }
     try {
       setRangeMetricsLoading(true);
-      const response = await analyticsAPI.getDateRangeMetrics(range.startDate, range.endDate);
+      const response = await analyticsAPI.getDateRangeMetrics(range.startDate, range.endDate, signal);
       setRangeMetrics(response.data);
     } catch (error) {
+      if (error.name === "CanceledError") return;
       console.error("Error loading range metrics:", error);
       setRangeMetrics(null);
     } finally {
-      setRangeMetricsLoading(false);
+      if (!signal?.aborted) setRangeMetricsLoading(false);
     }
   }, [getActiveRange]);
 
   // Initial load
   useEffect(() => {
-    loadDashboard();
-    loadBrokerData();
-    loadSparklineData();
-    loadHoldingsSparklineData();
-    loadReturnDetails();
-    loadInceptionDate();
+    const controller = new AbortController();
+    const { signal } = controller;
+    loadDashboard(signal);
+    loadBrokerData(signal);
+    loadSparklineData(signal);
+    loadHoldingsSparklineData(signal);
+    loadReturnDetails(signal);
+    loadInceptionDate(signal);
+    return () => controller.abort();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reload performance + range metrics when range changes
   useEffect(() => {
     if (!activeRangeKey) return;
-    loadPerformanceForRange();
-    loadRangeMetrics();
+    const controller = new AbortController();
+    loadPerformanceForRange(controller.signal);
+    loadRangeMetrics(controller.signal);
+    return () => controller.abort();
   }, [activeRangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reload benchmark when range or symbol changes
@@ -152,10 +166,14 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     }
     const range = getActiveRange();
     if (!range) return;
+    const controller = new AbortController();
     analyticsAPI
-      .getBenchmark({ symbol: benchmarkSymbol, start_date: range.startDate, end_date: range.endDate })
+      .getBenchmark({ symbol: benchmarkSymbol, start_date: range.startDate, end_date: range.endDate }, controller.signal)
       .then((res) => setBenchmarkData(res.data || null))
-      .catch(() => setBenchmarkData(null));
+      .catch((err) => {
+        if (err.name !== "CanceledError") setBenchmarkData(null);
+      });
+    return () => controller.abort();
   }, [activeRangeKey, benchmarkSymbol]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {

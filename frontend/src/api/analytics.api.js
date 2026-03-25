@@ -1,9 +1,10 @@
 import api from "./client";
 
 export const analyticsAPI = {
-  getPortfolioAnalytics: (excludeTypes = []) =>
+  getPortfolioAnalytics: (excludeTypes = [], signal) =>
     api.get("/analytics/portfolio/analytics", {
       params: excludeTypes.length ? { exclude: excludeTypes.join(",") } : {},
+      signal,
     }),
 
   getPortfolioPerformance: (
@@ -11,29 +12,32 @@ export const analyticsAPI = {
     excludeTypes = [],
     startDate = null,
     endDate = null,
+    signal,
   ) => {
     const params = {};
-    // Only send `days` when not using explicit date bounds (backend ignores it either way,
-    // but omitting avoids misleading query strings in logs)
     if (!startDate || !endDate) params.days = days;
     if (excludeTypes.length) params.exclude = excludeTypes.join(",");
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
-    return api.get("/analytics/portfolio/performance", { params });
+    return api.get("/analytics/portfolio/performance", { params, signal });
   },
 
-  getDateRangeMetrics: (startDate, endDate) =>
+  getDateRangeMetrics: (startDate, endDate, signal) =>
     api.get("/analytics/portfolio/performance/range", {
       params: { start_date: startDate, end_date: endDate },
+      signal,
     }),
 
-  getInceptionDate: () => api.get("/analytics/portfolio/inception-date"),
+  getInceptionDate: (signal) =>
+    api.get("/analytics/portfolio/inception-date", { signal }),
 
-  getReturnDetails: () => api.get("/analytics/portfolio/returns/details"),
+  getReturnDetails: (signal) =>
+    api.get("/analytics/portfolio/returns/details", { signal }),
 
   getCashBalanceDetails: () => api.get("/analytics/portfolio/cash-details"),
 
-  getBrokerOverview: () => api.get("/analytics/brokers/overview"),
+  getBrokerOverview: (signal) =>
+    api.get("/analytics/brokers/overview", { signal }),
 
   getMarketTrends: (days = 30) =>
     api.get("/analytics/market-trends", { params: { days } }),
@@ -70,12 +74,12 @@ export const analyticsAPI = {
     return api.get("/analytics/tax-harvesting", { params });
   },
 
-  getRiskMetrics: (days = 365, startDate = null, endDate = null) => {
+  getRiskMetrics: (days = 365, startDate = null, endDate = null, signal) => {
     const params = {};
     if (!startDate || !endDate) params.days = days;
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
-    return api.get("/analytics/portfolio/risk-metrics", { params });
+    return api.get("/analytics/portfolio/risk-metrics", { params, signal });
   },
 
   getHistoricalHoldings: (asOf) =>
@@ -85,16 +89,17 @@ export const analyticsAPI = {
 
   getEconomicCalendar: () => api.get("/analytics/economic-calendar"),
 
-  getBenchmark: (params) =>
-    api.get("/analytics/portfolio/benchmark", { params }),
+  getBenchmark: (params, signal) =>
+    api.get("/analytics/portfolio/benchmark", { params, signal }),
 
-  getAttribution: (startDate, endDate) =>
+  getAttribution: (startDate, endDate, signal) =>
     api.get("/analytics/portfolio/attribution", {
       params: { start_date: startDate, end_date: endDate },
+      signal,
     }),
 
-  getCorrelation: (days = 365) =>
-    api.get("/analytics/portfolio/correlation", { params: { days } }),
+  getCorrelation: (days = 365, signal) =>
+    api.get("/analytics/portfolio/correlation", { params: { days }, signal }),
 
   getAdminOverview: () => api.get("/analytics/admin/overview"),
 

@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState, useRef } from "react";
 import { styled } from "@mui/material/styles";
 import {
   Toolbar,
@@ -52,8 +52,8 @@ const StyledTextField = styled(TextField)(({ theme, ownerState }) => ({
 /* I used this one instead of default to be able to inject custom actions */
 
 export function StyledDataGridToolbar({ label, actions }) {
-  const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
-  const exportMenuTriggerRef = React.useRef(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuTriggerRef = useRef(null);
 
   return (
     <Toolbar

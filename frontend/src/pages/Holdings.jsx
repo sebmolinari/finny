@@ -18,7 +18,6 @@ import {
   History as HistoryIcon,
 } from "@mui/icons-material";
 import { MetricCard } from "../components/data-display/StyledCard";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
 
 import { analyticsAPI } from "../api/api";

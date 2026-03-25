@@ -19,7 +19,6 @@ import { BENCHMARKS } from "../../constants/benchmarks";
 
 import { formatDate } from "../../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../../utils/formatNumber";
-import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import PageContainer from "../../components/layout/PageContainer";
 import { useUserSettings } from "../../hooks/useUserSettings";
 

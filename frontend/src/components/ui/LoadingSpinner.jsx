@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 
 export default function LoadingSpinner({ maxWidth = "xl", message }) {

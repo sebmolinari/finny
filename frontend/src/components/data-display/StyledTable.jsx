@@ -1,4 +1,3 @@
-import React from "react";
 import { Table, TableCell, TableRow } from "@mui/material";
 
 // Styled table with consistent size

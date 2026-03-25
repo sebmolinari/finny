@@ -13,6 +13,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Skeleton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -44,7 +45,6 @@ import {
   formatNumber,
 } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
 import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
@@ -71,7 +71,7 @@ export default function RiskMetrics() {
   const [customEnd, setCustomEnd] = useState(() => getTodayInTimezone("UTC"));
   const [corrData, setCorrData] = useState(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal) => {
     setLoading(true);
     try {
       const opt = RANGE_OPTIONS.find((o) => o.value === rangeMode);
@@ -97,15 +97,16 @@ export default function RiskMetrics() {
       }
 
       const [res, corrRes] = await Promise.allSettled([
-        analyticsAPI.getRiskMetrics(days, startDate, endDate),
-        analyticsAPI.getCorrelation(days),
+        analyticsAPI.getRiskMetrics(days, startDate, endDate, signal),
+        analyticsAPI.getCorrelation(days, signal),
       ]);
       if (res.status === "fulfilled") setData(res.value.data);
       if (corrRes.status === "fulfilled") setCorrData(corrRes.value.data);
     } catch (err) {
+      if (err.name === "CanceledError") return;
       console.error("Error loading risk metrics:", err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [rangeMode, customStart, customEnd, timezone]);
 
@@ -114,10 +115,29 @@ export default function RiskMetrics() {
   }, [timezone]);
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
+    return () => controller.abort();
   }, [loadData]);
 
-  if (loading) return <LoadingSpinner maxWidth="lg" />;
+  if (loading) return (
+    <PageContainer>
+      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+        <Skeleton variant="rounded" width={420} height={36} />
+      </Box>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {[...Array(8)].map((_, i) => (
+          <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+            <Skeleton variant="rounded" height={100} />
+          </Grid>
+        ))}
+      </Grid>
+      <Grid container spacing={2}>
+        <Grid size={12}><Skeleton variant="rounded" height={380} /></Grid>
+        <Grid size={12}><Skeleton variant="rounded" height={380} /></Grid>
+      </Grid>
+    </PageContainer>
+  );
 
   const navSeries = data?.nav_series ?? [];
   const rollingVol = data?.rolling_volatility ?? [];

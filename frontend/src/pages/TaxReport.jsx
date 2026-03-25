@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Paper,
   Typography,
@@ -15,10 +15,10 @@ import {
   Chip,
   Tabs,
   Tab,
+  Skeleton,
 } from "@mui/material";
 import { Preview as PreviewIcon } from "@mui/icons-material";
 import { analyticsAPI, assetAPI, brokerAPI } from "../api/api";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { formatDate } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
@@ -220,7 +220,20 @@ export default function TaxReport() {
   };
 
   if (userSettingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return (
+      <PageContainer>
+        <Paper sx={{ p: 2 }}>
+          <Skeleton variant="rounded" height={48} sx={{ mb: 2 }} />
+          <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
+            <Skeleton variant="rounded" width={120} height={40} />
+            <Skeleton variant="rounded" width={200} height={40} />
+            <Skeleton variant="rounded" width={200} height={40} />
+            <Skeleton variant="rounded" width={130} height={40} />
+          </Box>
+          <Skeleton variant="rounded" height={400} />
+        </Paper>
+      </PageContainer>
+    );
   }
 
   // ── realized gains columns ─────────────────────────────────────────────

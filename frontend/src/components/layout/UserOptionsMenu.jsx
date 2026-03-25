@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { styled } from "@mui/material/styles";
 import Divider, { dividerClasses } from "@mui/material/Divider";
@@ -21,7 +21,7 @@ const MenuItem = styled(MuiMenuItem)({
 });
 
 export default function UserOptionsMenu() {
-  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const { logout } = useAuth();
   const open = Boolean(anchorEl);
@@ -63,7 +63,7 @@ export default function UserOptionsMenu() {
   };
 
   return (
-    <React.Fragment>
+    <>
       <MenuButton
         aria-label="Open menu"
         onClick={handleClick}
@@ -114,6 +114,6 @@ export default function UserOptionsMenu() {
           </ListItemIcon>
         </MenuItem>
       </Menu>
-    </React.Fragment>
+    </>
   );
 }
