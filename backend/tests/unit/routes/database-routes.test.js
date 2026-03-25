@@ -57,7 +57,9 @@ describe("POST /database/wal-checkpoint", () => {
 
   it("returns 500 when db.pragma throws (error path)", async () => {
     const orig = db.pragma.bind(db);
-    db.pragma = () => { throw new Error("wal error"); };
+    db.pragma = () => {
+      throw new Error("wal error");
+    };
     try {
       const res = await request(app).post("/database/wal-checkpoint");
       expect(res.status).toBe(500);
@@ -79,7 +81,9 @@ describe("DELETE /database/reset", () => {
 
   it("returns 500 when db.transaction throws (error path)", async () => {
     const orig = db.transaction.bind(db);
-    db.transaction = () => { throw new Error("reset error"); };
+    db.transaction = () => {
+      throw new Error("reset error");
+    };
     try {
       const res = await request(app).delete("/database/reset");
       expect(res.status).toBe(500);
@@ -101,28 +105,36 @@ describe("POST /database/seed", () => {
   });
 
   it("returns 200 and logs warning when Broker.create throws (inner catch)", async () => {
-    Broker.create.mockImplementation(() => { throw new Error("dup broker"); });
+    Broker.create.mockImplementation(() => {
+      throw new Error("dup broker");
+    });
     const res = await request(app).post("/database/seed");
     expect(res.status).toBe(200);
     expect(res.body.created.brokers).toBe(0);
   });
 
   it("returns 200 and logs warning when Asset.create throws (inner catch)", async () => {
-    Asset.create.mockImplementation(() => { throw new Error("dup asset"); });
+    Asset.create.mockImplementation(() => {
+      throw new Error("dup asset");
+    });
     const res = await request(app).post("/database/seed");
     expect(res.status).toBe(200);
     expect(res.body.created.assets).toBe(0);
   });
 
   it("returns 200 and logs warning when Transaction.create throws (inner catch)", async () => {
-    Transaction.create.mockImplementation(() => { throw new Error("tx error"); });
+    Transaction.create.mockImplementation(() => {
+      throw new Error("tx error");
+    });
     const res = await request(app).post("/database/seed");
     expect(res.status).toBe(200);
     expect(res.body.created.transactions).toBe(0);
   });
 
   it("returns 200 and logs warning when AssetAllocationTarget.upsert throws (inner catch)", async () => {
-    AssetAllocationTarget.upsert.mockImplementation(() => { throw new Error("alloc error"); });
+    AssetAllocationTarget.upsert.mockImplementation(() => {
+      throw new Error("alloc error");
+    });
     const res = await request(app).post("/database/seed");
     expect(res.status).toBe(200);
     expect(res.body.created.allocationTargets).toBe(0);
@@ -130,7 +142,9 @@ describe("POST /database/seed", () => {
 
   it("returns 500 when PriceData.bulkCreate throws (outer catch, lines 257-258)", async () => {
     const PriceData = require("../../../models/PriceData");
-    PriceData.bulkCreate.mockImplementation(() => { throw new Error("bulk price error"); });
+    PriceData.bulkCreate.mockImplementation(() => {
+      throw new Error("bulk price error");
+    });
     const res = await request(app).post("/database/seed");
     expect(res.status).toBe(500);
     expect(res.body.message).toBe("Seed failed");
@@ -141,11 +155,13 @@ describe("POST /database/seed", () => {
 
 describe("POST /database/seed – fallback branches", () => {
   it("covers broker.active ?? 1 and asset.active ?? 1 fallbacks when active is undefined", (done) => {
-    // Use jest.isolateModules so we can inject a different sample_data.json
+    // Use jest.isolateModules so we can inject a different data.json
     jest.isolateModules(() => {
-      jest.doMock("../../../data/sample_data.json", () => ({
+      jest.doMock("../../../sample_data/data.json", () => ({
         brokers: [{ name: "NoBrokerActive", description: "d" }], // active undefined → ?? 1 fires
-        assets: [{ symbol: "NOACT", name: "N", type: "equity", currency: "USD" }], // active undefined → ?? 1 fires
+        assets: [
+          { symbol: "NOACT", name: "N", type: "equity", currency: "USD" },
+        ], // active undefined → ?? 1 fires
         priceHistory: undefined, // || {} fires
         transactions: undefined, // || [] fires
         allocationTargets: undefined, // || {} fires

@@ -118,7 +118,7 @@ router.delete("/reset", authMiddleware, adminMiddleware, (req, res) => {
 router.post("/seed", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const sampleData = require(
-      path.join(__dirname, "../data/sample_data.json"),
+      path.join(__dirname, "../sample_data/data.json"),
     );
     const userId = req.user.id;
     const counts = { brokers: 0, assets: 0, priceData: 0, transactions: 0 };
