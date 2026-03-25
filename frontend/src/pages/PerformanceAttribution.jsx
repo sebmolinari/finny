@@ -25,10 +25,10 @@ import {
 import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
-import { MetricCard, StyledCard } from "../components/StyledCard";
-import StyledDataGrid from "../components/StyledDataGrid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
 import {

@@ -3,15 +3,15 @@ import { Typography, Paper, Chip, Grid, Button, Tooltip, Alert } from "@mui/mate
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import api from "../api/api";
-import StyledDataGrid from "../components/StyledDataGrid";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import { ToolbarButton } from "@mui/x-data-grid";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 const AuditLogs = () => {

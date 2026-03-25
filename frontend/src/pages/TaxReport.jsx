@@ -18,12 +18,12 @@ import {
 } from "@mui/material";
 import { Preview as PreviewIcon } from "@mui/icons-material";
 import { analyticsAPI, assetAPI, brokerAPI } from "../api/api";
-import LoadingSpinner from "../components/LoadingSpinner";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { formatDate } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
 

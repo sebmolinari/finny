@@ -10,14 +10,14 @@ import {
   Alert,
   Button,
 } from "@mui/material";
-import { MetricCard, CompactCard } from "../components/StyledCard";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { MetricCard, CompactCard } from "../components/data-display/StyledCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { analyticsAPI } from "../api/api";
 import { useTheme, alpha } from "@mui/material/styles";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { formatDate } from "../utils/dateUtils";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
 

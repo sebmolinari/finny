@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Box, Grid, Tooltip, Alert, Button } from "@mui/material";
+import { Box, Grid, Tooltip, Alert, Button, Skeleton } from "@mui/material";
 import { fadeInUpSx } from "../../utils/animations";
-import { MetricCard } from "../../components/StyledCard";
+import { MetricCard } from "../../components/data-display/StyledCard";
 import { useTheme } from "@mui/material/styles";
 import {
   AccountBalance as AccountBalanceIcon,
@@ -10,17 +10,17 @@ import {
   ShowChart as ShowChartIcon,
 } from "@mui/icons-material";
 
-import AssetAllocationChart from "../../components/AssetAllocationChart";
-import PortfolioValueChart from "../../components/PortfolioValueChart";
-import MarketValueByBrokerChart from "../../components/MarketValueByBrokerChart";
-import MTMEvolutionChart from "../../components/MTMEvolutionChart";
-import TrendCard from "../../components/TrendCard";
+import AssetAllocationChart from "../../components/charts/AssetAllocationChart";
+import PortfolioValueChart from "../../components/charts/PortfolioValueChart";
+import MarketValueByBrokerChart from "../../components/charts/MarketValueByBrokerChart";
+import MTMEvolutionChart from "../../components/charts/MTMEvolutionChart";
+import TrendCard from "../../components/charts/TrendCard";
 import { BENCHMARKS } from "../../constants/benchmarks";
 
 import { formatDate } from "../../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../../utils/formatNumber";
-import LoadingSpinner from "../../components/LoadingSpinner";
-import PageContainer from "../../components/PageContainer";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import PageContainer from "../../components/layout/PageContainer";
 import { useUserSettings } from "../../hooks/useUserSettings";
 
 import { useDateRange } from "./hooks/useDateRange";
@@ -76,7 +76,26 @@ const Dashboard = () => {
   }, [loadedInceptionDate]);
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return (
+      <PageContainer>
+        <Grid container spacing={2.5}>
+          {[1, 2, 3].map((i) => (
+            <Grid key={i} size={{ xs: 12, md: 4 }}>
+              <Skeleton variant="rounded" height={140} />
+            </Grid>
+          ))}
+        </Grid>
+        <Grid container spacing={2.5} sx={{ mt: 1 }}>
+          {[1, 2, 3].map((i) => (
+            <Grid key={i} size={{ xs: 12, md: 4 }}>
+              <Skeleton variant="rounded" height={80} />
+            </Grid>
+          ))}
+        </Grid>
+        <Skeleton variant="rounded" height={300} sx={{ mt: 2.5 }} />
+        <Skeleton variant="rounded" height={380} sx={{ mt: 2.5 }} />
+      </PageContainer>
+    );
   }
 
   if (error) {

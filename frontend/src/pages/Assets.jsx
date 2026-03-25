@@ -7,12 +7,12 @@ import {
   Typography,
   Tooltip,
 } from "@mui/material";
-import StyledDataGrid from "../components/StyledDataGrid";
-import AssetDialog from "../components/AssetDialog";
-import AssetPriceDialog from "../components/AssetPriceDialog";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import AssetDialog from "../components/dialogs/AssetDialog";
+import AssetPriceDialog from "../components/dialogs/AssetPriceDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -27,7 +27,7 @@ import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import { useAuth } from "../auth/AuthContext";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Assets() {

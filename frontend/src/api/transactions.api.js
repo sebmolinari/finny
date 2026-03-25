@@ -1,7 +1,7 @@
 import api from "./client";
 
 export const transactionAPI = {
-  getAll: () => api.get("/transactions"),
+  getAll: (params = {}) => api.get("/transactions", { params }),
 
   getById: (id) => api.get(`/transactions/${id}`),
 

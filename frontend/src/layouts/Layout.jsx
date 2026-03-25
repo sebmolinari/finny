@@ -3,10 +3,10 @@ import Box from "@mui/material/Box";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Paper from "@mui/material/Paper";
-import UserMenu from "../components/UserMenu";
-import Header from "../components/Header";
-import Copyright from "../components/Copyright";
-import MobileNavDrawer from "../components/MobileNavDrawer";
+import UserMenu from "../components/layout/UserMenu";
+import Header from "../components/layout/Header";
+import Copyright from "../components/layout/Copyright";
+import MobileNavDrawer from "../components/layout/MobileNavDrawer";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";

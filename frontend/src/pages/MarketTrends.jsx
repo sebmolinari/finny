@@ -5,9 +5,9 @@ import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
-import StyledDataGrid from "../components/StyledDataGrid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function MarketTrends() {

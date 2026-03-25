@@ -153,7 +153,7 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     const range = getActiveRange();
     if (!range) return;
     analyticsAPI
-      .getBenchmark({ symbol: benchmarkSymbol, startDate: range.startDate, endDate: range.endDate })
+      .getBenchmark({ symbol: benchmarkSymbol, start_date: range.startDate, end_date: range.endDate })
       .then((res) => setBenchmarkData(res.data || null))
       .catch(() => setBenchmarkData(null));
   }, [activeRangeKey, benchmarkSymbol]); // eslint-disable-line react-hooks/exhaustive-deps

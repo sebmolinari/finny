@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
 import { useAuth } from "../auth/AuthContext";
 import { fadeInUpSx } from "../utils/animations";
 

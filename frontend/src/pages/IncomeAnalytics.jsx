@@ -21,11 +21,11 @@ import {
   Bar,
 } from "recharts";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
-import { CompactCard } from "../components/StyledCard";
-import ChartCard from "../components/ChartCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
+import { CompactCard } from "../components/data-display/StyledCard";
+import ChartCard from "../components/charts/ChartCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
 import { formatDate, getTodayInTimezone } from "../utils/dateUtils";

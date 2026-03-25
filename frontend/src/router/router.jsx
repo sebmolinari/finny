@@ -2,8 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import Layout from "../layouts/Layout";
-import RouteErrorBoundary from "../components/RouteErrorBoundary";
-import LoadingSpinner from "../components/LoadingSpinner";
+import RouteErrorBoundary from "../components/ui/RouteErrorBoundary";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 const Login = lazy(() => import("../pages/Login"));
 const Register = lazy(() => import("../pages/Register"));
@@ -66,90 +66,112 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
+            handle: { title: "Dashboard" },
             element: <Dashboard />,
           },
           {
             path: "holdings",
+            handle: { title: "Holdings" },
             element: <Holdings />,
           },
           {
             path: "market-trends",
+            handle: { title: "Market Trends" },
             element: <MarketTrends />,
           },
           {
             path: "blotter",
+            handle: { title: "Blotter" },
             element: <Blotter />,
           },
           {
             path: "return-details",
+            handle: { title: "Return Details" },
             element: <ReturnDetails />,
           },
           {
             path: "cash-details",
+            handle: { title: "Cash & Liquidity" },
             element: <CashDetails />,
           },
           {
             path: "income",
+            handle: { title: "Income Analytics" },
             element: <IncomeAnalytics />,
           },
           {
             path: "tax-report",
+            handle: { title: "Tax Report" },
             element: <TaxReport />,
           },
           {
             path: "asset-allocation",
+            handle: { title: "Asset Allocation" },
             element: <AssetAllocation />,
           },
           {
             path: "assets",
+            handle: { title: "Assets" },
             element: <Assets />,
           },
           {
             path: "brokers",
+            handle: { title: "Brokers" },
             element: <Brokers />,
           },
           {
             path: "settings",
+            handle: { title: "Settings" },
             element: <Settings />,
           },
           {
             path: "profile",
+            handle: { title: "Profile" },
             element: <Profile />,
           },
           {
             path: "change-password",
+            handle: { title: "Change Password" },
             element: <ChangePassword />,
           },
           {
             path: "changelog",
+            handle: { title: "Changelog" },
             element: <Changelog />,
           },
           {
             path: "features",
+            handle: { title: "Features" },
             element: <Features />,
           },
           {
             path: "getting-started",
+            handle: { title: "Getting Started" },
             element: <GettingStarted />,
           },
           {
             path: "risk-metrics",
+            handle: { title: "Risk Metrics" },
             element: <RiskMetrics />,
           },
           {
             path: "attribution",
+            handle: { title: "Performance Attribution" },
             element: <PerformanceAttribution />,
           },
           {
             path: "economic-calendar",
+            handle: { title: "Economic Calendar" },
             element: <EconomicCalendar />,
           },
           {
             path: "missing-prices",
+            handle: { title: "Missing Prices" },
             element: <MissingPrices />,
           },
           {
             path: "users",
+            handle: { title: "Users" },
             element: (
               <ProtectedRoute role="admin">
                 <Users />
@@ -158,6 +180,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "audit",
+            handle: { title: "Audit Log" },
             element: (
               <ProtectedRoute role="admin">
                 <AuditLogs />
@@ -166,6 +189,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "schedulers",
+            handle: { title: "Schedulers" },
             element: (
               <ProtectedRoute role="admin">
                 <Scheduler />
@@ -174,6 +198,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "host-metrics",
+            handle: { title: "Host Metrics" },
             element: (
               <ProtectedRoute role="admin">
                 <HostMetrics />
@@ -182,6 +207,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "admin/overview",
+            handle: { title: "Admin Overview" },
             element: (
               <ProtectedRoute role="admin">
                 <AdminOverview />

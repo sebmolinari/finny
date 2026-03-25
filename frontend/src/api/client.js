@@ -41,8 +41,7 @@ api.interceptors.response.use(
         // Unauthorized - token expired or invalid
         if (window.location.pathname !== "/login") {
           toast.error("Session expired. Please login again.");
-          localStorage.removeItem("token");
-          window.location.href = "/login";
+          window.dispatchEvent(new CustomEvent("auth:unauthorized"));
         }
         break;
       case 403:

@@ -14,6 +14,7 @@ import {
   IconButton,
   Tooltip,
   Alert,
+  Skeleton,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -34,12 +35,12 @@ import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
-import StyledDataGrid from "../components/StyledDataGrid";
-import TransactionDialog from "../components/TransactionDialog";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import TransactionDialog from "../components/dialogs/TransactionDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Blotter() {
@@ -409,7 +410,11 @@ export default function Blotter() {
   ];
 
   if (transactionsLoading || settingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return (
+      <PageContainer>
+        <Skeleton variant="rounded" height={600} />
+      </PageContainer>
+    );
   }
 
   if (error) {

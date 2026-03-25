@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Box, IconButton, Switch, Tooltip, Alert, Button } from "@mui/material";
-import StyledDataGrid from "../components/StyledDataGrid";
-import BrokerDialog from "../components/BrokerDialog";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import BrokerDialog from "../components/dialogs/BrokerDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
-import LoadingSpinner from "../components/LoadingSpinner";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -13,8 +13,8 @@ import { brokerAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
-import PageContainer from "../components/PageContainer";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import PageContainer from "../components/layout/PageContainer";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Brokers() {

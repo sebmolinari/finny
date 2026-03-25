@@ -1,43 +1,10 @@
 import Typography from "@mui/material/Typography";
-import { useLocation } from "react-router-dom";
-
-const routeTitles = {
-  "/": "Dashboard",
-  "/holdings": "Holdings",
-  "/market-trends": "Market Trends",
-  "/blotter": "Blotter",
-  "/asset-allocation": "Asset Allocation",
-  "/assets": "Assets",
-  "/brokers": "Brokers",
-  "/cash-details": "Cash Details",
-  "/return-details": "Return Details",
-  "/allocation": "Allocation",
-  "/analytics": "Analytics",
-  "/cash": "Cash",
-  "/settings": "Settings",
-  "/changelog": "Changelog",
-  "/tax-report": "Tax Report",
-  "/users": "Users",
-  "/audit": "Audit Logs",
-  "/host-metrics": "Host Metrics",
-  "/profile": "Profile",
-  "/metrics": "Metrics",
-  "/change-password": "Change Password",
-  "/risk-metrics": "Risk Metrics",
-  "/economic-calendar": "Economic Calendar",
-  "/missing-prices": "Missing Prices",
-  "/admin/overview": "Control Panel",
-  "/schedulers": "Schedulers",
-  "/income": "Income Analytics",
-  "/features": "Features",
-  "/getting-started": "Getting Started",
-  "/user-manual": "User Manual",
-  "/attribution": "Performance Attribution",
-};
+import { useMatches } from "react-router-dom";
 
 export default function NavbarBreadcrumbs() {
-  const location = useLocation();
-  const title = routeTitles[location.pathname] ?? "Finny";
+  const matches = useMatches();
+  const match = [...matches].reverse().find((m) => m.handle?.title);
+  const title = match?.handle?.title ?? "Finny";
 
   return (
     <Typography

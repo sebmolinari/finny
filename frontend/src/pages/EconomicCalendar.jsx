@@ -21,10 +21,10 @@ import { useTheme } from "@mui/material/styles";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone } from "../utils/dateUtils";
-import PageContainer from "../components/PageContainer";
-import StyledDataGrid from "../components/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import { fadeInUpSx } from "../utils/animations";
-import { StyledCard } from "../components/StyledCard";
+import { StyledCard } from "../components/data-display/StyledCard";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 const EVENT_CONFIG = {

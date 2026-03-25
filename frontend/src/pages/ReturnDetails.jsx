@@ -2,13 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { Typography, Paper, Box, Grid, Divider, Alert, Button } from "@mui/material";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useTheme } from "@mui/material/styles";
-import { CompactCard } from "../components/StyledCard";
+import { CompactCard } from "../components/data-display/StyledCard";
 import { formatDate } from "../utils/dateUtils";
-import LoadingSpinner from "../components/LoadingSpinner";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function ReturnDetails() {

@@ -58,8 +58,8 @@ export const analyticsAPI = {
   getIncome: (year = null, startDate = null, endDate = null) => {
     const params = {};
     if (year !== null) params.year = year;
-    if (startDate !== null) params.startDate = startDate;
-    if (endDate !== null) params.endDate = endDate;
+    if (startDate !== null) params.start_date = startDate;
+    if (endDate !== null) params.end_date = endDate;
     return api.get("/analytics/income", { params });
   },
 
@@ -90,7 +90,7 @@ export const analyticsAPI = {
 
   getAttribution: (startDate, endDate) =>
     api.get("/analytics/portfolio/attribution", {
-      params: { startDate, endDate },
+      params: { start_date: startDate, end_date: endDate },
     }),
 
   getCorrelation: (days = 365) =>

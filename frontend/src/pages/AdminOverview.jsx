@@ -40,18 +40,18 @@ import {
   databaseAPI,
 } from "../api/api";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
-import SystemConfigCard from "../components/SystemConfigCard";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import SystemConfigCard from "../components/data-display/SystemConfigCard";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 import { formatNumber } from "../utils/formatNumber";
-import { MetricCard, StyledCard } from "../components/StyledCard";
-import PageContainer from "../components/PageContainer";
+import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
 import {
   StyledTable,
   StyledHeaderRow,
   StyledHeaderCell,
-} from "../components/StyledTable";
+} from "../components/data-display/StyledTable";
 import { TableBody, TableCell, TableRow, TableHead } from "@mui/material";
 
 const DELETE_CONFIRM_WORDS = [

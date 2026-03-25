@@ -43,9 +43,9 @@ import {
   formatPercent,
   formatNumber,
 } from "../utils/formatNumber";
-import { MetricCard, StyledCard } from "../components/StyledCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
 

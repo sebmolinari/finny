@@ -10,15 +10,16 @@ import {
   Typography,
   Alert,
   Button,
+  Skeleton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
   AttachMoney as AttachMoneyIcon,
   History as HistoryIcon,
 } from "@mui/icons-material";
-import { MetricCard } from "../components/StyledCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import StyledDataGrid from "../components/StyledDataGrid";
+import { MetricCard } from "../components/data-display/StyledCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
 
 import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
@@ -27,7 +28,7 @@ import {
   formatCurrency,
   formatPercent,
 } from "../utils/formatNumber";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
 
@@ -90,7 +91,18 @@ export default function Holdings() {
   }, [isHistorical, asOfDate, loadHistoricalData]);
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return (
+      <PageContainer>
+        <Grid container spacing={2.5} sx={{ mb: 2 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+              <Skeleton variant="rounded" height={80} />
+            </Grid>
+          ))}
+        </Grid>
+        <Skeleton variant="rounded" height={500} />
+      </PageContainer>
+    );
   }
 
   if (error) {

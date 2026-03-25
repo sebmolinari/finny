@@ -1,5 +1,5 @@
 import { Paper, Box } from "@mui/material";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
 import ReactMarkdown from "react-markdown";
 import features from "../assets/FEATURES.md?raw";
 import { fadeInUpSx } from "../utils/animations";

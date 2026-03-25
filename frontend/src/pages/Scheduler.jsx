@@ -3,10 +3,10 @@ import { Box, Button, Alert, Tabs, Tab } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import { schedulerAPI, systemAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
-import PageContainer from "../components/PageContainer";
-import LoadingSpinner from "../components/LoadingSpinner";
-import SchedulerList from "../components/SchedulerList";
-import SchedulerForm from "../components/SchedulerForm";
+import PageContainer from "../components/layout/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import SchedulerList from "../components/scheduler/SchedulerList";
+import SchedulerForm from "../components/scheduler/SchedulerForm";
 
 function TabPanel({ children, value, index }) {
   return (
