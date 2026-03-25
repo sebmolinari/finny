@@ -182,9 +182,11 @@ Rules:
 
 1. **Commit and push** your changes to the `develop` branch.
 
-2. **Open a PR** from `develop` → `master` on GitHub and merge it.
+2. **Update documentation** by running `/update-docs`. This compares `develop` against `origin/master`, updates `CHANGELOG.md` and `FEATURES.md`, and determines the next version. Review the changes, then commit and push them to `develop`.
 
-3. **Re-sync `develop`** with master after the merge:
+3. **Open a PR** from `develop` → `master` on GitHub and merge it.
+
+4. **Re-sync `develop`** with master after the merge:
 
    ```bash
    git checkout develop
@@ -193,7 +195,7 @@ Rules:
    git push origin develop
    ```
 
-4. **Tag the release** on master:
+5. **Tag the release** on master:
 
    ```bash
    git checkout master
