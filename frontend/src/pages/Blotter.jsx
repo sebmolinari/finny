@@ -32,6 +32,7 @@ import {
 } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
+import { fadeInUpSx } from "../utils/animations";
 import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
@@ -430,36 +431,38 @@ export default function Blotter() {
   return (
     <PageContainer>
       {/* Transactions Grid */}
-      <StyledDataGrid
-        rows={transactions}
-        columns={columns}
-        loading={transactionsLoading}
-        getRowId={(row) => row.id}
-        slotProps={{
-          toolbar: {
-            actions: (
-              <>
-                <Tooltip title="Add transaction">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleOpenDialog()}
-                  >
-                    <AddIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-                <Tooltip title="Import">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleOpenImportDialog()}
-                  >
-                    <UploadIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-              </>
-            ),
-          },
-        }}
-      />
+      <Box sx={{ ...fadeInUpSx(1) }}>
+        <StyledDataGrid
+          rows={transactions}
+          columns={columns}
+          loading={transactionsLoading}
+          getRowId={(row) => row.id}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <>
+                  <Tooltip title="Add transaction">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenDialog()}
+                    >
+                      <AddIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                  <Tooltip title="Import">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenImportDialog()}
+                    >
+                      <UploadIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                </>
+              ),
+            },
+          }}
+        />
+      </Box>
 
       <TransactionDialog
         open={openDialog}

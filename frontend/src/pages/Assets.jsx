@@ -23,6 +23,7 @@ import {
 import { assetAPI, constantsAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
+import { fadeInUpSx } from "../utils/animations";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
@@ -401,53 +402,55 @@ export default function Assets() {
 
   return (
     <PageContainer>
-      <StyledDataGrid
-        rows={assets}
-        columns={columns}
-        loading={loading}
-        getRowId={(row) => row.id}
-        pageSize={25}
-        rowsPerPageOptions={[25, 50, 100]}
-        initialState={{
-          filter: {
-            filterModel: {
-              items: [
-                {
-                  field: "active",
-                  operator: "=",
-                  value: 1,
-                },
-              ],
+      <Box sx={{ ...fadeInUpSx(1) }}>
+        <StyledDataGrid
+          rows={assets}
+          columns={columns}
+          loading={loading}
+          getRowId={(row) => row.id}
+          pageSize={25}
+          rowsPerPageOptions={[25, 50, 100]}
+          initialState={{
+            filter: {
+              filterModel: {
+                items: [
+                  {
+                    field: "active",
+                    operator: "=",
+                    value: 1,
+                  },
+                ],
+              },
             },
-          },
-        }}
-        slotProps={{
-          toolbar: {
-            actions: (
-              <>
-                {isAdmin && (
-                  <Tooltip title="Add asset">
+          }}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <>
+                  {isAdmin && (
+                    <Tooltip title="Add asset">
+                      <ToolbarButton
+                        color="primary"
+                        onClick={() => handleOpenDialog()}
+                      >
+                        <AddIcon fontSize="small" />
+                      </ToolbarButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="Refresh all prices">
                     <ToolbarButton
                       color="primary"
-                      onClick={() => handleOpenDialog()}
+                      onClick={() => handleRefreshAllPrices()}
                     >
-                      <AddIcon fontSize="small" />
+                      <RefreshIcon fontSize="small" />
                     </ToolbarButton>
                   </Tooltip>
-                )}
-                <Tooltip title="Refresh all prices">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleRefreshAllPrices()}
-                  >
-                    <RefreshIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-              </>
-            ),
-          },
-        }}
-      />
+                </>
+              ),
+            },
+          }}
+        />
+      </Box>
       <AssetDialog
         open={openDialog}
         editingAsset={editingAsset}

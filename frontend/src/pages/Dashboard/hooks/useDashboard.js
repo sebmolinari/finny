@@ -182,7 +182,7 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     if (!range) return;
     const controller = new AbortController();
     analyticsAPI
-      .getBenchmark({ symbol: benchmarkSymbol, start_date: range.startDate, end_date: range.endDate }, controller.signal)
+      .getBenchmark({ symbol: benchmarkSymbol, startDate: range.startDate, endDate: range.endDate }, controller.signal)
       .then((res) => setBenchmarkData(res.data || null))
       .catch((err) => {
         if (err.name !== "CanceledError") setBenchmarkData(null);

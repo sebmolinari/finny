@@ -107,7 +107,10 @@ export default function Holdings() {
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={loadData}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadData}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>
@@ -406,14 +409,16 @@ export default function Holdings() {
         )}
       </Grid>
       {/* Holdings Table */}
-      <StyledDataGrid
-        rows={activeHoldings}
-        columns={visibleColumns}
-        loading={isHistorical ? historicalLoading : loading}
-        getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
-        pageSize={25}
-        rowsPerPageOptions={[10, 25, 50]}
-      />
+      <Box sx={{ ...fadeInUpSx(7) }}>
+        <StyledDataGrid
+          rows={activeHoldings}
+          columns={visibleColumns}
+          loading={isHistorical ? historicalLoading : loading}
+          getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
+          pageSize={25}
+          rowsPerPageOptions={[10, 25, 50]}
+        />
+      </Box>
     </PageContainer>
   );
 }

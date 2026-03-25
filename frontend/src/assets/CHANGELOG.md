@@ -7,7 +7,7 @@ All notable changes to this project are documented below.
 - Skeleton loaders shown across pages while data is being fetched, replacing blank states for a smoother experience
 - All page bundles are now loaded on demand (code splitting), reducing initial app load time
 - Dashboard charts and timeline labels now consistently use the user-configured date format
-- Frontend dependencies upgraded to latest compatible versions
+- Frontend and Backend libraries upgraded to latest compatible versions
 
 ### Fixed
 
