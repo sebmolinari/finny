@@ -4,7 +4,7 @@ import {
   EmojiEvents as EmojiEventsIcon,
   TrendingDown as TrendingDownIcon,
 } from "@mui/icons-material";
-import { StyledCard } from "../../../components/StyledCard";
+import { StyledCard } from "../../../components/data-display/StyledCard";
 import { formatCurrency } from "../../../utils/formatNumber";
 
 function PerformerRow({ holding, color, theme }) {

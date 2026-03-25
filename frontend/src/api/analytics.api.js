@@ -94,7 +94,7 @@ export const analyticsAPI = {
 
   getAttribution: (startDate, endDate, signal) =>
     api.get("/analytics/portfolio/attribution", {
-      params: { start_date: startDate, end_date: endDate },
+      params: { startDate, endDate },
       signal,
     }),
 
