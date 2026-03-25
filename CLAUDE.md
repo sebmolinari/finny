@@ -94,17 +94,18 @@ Migrations run automatically at startup via `migrationRunner.js`. To add a migra
 
 Never use `REAL` or `FLOAT` for any column. Use:
 
-| Data | Type | Notes |
-|---|---|---|
-| Booleans / flags | `INTEGER` (0/1) | e.g. `email_notifications_enabled INTEGER DEFAULT 0` |
-| Counts, IDs, days | `INTEGER` | e.g. `lt_holding_period_days INTEGER DEFAULT 365` |
-| Small decimals (rates, percentages stored as fractions) | `NUMERIC(5,2)` | e.g. `marginal_tax_rate NUMERIC(5,2) DEFAULT 0.25`, `risk_free_rate NUMERIC(5,2) DEFAULT 0.05` |
-| Financial values (prices, quantities, amounts) | `INTEGER` (scaled) | Use `toValueScale`/`fromValueScale` from `utils/valueScale.js` — **never store floats** |
-| Strings, dates, JSON | `TEXT` | Dates as `"YYYY-MM-DD"`, timestamps via `CURRENT_TIMESTAMP` |
+| Data                                                    | Type               | Notes                                                                                          |
+| ------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| Booleans / flags                                        | `INTEGER` (0/1)    | e.g. `email_notifications_enabled INTEGER DEFAULT 0`                                           |
+| Counts, IDs, days                                       | `INTEGER`          | e.g. `lt_holding_period_days INTEGER DEFAULT 365`                                              |
+| Small decimals (rates, percentages stored as fractions) | `NUMERIC(5,2)`     | e.g. `marginal_tax_rate NUMERIC(5,2) DEFAULT 0.25`, `risk_free_rate NUMERIC(5,2) DEFAULT 0.05` |
+| Financial values (prices, quantities, amounts)          | `INTEGER` (scaled) | Use `toValueScale`/`fromValueScale` from `utils/valueScale.js` — **never store floats**        |
+| Strings, dates, JSON                                    | `TEXT`             | Dates as `"YYYY-MM-DD"`, timestamps via `CURRENT_TIMESTAMP`                                    |
 
 ## Patterns & Checklists
 
 ### Adding a new page
+
 1. Create `frontend/src/pages/MyPage.jsx`
 2. Add route in `frontend/src/router/router.jsx`
 3. If it needs a nav entry: add to the appropriate items array in `frontend/src/components/MenuContent.jsx`
@@ -114,6 +115,7 @@ Never use `REAL` or `FLOAT` for any column. Use:
 7. Wrap page content in `<PageContainer>` with **no** `title` or `subtitle` props — the navbar breadcrumb is the page title
 
 ### Adding a new backend route
+
 1. Create `backend/routes/myRoute.js`
 2. Mount in `backend/server.js` under `/api/v1/myroute`
 3. If new DB columns are needed: add a numbered migration in `backend/migrations/`
@@ -133,6 +135,7 @@ backend/tests/
 ```
 
 **Rules:**
+
 - Every new function or method **must** have a corresponding unit test in `backend/tests/unit/`.
 - Unit tests for a file at `backend/foo/bar.js` go in `backend/tests/unit/foo/bar.test.js`.
 - Use `testDb.clearAll()` in `beforeEach` to reset state between tests — never share state across tests.
@@ -140,6 +143,7 @@ backend/tests/
 - Coverage thresholds are enforced at 80% (branches, functions, lines, statements) — keep them green.
 
 ### Frontend import conventions
+
 - Do **not** add `import React from "react"` — React 19 + Vite use the automatic JSX transform; the default import is never needed
 - Run `npm run lint` from `frontend/` before committing to catch unused imports
 
@@ -148,37 +152,41 @@ backend/tests/
 Users configure an IANA timezone in `user_settings.timezone` (e.g. `America/Argentina/Buenos_Aires`). All date logic must respect this — never use raw `new Date()` to represent "today" or "now" for the user.
 
 **Backend** (`backend/utils/dateUtils.js`):
+
 - `getTodayInTimezone(tz)` → `"YYYY-MM-DD"` in the given timezone
 - `getYesterdayInTimezone(tz)` → `"YYYY-MM-DD"` yesterday in the given timezone
 - `getNowInTimezoneISO(tz)` → ISO-8601 datetime string in the given timezone
 - `getSchedulerNow(tz)` → `{ time, today, dayOfWeek, dayOfMonth }` used by the scheduler
 
 Rules:
+
 - Do **not** use `new Date().toISOString()` or `new Date().getFullYear()` etc. when the result represents a user-facing date. Use the utils above.
 - For scheduler fire times, resolve the creator's timezone via `UserSettings.findByUserId(scheduler.created_by)?.timezone || "UTC"` and pass it to `getSchedulerNow`.
 - SQLite stores all timestamps in UTC. `CURRENT_TIMESTAMP` and `.toISOString()` are fine for audit/log columns.
 
 **Frontend** (`frontend/src/utils/dateUtils.js`):
+
 - `getTodayInTimezone(tz)` → `"YYYY-MM-DD"` in the given timezone
 - `formatDatetimeInTimezone(isoStr, tz)` → human-readable datetime for display
 - `formatDate(isoStr)` → short date display
 
 Rules:
+
 - Load the user's timezone from `settingsAPI.get()` (field: `response.data.timezone`).
 - Use `getTodayInTimezone(userTimezone)` wherever "today" is needed (date picker defaults, range start/end, event greying, YTD year, etc.). Never use `new Date().toISOString().split("T")[0]` or `toDateInput(new Date())`.
 - For relative date arithmetic (e.g. 30 days ago from today): derive from `new Date(getTodayInTimezone(tz))`, do the arithmetic, then convert back via `.toISOString().split("T")[0]`.
 - Load settings in the same data-fetch function or a dedicated `useEffect` on mount. Fallback to `"UTC"` if the call fails.
 
 **What does NOT need timezone handling:**
+
 - Date-only DB iteration in analytics (parses as UTC midnight, arithmetic stays consistent)
 - Audit log `executed_at` / `created_at` columns (UTC is correct)
 - Year selectors that are display-only (TaxReport, HostMetrics)
 - Copyright year
 
-### After adding or changing features
-- Run `/update-docs` to update `frontend/src/assets/CHANGELOG.md` and `README.md`
-
 ## Release Process
+
+### After adding or changing features
 
 1. **Commit and push** your changes to the `develop` branch.
 
