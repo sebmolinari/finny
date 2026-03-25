@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, IconButton, Switch, Tooltip } from "@mui/material";
+import { Box, IconButton, Switch, Tooltip, Alert, Button } from "@mui/material";
 import StyledDataGrid from "../components/StyledDataGrid";
 import BrokerDialog from "../components/BrokerDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
@@ -9,19 +9,20 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
-import { brokerAPI, settingsAPI } from "../api/api";
+import { brokerAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
 import PageContainer from "../components/PageContainer";
 import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Brokers() {
   const { user } = useAuth();
+  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
   const [brokers, setBrokers] = useState([]);
-  const [userTimezone, setUserTimezone] = useState(null);
-  const [userDateFormat, setUserDateFormat] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingBroker, setEditingBroker] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({
@@ -32,13 +33,14 @@ export default function Brokers() {
   const loadBrokers = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await brokerAPI.getAll({
         includeInactive: true,
       });
       setBrokers(response.data);
-    } catch (error) {
-      console.error("Error loading brokers:", error);
-      toast.error("Failed to load brokers");
+    } catch (err) {
+      console.error("Error loading brokers:", err);
+      setError("Failed to load brokers. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -47,18 +49,6 @@ export default function Brokers() {
   useEffect(() => {
     loadBrokers();
   }, [loadBrokers]);
-
-  useEffect(() => {
-    if (user?.id) {
-      loadUserSettings();
-    }
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadUserSettings = async () => {
-    const response = await settingsAPI.get();
-    setUserTimezone(response.data.timezone);
-    setUserDateFormat(response.data.date_format);
-  };
 
   const handleOpenDialog = (broker = null) => {
     setEditingBroker(broker || null);
@@ -196,6 +186,16 @@ export default function Brokers() {
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert severity="error" action={<Button onClick={loadBrokers}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   return (

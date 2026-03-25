@@ -17,7 +17,7 @@ import {
   Tab,
 } from "@mui/material";
 import { Preview as PreviewIcon } from "@mui/icons-material";
-import { analyticsAPI, assetAPI, brokerAPI, settingsAPI } from "../api/api";
+import { analyticsAPI, assetAPI, brokerAPI } from "../api/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { formatDate } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
@@ -25,6 +25,7 @@ import { formatCurrency } from "../utils/formatNumber";
 import StyledDataGrid from "../components/StyledDataGrid";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -110,6 +111,7 @@ const holdingsColumns = [
 ];
 
 export default function TaxReport() {
+  const { settings: userSettings, dateFormat: userDateFormat, settingsLoading: userSettingsLoading } = useUserSettings();
   const [tabValue, setTabValue] = useState(0);
 
   // ── year-end holdings state ──────────────────────────────────────────────
@@ -121,9 +123,6 @@ export default function TaxReport() {
   const [brokers, setBrokers] = useState([]);
   const [excludeAssetTypes, setExcludeAssetTypes] = useState([]);
   const [excludeBrokers, setExcludeBrokers] = useState([]);
-  const [userDateFormat, setUserDateFormat] = useState(null);
-  const [userSettingsLoading, setUserSettingsLoading] = useState(true);
-  const [userSettings, setUserSettings] = useState(null);
 
   // ── realized gains state ─────────────────────────────────────────────────
   const [gainsYear, setGainsYear] = useState(new Date().getFullYear() - 1);
@@ -137,24 +136,10 @@ export default function TaxReport() {
   const [loadingHarvest, setLoadingHarvest] = useState(false);
   const [harvestError, setHarvestError] = useState(null);
 
-  const loadUserSettings = useCallback(async () => {
-    setUserSettingsLoading(true);
-    try {
-      const res = await settingsAPI.get();
-      setUserDateFormat(res.data.date_format);
-      setUserSettings(res.data);
-    } catch (error) {
-      setUserDateFormat(null);
-    } finally {
-      setUserSettingsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadConstants();
     loadBrokers();
-    loadUserSettings();
-  }, [loadUserSettings]);
+  }, []);
 
   const loadConstants = async () => {
     try {

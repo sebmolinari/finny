@@ -1,25 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
-import { Typography, Chip, Box, Paper } from "@mui/material";
+import { Typography, Chip, Box, Paper, Alert, Button } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import StyledDataGrid from "../components/StyledDataGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function MarketTrends() {
   const [trends30D, setTrends30D] = useState([]);
   const [trendsYTD, setTrendsYTD] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const theme = useTheme();
+  const { timezone } = useUserSettings();
 
   const loadMarketTrends = useCallback(async () => {
     try {
-      const settingsRes = await settingsAPI.get().catch(() => ({ data: {} }));
-      const todayStr = getTodayInTimezone(settingsRes.data?.timezone || "UTC");
+      const todayStr = getTodayInTimezone(timezone || "UTC");
       const ytdDays = Math.ceil(
         (new Date(todayStr) - new Date(`${todayStr.substring(0, 4)}-01-01`)) /
           (1000 * 60 * 60 * 24),
@@ -33,12 +35,13 @@ export default function MarketTrends() {
 
       setTrends30D(response30D.data.trends);
       setTrendsYTD(responseYTD.data.trends);
-    } catch (error) {
-      console.error("Error loading market trends:", error);
+    } catch (err) {
+      console.error("Error loading market trends:", err);
+      setError("Failed to load market trends. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timezone]);
 
   useEffect(() => {
     loadMarketTrends();
@@ -46,6 +49,16 @@ export default function MarketTrends() {
 
   if (loading) {
     return <LoadingSpinner maxWidth="lg" />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert severity="error" action={<Button onClick={loadMarketTrends}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   // Merge 30D and YTD data by asset_id

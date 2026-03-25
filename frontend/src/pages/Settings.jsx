@@ -13,6 +13,7 @@ import {
   FormControlLabel,
   Switch,
   Divider,
+  Alert,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -27,9 +28,11 @@ import { handleApiError } from "../utils/errorHandler";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { refreshSettings } = useUserSettings();
   const [settings, setSettings] = useState({
     date_format: "DD/MM/YYYY",
     timezone: "America/Argentina/Buenos_Aires",
@@ -44,6 +47,7 @@ export default function Settings() {
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingAssets, setLoadingAssets] = useState(true);
+  const [error, setError] = useState(null);
   const [assets, setAssets] = useState([]);
 
   useEffect(() => {
@@ -75,8 +79,9 @@ export default function Settings() {
         marginal_tax_rate: (response.data.marginal_tax_rate ?? 0.25) * 100,
         risk_free_rate: (response.data.risk_free_rate ?? 0.05) * 100,
       });
-    } catch (error) {
-      handleApiError(error, "Failed to load settings");
+    } catch (err) {
+      setError("Failed to load settings. Please try again.");
+      handleApiError(err, "Failed to load settings");
     } finally {
       setLoadingSettings(false);
     }
@@ -99,6 +104,7 @@ export default function Settings() {
         risk_free_rate: settings.risk_free_rate / 100,
       });
       toast.success("Settings saved successfully");
+      refreshSettings();
       navigate("/");
     } catch (error) {
       handleApiError(error, "Failed to save settings");
@@ -107,6 +113,16 @@ export default function Settings() {
 
   if (loadingSettings || loadingAssets) {
     return <LoadingSpinner maxWidth="md" />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer maxWidth="md">
+        <Alert severity="error" action={<Button onClick={loadSettings}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   return (

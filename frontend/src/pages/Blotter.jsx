@@ -13,6 +13,7 @@ import {
   TextField,
   IconButton,
   Tooltip,
+  Alert,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -26,7 +27,6 @@ import {
   assetAPI,
   brokerAPI,
   constantsAPI,
-  settingsAPI,
   analyticsAPI,
 } from "../api/api";
 import { useTheme } from "@mui/material/styles";
@@ -40,17 +40,17 @@ import { ToolbarButton } from "@mui/x-data-grid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import PageContainer from "../components/PageContainer";
 import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Blotter() {
   const theme = useTheme();
+  const { timezone: userTimezone, dateFormat: userDateFormat, settingsLoading } = useUserSettings();
   const [transactions, setTransactions] = useState([]);
   const [assets, setAssets] = useState([]); // Active only - for dialog
   const [brokers, setBrokers] = useState([]); // Active only - for dialog
   const [validTransactionTypes, setValidTransactionTypes] = useState([]);
-  const [userTimezone, setUserTimezone] = useState(null);
-  const [userDateFormat, setUserDateFormat] = useState();
   const [transactionsLoading, setTransactionsLoading] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [availableCash, setAvailableCash] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
@@ -64,10 +64,12 @@ export default function Blotter() {
   const loadTransactions = useCallback(async () => {
     try {
       setTransactionsLoading(true);
+      setError(null);
       const response = await transactionAPI.getAll();
       setTransactions(response.data.data);
-    } catch (error) {
-      console.error("Error loading transactions:", error);
+    } catch (err) {
+      console.error("Error loading transactions:", err);
+      setError("Failed to load transactions. Please try again.");
     } finally {
       setTransactionsLoading(false);
     }
@@ -108,14 +110,6 @@ export default function Blotter() {
     }
   }, []);
 
-  const loadUserSettings = useCallback(async () => {
-    setSettingsLoading(true);
-    const response = await settingsAPI.get();
-    setUserTimezone(response.data.timezone);
-    setUserDateFormat(response.data.date_format);
-    setSettingsLoading(false);
-  }, []);
-
   const loadCashBalance = useCallback(async () => {
     try {
       const res = await analyticsAPI.getCashBalanceDetails();
@@ -129,8 +123,7 @@ export default function Blotter() {
     loadAssets();
     loadBrokers();
     loadValidTransactionTypes();
-    loadUserSettings();
-  }, [loadAssets, loadBrokers, loadValidTransactionTypes, loadUserSettings]);
+  }, [loadAssets, loadBrokers, loadValidTransactionTypes]);
 
   const handleOpenDialog = (transaction = null) => {
     loadCashBalance();
@@ -417,6 +410,16 @@ export default function Blotter() {
 
   if (transactionsLoading || settingsLoading) {
     return <LoadingSpinner maxWidth="lg" />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert severity="error" action={<Button onClick={loadTransactions}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   return (

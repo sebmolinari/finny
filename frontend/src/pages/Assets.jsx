@@ -20,7 +20,7 @@ import {
   ShowChart as ShowChartIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import { assetAPI, settingsAPI, constantsAPI } from "../api/api";
+import { assetAPI, constantsAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
@@ -28,14 +28,14 @@ import { formatCurrency } from "../utils/formatNumber";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import { useAuth } from "../auth/AuthContext";
 import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Assets() {
   const theme = useTheme();
   const { user } = useAuth();
+  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
   const isAdmin = user?.role === "admin";
   const [assets, setAssets] = useState([]);
-  const [userTimezone, setUserTimezone] = useState();
-  const [userDateFormat, setUserDateFormat] = useState();
   const [validAssetTypes, setValidAssetTypes] = useState([]);
   const [validPriceSources, setValidPriceSources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +72,6 @@ export default function Assets() {
     loadAssets();
     loadValidAssetTypes();
     loadValidPriceSources();
-    loadUserSettings();
   }, [loadAssets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadValidAssetTypes = async () => {
@@ -84,12 +83,6 @@ export default function Assets() {
       toast.error("Failed to load asset types. Please refresh the page.");
       setValidAssetTypes([]);
     }
-  };
-
-  const loadUserSettings = async () => {
-    const response = await settingsAPI.get();
-    setUserTimezone(response.data.timezone);
-    setUserDateFormat(response.data.date_format);
   };
 
   const loadValidPriceSources = async () => {
