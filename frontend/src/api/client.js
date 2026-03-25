@@ -27,6 +27,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Intentional abort (AbortController) — do not toast
+    if (error.name === "CanceledError" || axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     // Handle network errors
     if (!error.response) {
       toast.error("Network error. Please check your connection.");

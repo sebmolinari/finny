@@ -29,8 +29,6 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
       if (err.name === "CanceledError") return;
       console.error("Error loading dashboard:", err);
       setError("Failed to load dashboard data. Please try again.");
-    } finally {
-      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
@@ -136,16 +134,20 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     }
   }, [getActiveRange]);
 
-  // Initial load
+  // Initial load — wait for all 6 calls before clearing the skeleton
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
-    loadDashboard(signal);
-    loadBrokerData(signal);
-    loadSparklineData(signal);
-    loadHoldingsSparklineData(signal);
-    loadReturnDetails(signal);
-    loadInceptionDate(signal);
+    Promise.allSettled([
+      loadDashboard(signal),
+      loadBrokerData(signal),
+      loadSparklineData(signal),
+      loadHoldingsSparklineData(signal),
+      loadReturnDetails(signal),
+      loadInceptionDate(signal),
+    ]).then(() => {
+      if (!signal.aborted) setLoading(false);
+    });
     return () => controller.abort();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
