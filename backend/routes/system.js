@@ -22,9 +22,10 @@ const mask = (value) => (value ? "••••••••" : "(not set)");
 router.get("/config", authMiddleware, adminMiddleware, (_req, res) => {
   res.json({
     NODE_ENV: process.env.NODE_ENV,
-    DATABASE_PATH: process.env.DATABASE_PATH,
+    DB_PATH: process.env.DB_PATH,
     PORT: process.env.PORT,
     DB_KEY: mask(process.env.DB_KEY),
+    DB_VERBOSE: process.env.DB_VERBOSE,
     JWT_SECRET: mask(process.env.JWT_SECRET),
     JWT_EXPIRATION: process.env.JWT_EXPIRATION,
     RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,

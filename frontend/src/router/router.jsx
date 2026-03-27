@@ -1,36 +1,38 @@
 import { createBrowserRouter } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import Layout from "../layouts/Layout";
-import RouteErrorBoundary from "../components/RouteErrorBoundary";
+import RouteErrorBoundary from "../components/ui/RouteErrorBoundary";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import Dashboard from "../pages/Dashboard";
-import Holdings from "../pages/Holdings";
-import Users from "../pages/Users";
-import Profile from "../pages/Profile";
-import Blotter from "../pages/Blotter";
-import Assets from "../pages/Assets";
-import ReturnDetails from "../pages/ReturnDetails";
-import CashDetails from "../pages/CashDetails";
-import IncomeAnalytics from "../pages/IncomeAnalytics";
-import Brokers from "../pages/Brokers";
-import Settings from "../pages/Settings";
-import AuditLogs from "../pages/AuditLogs";
-import HostMetrics from "../pages/HostMetrics";
-import MarketTrends from "../pages/MarketTrends";
-import TaxReport from "../pages/TaxReport";
-import ChangePassword from "../pages/ChangePassword";
-import AssetAllocation from "../pages/AssetAllocation";
-import Changelog from "../pages/Changelog";
-import RiskMetrics from "../pages/RiskMetrics";
-import EconomicCalendar from "../pages/EconomicCalendar";
-import AdminOverview from "../pages/AdminOverview";
-import Scheduler from "../pages/Scheduler";
-import GettingStarted from "../pages/GettingStarted";
-import MissingPrices from "../pages/MissingPrices";
-import Features from "../pages/Features";
-import PerformanceAttribution from "../pages/PerformanceAttribution";
+const Login = lazy(() => import("../pages/Login"));
+const Register = lazy(() => import("../pages/Register"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Holdings = lazy(() => import("../pages/Holdings"));
+const Users = lazy(() => import("../pages/Users"));
+const Profile = lazy(() => import("../pages/Profile"));
+const Blotter = lazy(() => import("../pages/Blotter"));
+const Assets = lazy(() => import("../pages/Assets"));
+const ReturnDetails = lazy(() => import("../pages/ReturnDetails"));
+const CashDetails = lazy(() => import("../pages/CashDetails"));
+const IncomeAnalytics = lazy(() => import("../pages/IncomeAnalytics"));
+const Brokers = lazy(() => import("../pages/Brokers"));
+const Settings = lazy(() => import("../pages/Settings"));
+const AuditLogs = lazy(() => import("../pages/AuditLogs"));
+const HostMetrics = lazy(() => import("../pages/HostMetrics"));
+const MarketTrends = lazy(() => import("../pages/MarketTrends"));
+const TaxReport = lazy(() => import("../pages/TaxReport"));
+const ChangePassword = lazy(() => import("../pages/ChangePassword"));
+const AssetAllocation = lazy(() => import("../pages/AssetAllocation"));
+const Changelog = lazy(() => import("../pages/Changelog"));
+const RiskMetrics = lazy(() => import("../pages/RiskMetrics"));
+const EconomicCalendar = lazy(() => import("../pages/EconomicCalendar"));
+const AdminOverview = lazy(() => import("../pages/AdminOverview"));
+const Scheduler = lazy(() => import("../pages/Scheduler"));
+const GettingStarted = lazy(() => import("../pages/GettingStarted"));
+const MissingPrices = lazy(() => import("../pages/MissingPrices"));
+const Features = lazy(() => import("../pages/Features"));
+const PerformanceAttribution = lazy(() => import("../pages/PerformanceAttribution"));
 
 export const router = createBrowserRouter([
   {
@@ -39,105 +41,137 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "login",
-        element: <Login />,
+        element: (
+          <Suspense fallback={<LoadingSpinner />}>
+            <Login />
+          </Suspense>
+        ),
       },
       {
         path: "register",
-        element: <Register />,
+        element: (
+          <Suspense fallback={<LoadingSpinner />}>
+            <Register />
+          </Suspense>
+        ),
       },
       {
         element: (
           <ProtectedRoute>
-            <Layout />
+            <Suspense fallback={<LoadingSpinner />}>
+              <Layout />
+            </Suspense>
           </ProtectedRoute>
         ),
         children: [
           {
             index: true,
+            handle: { title: "Dashboard" },
             element: <Dashboard />,
           },
           {
             path: "holdings",
+            handle: { title: "Holdings" },
             element: <Holdings />,
           },
           {
             path: "market-trends",
+            handle: { title: "Market Trends" },
             element: <MarketTrends />,
           },
           {
             path: "blotter",
+            handle: { title: "Blotter" },
             element: <Blotter />,
           },
           {
             path: "return-details",
+            handle: { title: "Return Details" },
             element: <ReturnDetails />,
           },
           {
             path: "cash-details",
+            handle: { title: "Cash & Liquidity" },
             element: <CashDetails />,
           },
           {
             path: "income",
+            handle: { title: "Income Analytics" },
             element: <IncomeAnalytics />,
           },
           {
             path: "tax-report",
+            handle: { title: "Tax Report" },
             element: <TaxReport />,
           },
           {
             path: "asset-allocation",
+            handle: { title: "Asset Allocation" },
             element: <AssetAllocation />,
           },
           {
             path: "assets",
+            handle: { title: "Assets" },
             element: <Assets />,
           },
           {
             path: "brokers",
+            handle: { title: "Brokers" },
             element: <Brokers />,
           },
           {
             path: "settings",
+            handle: { title: "Settings" },
             element: <Settings />,
           },
           {
             path: "profile",
+            handle: { title: "Profile" },
             element: <Profile />,
           },
           {
             path: "change-password",
+            handle: { title: "Change Password" },
             element: <ChangePassword />,
           },
           {
             path: "changelog",
+            handle: { title: "Changelog" },
             element: <Changelog />,
           },
           {
             path: "features",
+            handle: { title: "Features" },
             element: <Features />,
           },
           {
             path: "getting-started",
+            handle: { title: "Getting Started" },
             element: <GettingStarted />,
           },
           {
             path: "risk-metrics",
+            handle: { title: "Risk Metrics" },
             element: <RiskMetrics />,
           },
           {
             path: "attribution",
+            handle: { title: "Performance Attribution" },
             element: <PerformanceAttribution />,
           },
           {
             path: "economic-calendar",
+            handle: { title: "Economic Calendar" },
             element: <EconomicCalendar />,
           },
           {
             path: "missing-prices",
+            handle: { title: "Missing Prices" },
             element: <MissingPrices />,
           },
           {
             path: "users",
+            handle: { title: "Users" },
             element: (
               <ProtectedRoute role="admin">
                 <Users />
@@ -146,6 +180,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "audit",
+            handle: { title: "Audit Log" },
             element: (
               <ProtectedRoute role="admin">
                 <AuditLogs />
@@ -154,6 +189,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "schedulers",
+            handle: { title: "Schedulers" },
             element: (
               <ProtectedRoute role="admin">
                 <Scheduler />
@@ -162,6 +198,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "host-metrics",
+            handle: { title: "Host Metrics" },
             element: (
               <ProtectedRoute role="admin">
                 <HostMetrics />
@@ -170,6 +207,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "admin/overview",
+            handle: { title: "Admin Overview" },
             element: (
               <ProtectedRoute role="admin">
                 <AdminOverview />

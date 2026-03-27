@@ -8,38 +8,47 @@ import {
   FormControlLabel,
   TextField,
   Typography,
+  Alert,
+  Button,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
   AttachMoney as AttachMoneyIcon,
   History as HistoryIcon,
 } from "@mui/icons-material";
-import { MetricCard } from "../components/StyledCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import StyledDataGrid from "../components/StyledDataGrid";
-
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { MetricCard } from "../components/data-display/StyledCard";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import {
   formatNumber,
   formatCurrency,
   formatPercent,
 } from "../utils/formatNumber";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Holdings() {
   const [holdings, setHoldings] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Historical mode
   const [isHistorical, setIsHistorical] = useState(false);
-  const [asOfDate, setAsOfDate] = useState("");
   const [historicalData, setHistoricalData] = useState(null);
   const [historicalLoading, setHistoricalLoading] = useState(false);
 
   const theme = useTheme();
+  const { timezone } = useUserSettings();
+  const [asOfDate, setAsOfDate] = useState(() => getTodayInTimezone("UTC"));
+
+  // Sync asOfDate when timezone loads
+  useEffect(() => {
+    setAsOfDate(getTodayInTimezone(timezone));
+  }, [timezone]);
 
   const loadData = useCallback(async () => {
     try {
@@ -50,6 +59,7 @@ export default function Holdings() {
       setLoading(false);
     } catch (error) {
       console.error("Error loading holdings and analytics:", error);
+      setError("Failed to load data. Please try again.");
       setLoading(false);
     }
   }, []);
@@ -73,20 +83,26 @@ export default function Holdings() {
   }, [loadData]);
 
   useEffect(() => {
-    settingsAPI
-      .get()
-      .then((res) => setAsOfDate(getTodayInTimezone(res.data?.timezone || "UTC")))
-      .catch(() => setAsOfDate(getTodayInTimezone("UTC")));
-  }, []);
-
-  useEffect(() => {
     if (isHistorical && asOfDate) {
       loadHistoricalData(asOfDate);
     }
   }, [isHistorical, asOfDate, loadHistoricalData]);
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadData}>Retry</Button>}
+        >
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   // Determine which data to show
@@ -381,14 +397,16 @@ export default function Holdings() {
         )}
       </Grid>
       {/* Holdings Table */}
-      <StyledDataGrid
-        rows={activeHoldings}
-        columns={visibleColumns}
-        loading={isHistorical ? historicalLoading : loading}
-        getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
-        pageSize={25}
-        rowsPerPageOptions={[10, 25, 50]}
-      />
+      <Box sx={{ ...fadeInUpSx(7) }}>
+        <StyledDataGrid
+          rows={activeHoldings}
+          columns={visibleColumns}
+          loading={isHistorical ? historicalLoading : loading}
+          getRowId={(row) => `${row.asset_id}-${row.broker_id}`}
+          pageSize={25}
+          rowsPerPageOptions={[10, 25, 50]}
+        />
+      </Box>
     </PageContainer>
   );
 }

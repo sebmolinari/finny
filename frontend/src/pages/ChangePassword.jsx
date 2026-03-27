@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Paper,
@@ -16,7 +16,7 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import api from "../api/api";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
 const ChangePassword = () => {

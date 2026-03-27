@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Paper,
   Typography,
@@ -16,10 +16,10 @@ import {
   StyledTable,
   StyledHeaderRow,
   StyledHeaderCell,
-} from "../components/StyledTable";
+} from "../components/data-display/StyledTable";
 import { TableBody, TableCell, TableRow, TableHead } from "@mui/material";
 import api from "../api/api";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
 const MetricRow = ({ label, value, extra }) => (

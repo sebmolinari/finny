@@ -146,6 +146,13 @@ class Asset {
       price: fromValueScale(row.price, PRICE_SCALE),
     };
   }
+
+  static getDistinctAssetTypes() {
+    return db
+      .prepare("SELECT DISTINCT asset_type FROM assets WHERE asset_type IS NOT NULL")
+      .all()
+      .map((r) => r.asset_type.toLowerCase());
+  }
 }
 
 module.exports = Asset;

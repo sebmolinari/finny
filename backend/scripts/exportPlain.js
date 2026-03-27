@@ -3,7 +3,7 @@ const Database = require("better-sqlite3-multiple-ciphers");
 const path = require("path");
 const fs = require("fs");
 
-const srcPath = path.resolve(__dirname, `../${process.env.DATABASE_PATH}`);
+const srcPath = path.resolve(__dirname, `../${process.env.DB_PATH}`);
 const outPath = srcPath.replace(/\.db$/, "_plain.db");
 
 if (!process.env.DB_KEY) {

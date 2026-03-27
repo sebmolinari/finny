@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -13,10 +13,10 @@ import {
 import { userAPI } from "../api/api";
 import { handleApiError } from "../utils/errorHandler";
 import { useAuth } from "../auth/AuthContext";
-import StyledDataGrid from "../components/StyledDataGrid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 
 const Users = () => {
   const { user: currentUser } = useAuth();
@@ -99,7 +99,7 @@ const Users = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   const columns = [

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Grid,
@@ -38,20 +38,20 @@ import {
   notificationsAPI,
   schedulerAPI,
   databaseAPI,
-  settingsAPI,
 } from "../api/api";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
-import SystemConfigCard from "../components/SystemConfigCard";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import SystemConfigCard from "../components/data-display/SystemConfigCard";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 import { formatNumber } from "../utils/formatNumber";
-import { MetricCard, StyledCard } from "../components/StyledCard";
-import PageContainer from "../components/PageContainer";
+import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 import {
   StyledTable,
   StyledHeaderRow,
   StyledHeaderCell,
-} from "../components/StyledTable";
+} from "../components/data-display/StyledTable";
 import { TableBody, TableCell, TableRow, TableHead } from "@mui/material";
 
 const DELETE_CONFIRM_WORDS = [
@@ -78,8 +78,7 @@ export default function AdminOverview() {
   const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
   const [deleteDataPhrase, setDeleteDataPhrase] = useState("delete all data");
   const [purgeHistoryDialogOpen, setPurgeHistoryDialogOpen] = useState(false);
-  const [userTimezone, setUserTimezone] = useState();
-  const [userDateFormat, setUserDateFormat] = useState();
+  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
 
   const handleSeedData = useCallback(async () => {
     setSeedingData(true);
@@ -162,13 +161,8 @@ export default function AdminOverview() {
     setLoading(true);
     setError(null);
     try {
-      const [res, settingsRes] = await Promise.all([
-        analyticsAPI.getAdminOverview(),
-        settingsAPI.get(),
-      ]);
+      const res = await analyticsAPI.getAdminOverview();
       setData(res.data);
-      setUserTimezone(settingsRes.data.timezone);
-      setUserDateFormat(settingsRes.data.date_format);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load admin overview.");
     } finally {

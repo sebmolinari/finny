@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Chip,
@@ -7,12 +7,12 @@ import {
   Typography,
   Tooltip,
 } from "@mui/material";
-import StyledDataGrid from "../components/StyledDataGrid";
-import AssetDialog from "../components/AssetDialog";
-import AssetPriceDialog from "../components/AssetPriceDialog";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import AssetDialog from "../components/dialogs/AssetDialog";
+import AssetPriceDialog from "../components/dialogs/AssetPriceDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import PageContainer from "../components/layout/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -20,22 +20,24 @@ import {
   ShowChart as ShowChartIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import { assetAPI, settingsAPI, constantsAPI } from "../api/api";
+import { assetAPI, constantsAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
+import { fadeInUpSx } from "../utils/animations";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
 import { useAuth } from "../auth/AuthContext";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Assets() {
   const theme = useTheme();
   const { user } = useAuth();
+  const { timezone: userTimezone, dateFormat: userDateFormat } =
+    useUserSettings();
   const isAdmin = user?.role === "admin";
   const [assets, setAssets] = useState([]);
-  const [userTimezone, setUserTimezone] = useState();
-  const [userDateFormat, setUserDateFormat] = useState();
   const [validAssetTypes, setValidAssetTypes] = useState([]);
   const [validPriceSources, setValidPriceSources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,6 @@ export default function Assets() {
     loadAssets();
     loadValidAssetTypes();
     loadValidPriceSources();
-    loadUserSettings();
   }, [loadAssets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadValidAssetTypes = async () => {
@@ -84,12 +85,6 @@ export default function Assets() {
       toast.error("Failed to load asset types. Please refresh the page.");
       setValidAssetTypes([]);
     }
-  };
-
-  const loadUserSettings = async () => {
-    const response = await settingsAPI.get();
-    setUserTimezone(response.data.timezone);
-    setUserDateFormat(response.data.date_format);
   };
 
   const loadValidPriceSources = async () => {
@@ -396,58 +391,60 @@ export default function Assets() {
   ];
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   return (
     <PageContainer>
-      <StyledDataGrid
-        rows={assets}
-        columns={columns}
-        loading={loading}
-        getRowId={(row) => row.id}
-        pageSize={25}
-        rowsPerPageOptions={[25, 50, 100]}
-        initialState={{
-          filter: {
-            filterModel: {
-              items: [
-                {
-                  field: "active",
-                  operator: "=",
-                  value: 1,
-                },
-              ],
+      <Box sx={{ ...fadeInUpSx(1) }}>
+        <StyledDataGrid
+          rows={assets}
+          columns={columns}
+          loading={loading}
+          getRowId={(row) => row.id}
+          pageSize={25}
+          rowsPerPageOptions={[25, 50, 100]}
+          initialState={{
+            filter: {
+              filterModel: {
+                items: [
+                  {
+                    field: "active",
+                    operator: "=",
+                    value: 1,
+                  },
+                ],
+              },
             },
-          },
-        }}
-        slotProps={{
-          toolbar: {
-            actions: (
-              <>
-                {isAdmin && (
-                  <Tooltip title="Add asset">
+          }}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <>
+                  {isAdmin && (
+                    <Tooltip title="Add asset">
+                      <ToolbarButton
+                        color="primary"
+                        onClick={() => handleOpenDialog()}
+                      >
+                        <AddIcon fontSize="small" />
+                      </ToolbarButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="Refresh all prices">
                     <ToolbarButton
                       color="primary"
-                      onClick={() => handleOpenDialog()}
+                      onClick={() => handleRefreshAllPrices()}
                     >
-                      <AddIcon fontSize="small" />
+                      <RefreshIcon fontSize="small" />
                     </ToolbarButton>
                   </Tooltip>
-                )}
-                <Tooltip title="Refresh all prices">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleRefreshAllPrices()}
-                  >
-                    <RefreshIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-              </>
-            ),
-          },
-        }}
-      />
+                </>
+              ),
+            },
+          }}
+        />
+      </Box>
       <AssetDialog
         open={openDialog}
         editingAsset={editingAsset}

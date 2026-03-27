@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Container,
-  Paper,
   Typography,
   Button,
   Box,
@@ -13,6 +11,7 @@ import {
   TextField,
   IconButton,
   Tooltip,
+  Alert,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -26,31 +25,35 @@ import {
   assetAPI,
   brokerAPI,
   constantsAPI,
-  settingsAPI,
   analyticsAPI,
 } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
+import { fadeInUpSx } from "../utils/animations";
 import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
-import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
-import StyledDataGrid from "../components/StyledDataGrid";
-import TransactionDialog from "../components/TransactionDialog";
+import { formatDate } from "../utils/dateUtils";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import TransactionDialog from "../components/dialogs/TransactionDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
-import ConfirmPhraseDialog from "../components/ConfirmPhraseDialog";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
+import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Blotter() {
   const theme = useTheme();
+  const {
+    timezone: userTimezone,
+    dateFormat: userDateFormat,
+    settingsLoading,
+  } = useUserSettings();
   const [transactions, setTransactions] = useState([]);
   const [assets, setAssets] = useState([]); // Active only - for dialog
   const [brokers, setBrokers] = useState([]); // Active only - for dialog
   const [validTransactionTypes, setValidTransactionTypes] = useState([]);
-  const [userTimezone, setUserTimezone] = useState(null);
-  const [userDateFormat, setUserDateFormat] = useState();
   const [transactionsLoading, setTransactionsLoading] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [availableCash, setAvailableCash] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
@@ -64,10 +67,12 @@ export default function Blotter() {
   const loadTransactions = useCallback(async () => {
     try {
       setTransactionsLoading(true);
+      setError(null);
       const response = await transactionAPI.getAll();
       setTransactions(response.data.data);
-    } catch (error) {
-      console.error("Error loading transactions:", error);
+    } catch (err) {
+      console.error("Error loading transactions:", err);
+      setError("Failed to load transactions. Please try again.");
     } finally {
       setTransactionsLoading(false);
     }
@@ -108,14 +113,6 @@ export default function Blotter() {
     }
   }, []);
 
-  const loadUserSettings = useCallback(async () => {
-    setSettingsLoading(true);
-    const response = await settingsAPI.get();
-    setUserTimezone(response.data.timezone);
-    setUserDateFormat(response.data.date_format);
-    setSettingsLoading(false);
-  }, []);
-
   const loadCashBalance = useCallback(async () => {
     try {
       const res = await analyticsAPI.getCashBalanceDetails();
@@ -129,8 +126,7 @@ export default function Blotter() {
     loadAssets();
     loadBrokers();
     loadValidTransactionTypes();
-    loadUserSettings();
-  }, [loadAssets, loadBrokers, loadValidTransactionTypes, loadUserSettings]);
+  }, [loadAssets, loadBrokers, loadValidTransactionTypes]);
 
   const handleOpenDialog = (transaction = null) => {
     loadCashBalance();
@@ -416,42 +412,57 @@ export default function Blotter() {
   ];
 
   if (transactionsLoading || settingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadTransactions}>Retry</Button>}
+        >
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   return (
     <PageContainer>
       {/* Transactions Grid */}
-      <StyledDataGrid
-        rows={transactions}
-        columns={columns}
-        loading={transactionsLoading}
-        getRowId={(row) => row.id}
-        slotProps={{
-          toolbar: {
-            actions: (
-              <>
-                <Tooltip title="Add transaction">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleOpenDialog()}
-                  >
-                    <AddIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-                <Tooltip title="Import">
-                  <ToolbarButton
-                    color="primary"
-                    onClick={() => handleOpenImportDialog()}
-                  >
-                    <UploadIcon fontSize="small" />
-                  </ToolbarButton>
-                </Tooltip>
-              </>
-            ),
-          },
-        }}
-      />
+      <Box sx={{ ...fadeInUpSx(1) }}>
+        <StyledDataGrid
+          rows={transactions}
+          columns={columns}
+          loading={transactionsLoading}
+          getRowId={(row) => row.id}
+          slotProps={{
+            toolbar: {
+              actions: (
+                <>
+                  <Tooltip title="Add transaction">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenDialog()}
+                    >
+                      <AddIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                  <Tooltip title="Import">
+                    <ToolbarButton
+                      color="primary"
+                      onClick={() => handleOpenImportDialog()}
+                    >
+                      <UploadIcon fontSize="small" />
+                    </ToolbarButton>
+                  </Tooltip>
+                </>
+              ),
+            },
+          }}
+        />
+      </Box>
 
       <TransactionDialog
         open={openDialog}
@@ -510,7 +521,7 @@ export default function Blotter() {
             />
             {importing && (
               <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-                <LoadingSpinner maxWidth="sm" />
+                <LoadingSpinner />
               </Box>
             )}
             {importResults && (

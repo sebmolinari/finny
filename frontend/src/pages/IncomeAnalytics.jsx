@@ -21,16 +21,17 @@ import {
   Bar,
 } from "recharts";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
-import { CompactCard } from "../components/StyledCard";
-import ChartCard from "../components/ChartCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { CompactCard } from "../components/data-display/StyledCard";
+import ChartCard from "../components/charts/ChartCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
+import { analyticsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
 import { formatDate, getTodayInTimezone } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 const INCOME_TYPES = ["dividend", "interest", "coupon", "rental"];
 
@@ -56,12 +57,10 @@ function typeLabel(type) {
 export default function IncomeAnalytics() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const { timezone, dateFormat, settingsLoading } = useUserSettings();
 
   const [report, setReport] = useState(null);
-  const [userSettings, setUserSettings] = useState(null);
-  const [timezone, setTimezone] = useState("UTC");
   const [incomeLoading, setIncomeLoading] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(null);
   const [error, setError] = useState(null);
 
@@ -95,26 +94,12 @@ export default function IncomeAnalytics() {
     }
   }, [selectedYear, timezone]);
 
-  const loadUserSettings = useCallback(async () => {
-    setSettingsLoading(true);
-    try {
-      const res = await settingsAPI.get();
-      setUserSettings(res.data);
-      setTimezone(res.data?.timezone || "UTC");
-    } catch {
-      setUserSettings({ date_format: "YYYY-MM-DD", timezone: "UTC" });
-    } finally {
-      setSettingsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadIncome();
-    loadUserSettings();
-  }, [loadIncome, loadUserSettings]);
+  }, [loadIncome]);
 
   if (incomeLoading || settingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   if (error) {
@@ -353,9 +338,7 @@ export default function IncomeAnalytics() {
       headerAlign: "center",
       width: 110,
       renderCell: (params) =>
-        params.value
-          ? formatDate(params.value, userSettings?.date_format)
-          : "—",
+        params.value ? formatDate(params.value, dateFormat) : "—",
     },
   ];
 
@@ -366,8 +349,7 @@ export default function IncomeAnalytics() {
       headerName: "Date",
       headerAlign: "center",
       width: 100,
-      renderCell: (params) =>
-        formatDate(params.value, userSettings?.date_format),
+      renderCell: (params) => formatDate(params.value, dateFormat),
     },
     {
       field: "transaction_type",

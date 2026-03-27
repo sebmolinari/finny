@@ -1,6 +1,7 @@
 Summarize all uncommitted changes in this repository and update the documentation files accordingly.
 
 Steps:
+
 1. Run `git diff HEAD --stat` and `git status --short` to get an overview of all changes
 2. Run `git diff HEAD` on changed files to understand what was added, modified, or removed (use the Bash tool; diff may be large so focus on routes, models, pages, components, and migrations)
 3. Read the current `frontend/src/assets/CHANGELOG.md` and `frontend/src/assets/FEATURES.md`
@@ -8,6 +9,7 @@ Steps:
    - Bump **patch** (e.g. 1.0.0 → 1.0.1) for bug fixes, refactors, and internal improvements
    - Bump **minor** (e.g. 1.0.0 → 1.1.0) when new user-facing features were added
 5. Add a new dated version entry to the top of CHANGELOG.md using today's date and this structure (only include sections that apply):
+
    ```
    ## [X.Y.Z] – YYYY-MM-DD
 
@@ -20,6 +22,7 @@ Steps:
    ### Removed
    - ...
    ```
+
 6. Update `frontend/src/assets/FEATURES.md`:
    - Add new `##` sections for genuinely new features
    - Update existing sections that changed in behaviour or scope

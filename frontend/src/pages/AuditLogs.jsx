@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Typography, Paper, Chip, Grid, Button, Tooltip } from "@mui/material";
+import { useState, useEffect, useCallback } from "react";
+import { Typography, Paper, Chip, Grid, Button, Tooltip, Alert } from "@mui/material";
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import api from "../api/api";
-import StyledDataGrid from "../components/StyledDataGrid";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import { ToolbarButton } from "@mui/x-data-grid";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import { settingsAPI } from "../api/api";
 import { formatDatetimeInTimezone } from "../utils/dateUtils";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(true);
-  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [error, setError] = useState(null);
+  const { timezone: userTimezone, dateFormat: userDateFormat, settingsLoading } = useUserSettings();
 
   const [selectedLog, setSelectedLog] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -25,15 +26,14 @@ const AuditLogs = () => {
   const fetchLogs = useCallback(async () => {
     try {
       setLoadingAudit(true);
+      setError(null);
       const params = {};
 
       const response = await api.get("/audit", { params });
       setLogs(response.data);
-    } catch (error) {
-      console.error("Error fetching audit logs:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to fetch audit logs",
-      );
+    } catch (err) {
+      console.error("Error fetching audit logs:", err);
+      setError(err.response?.data?.message || "Failed to fetch audit logs. Please try again.");
     } finally {
       setLoadingAudit(false);
     }
@@ -62,26 +62,22 @@ const AuditLogs = () => {
     }
   };
 
-  const [userTimezone, setUserTimezone] = useState();
-  const [userDateFormat, setUserDateFormat] = useState();
-
-  useEffect(() => {
-    async function loadUserSettings() {
-      setLoadingSettings(true);
-      const response = await settingsAPI.get();
-      setUserTimezone(response.data.timezone);
-      setUserDateFormat(response.data.date_format);
-      setLoadingSettings(false);
-    }
-    loadUserSettings();
-  }, []);
-
   const formatDate = (dateString) => {
     return formatDatetimeInTimezone(dateString, userDateFormat, userTimezone);
   };
 
-  if (loadingAudit || loadingSettings) {
+  if (loadingAudit || settingsLoading) {
     return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert severity="error" action={<Button onClick={fetchLogs}>Retry</Button>}>
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   const openDetails = (log) => {

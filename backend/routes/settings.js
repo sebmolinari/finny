@@ -157,6 +157,15 @@ router.put(
 router.post("/reviewed", authMiddleware, (req, res) => {
   try {
     UserSettings.markSettingsReviewed(req.user.id);
+    AuditLog.logUpdate(
+      req.user.id,
+      req.user.username,
+      "user_settings",
+      req.user.id,
+      { settings_reviewed: true },
+      req.ip,
+      req.get("user-agent"),
+    );
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -166,6 +175,15 @@ router.post("/reviewed", authMiddleware, (req, res) => {
 router.post("/onboarding-complete", authMiddleware, (req, res) => {
   try {
     UserSettings.markOnboardingComplete(req.user.id);
+    AuditLog.logUpdate(
+      req.user.id,
+      req.user.username,
+      "user_settings",
+      req.user.id,
+      { onboarding_completed: true },
+      req.ip,
+      req.get("user-agent"),
+    );
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,5 +1,18 @@
 All notable changes to this project are documented below.
 
+## [1.0.3] – 2026-03-25
+
+### Changed
+
+- All page bundles are now loaded on demand (code splitting), reducing initial app load time
+- Frontend and Backend libraries upgraded to latest compatible versions
+
+### Fixed
+
+- Navigating away from a page mid-load no longer causes stale data to flash on return — in-flight requests are cancelled automatically
+
+---
+
 ## [1.0.2] – 2026-03-24
 
 ### Changed

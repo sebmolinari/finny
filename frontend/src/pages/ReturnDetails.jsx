@@ -1,22 +1,30 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Typography, Paper, Box, Grid, Divider } from "@mui/material";
+import { useEffect, useState, useCallback } from "react";
+import {
+  Typography,
+  Paper,
+  Box,
+  Grid,
+  Divider,
+  Alert,
+  Button,
+} from "@mui/material";
 import { analyticsAPI } from "../api/api";
-import { settingsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useTheme } from "@mui/material/styles";
-import { CompactCard } from "../components/StyledCard";
+import { CompactCard } from "../components/data-display/StyledCard";
 import { formatDate } from "../utils/dateUtils";
-import LoadingSpinner from "../components/LoadingSpinner";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function ReturnDetails() {
   const theme = useTheme();
   const [details, setDetails] = useState(null);
-  const [userSettings, setUserSettings] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
-  const [userSettingsLoading, setUserSettingsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { dateFormat, settingsLoading } = useUserSettings();
 
   // Load return details
   const loadDetails = useCallback(async () => {
@@ -24,33 +32,34 @@ export default function ReturnDetails() {
     try {
       const res = await analyticsAPI.getReturnDetails();
       setDetails(res.data);
-    } catch (error) {
+    } catch (err) {
+      console.error("Error loading return details:", err);
+      setError("Failed to load data. Please try again.");
       setDetails(null);
     } finally {
       setDetailsLoading(false);
     }
   }, []);
 
-  // Load user settings
-  const loadUserSettings = useCallback(async () => {
-    setUserSettingsLoading(true);
-    try {
-      const res = await settingsAPI.get();
-      setUserSettings(res.data);
-    } catch (error) {
-      setUserSettings(null);
-    } finally {
-      setUserSettingsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadDetails();
-    loadUserSettings();
-  }, [loadDetails, loadUserSettings]);
+  }, [loadDetails]);
 
-  if (detailsLoading || userSettingsLoading || !details) {
-    return <LoadingSpinner maxWidth="lg" />;
+  if (detailsLoading || settingsLoading || !details) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadDetails}>Retry</Button>}
+        >
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   const columnsMwrrCashFlows = [
@@ -59,8 +68,7 @@ export default function ReturnDetails() {
       headerName: "Date",
       headerAlign: "center",
       flex: 1,
-      renderCell: (params) =>
-        formatDate(params.row.date, userSettings.date_format),
+      renderCell: (params) => formatDate(params.row.date, dateFormat),
     },
     { field: "type", headerName: "Type", headerAlign: "center", width: 120 },
     {

@@ -5,7 +5,7 @@
 process.env.NODE_ENV = "test";
 process.env.PORT = "5001";
 process.env.DB_KEY = "test-key-12345678";
-process.env.DATABASE_PATH = "test.db"; // never actually opened
+process.env.DB_PATH = "test.db"; // never actually opened
 process.env.JWT_SECRET = "test-jwt-secret-that-is-at-least-32-characters-long";
 process.env.JWT_EXPIRATION = "1h";
 process.env.EMAIL_ENABLED = "false";

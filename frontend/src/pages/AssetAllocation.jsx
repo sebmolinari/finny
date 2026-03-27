@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Paper,
   Typography,
@@ -19,7 +19,6 @@ import {
   Tabs,
   Tab,
   LinearProgress,
-  Divider,
   Dialog,
   InputAdornment,
   CircularProgress,
@@ -44,11 +43,14 @@ import {
 import { allocationAPI, constantsAPI, assetAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
-import { MetricCard } from "../components/StyledCard";
-import { StyledTable, StyledHeaderCell } from "../components/StyledTable";
-import StyledDataGrid from "../components/StyledDataGrid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import { MetricCard } from "../components/data-display/StyledCard";
+import {
+  StyledTable,
+  StyledHeaderCell,
+} from "../components/data-display/StyledTable";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 
 export default function AssetAllocation() {

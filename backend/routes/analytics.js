@@ -435,6 +435,59 @@ router.get(
   },
 );
 
+// Get historical unrealized P&L for sparkline
+/**
+* @swagger
+* /analytics/portfolio/unrealized-pnl-history:
+*   get:
+*     summary: Get 30-day historical unrealized P&L
+*     tags: [Analytics]
+*     security:
+*       - bearerAuth: []
+*     parameters:
+*       - in: query
+*         name: days
+*         schema:
+*           type: integer
+*           default: 31
+*         description: Number of days of history
+*       - in: query
+*         name: exclude
+*         schema:
+*           type: string
+*         description: Comma-separated asset types to exclude (e.g. realestate)
+*     responses:
+*       200:
+*         description: Array of daily unrealized P&L values
+*       500:
+*         description: Server error
+*/
+
+router.get(
+  "/portfolio/unrealized-pnl-history",
+  authMiddleware,
+  (req, res) => {
+    try {
+      const { days, exclude } = req.query;
+      const excludeTypes = exclude
+        ? exclude
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
+      const daysCount = Math.min(parseInt(days) || 31, 365);
+      const history = AnalyticsService.getPortfolioUnrealizedPnlHistory(
+        req.user.id,
+        daysCount,
+        excludeTypes,
+      );
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
+
 // Get detailed return calculations (MWRR & CAGR)
 /**
 * @swagger

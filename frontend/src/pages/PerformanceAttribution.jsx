@@ -7,6 +7,8 @@ import {
   ToggleButton,
   TextField,
   Chip,
+  Alert,
+  Button,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -20,14 +22,15 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
-import { MetricCard, StyledCard } from "../components/StyledCard";
-import StyledDataGrid from "../components/StyledDataGrid";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -147,27 +150,28 @@ const columns = [
 
 export default function PerformanceAttribution() {
   const theme = useTheme();
+  const { timezone: userTimezone } = useUserSettings();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [rangeMode, setRangeMode] = useState("ytd");
   const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [customEnd, setCustomEnd] = useState(() => getTodayInTimezone("UTC"));
   const [inceptionDate, setInceptionDate] = useState(null);
-  const [userTimezone, setUserTimezone] = useState("UTC");
 
   useEffect(() => {
-    settingsAPI
-      .get()
-      .then((res) => {
-        const tz = res.data?.timezone || "UTC";
-        setUserTimezone(tz);
-        setCustomEnd(getTodayInTimezone(tz));
-      })
-      .catch(() => setCustomEnd(getTodayInTimezone("UTC")));
+    setCustomEnd(getTodayInTimezone(userTimezone || "UTC"));
+  }, [userTimezone]);
+
+  useEffect(() => {
+    const controller = new AbortController();
     analyticsAPI
-      .getInceptionDate()
+      .getInceptionDate(controller.signal)
       .then((res) => setInceptionDate(res.data?.inception_date || null))
-      .catch(() => {});
+      .catch((err) => {
+        if (err.name !== "CanceledError") console.error(err);
+      });
+    return () => controller.abort();
   }, []);
 
   const getDateRange = useCallback(() => {
@@ -208,28 +212,49 @@ export default function PerformanceAttribution() {
     }
   }, [rangeMode, customStart, customEnd, inceptionDate, userTimezone]);
 
-  const loadData = useCallback(async () => {
-    const range = getDateRange();
-    if (!range) return;
-    setLoading(true);
-    try {
-      const res = await analyticsAPI.getAttribution(
-        range.startDate,
-        range.endDate,
-      );
-      setData(res.data);
-    } catch (err) {
-      console.error("Error loading attribution:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [getDateRange]);
+  const loadData = useCallback(
+    async (signal) => {
+      const range = getDateRange();
+      if (!range) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await analyticsAPI.getAttribution(
+          range.startDate,
+          range.endDate,
+          signal,
+        );
+        setData(res.data);
+      } catch (err) {
+        if (err.name === "CanceledError") return;
+        console.error("Error loading attribution:", err);
+        setError("Failed to load attribution data. Please try again.");
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [getDateRange],
+  );
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
+    return () => controller.abort();
   }, [loadData]);
 
-  if (loading) return <LoadingSpinner maxWidth="lg" />;
+  if (loading) return <LoadingSpinner />;
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadData}>Retry</Button>}
+        >
+          {error}
+        </Alert>
+      </PageContainer>
+    );
+  }
 
   const attributions = data?.attributions ?? [];
   const totalGain = attributions.reduce((s, a) => s + (a.price_gain ?? 0), 0);

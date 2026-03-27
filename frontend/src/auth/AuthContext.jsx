@@ -11,6 +11,15 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      localStorage.removeItem("token");
+      setUser(null);
+    };
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+  }, []);
+
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem("token");

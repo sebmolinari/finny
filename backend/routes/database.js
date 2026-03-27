@@ -12,6 +12,7 @@ const Transaction = require("../models/Transaction");
 const AssetAllocationTarget = require("../models/AssetAllocationTarget");
 
 const PROTECTED_SYMBOLS = ["USD", "USDARS_BNA", "USDARS_CCL"];
+const PROTECTED_SYMBOLS_SQL = PROTECTED_SYMBOLS.map((s) => `'${s}'`).join(",");
 
 /**
  * @swagger
@@ -75,13 +76,13 @@ router.delete("/reset", authMiddleware, adminMiddleware, (req, res) => {
       const priceData = db
         .prepare(
           `DELETE FROM price_data WHERE asset_id NOT IN (
-            SELECT id FROM assets WHERE symbol IN ('USD','USDARS_BNA','USDARS_CCL')
+            SELECT id FROM assets WHERE symbol IN (${PROTECTED_SYMBOLS_SQL})
           )`,
         )
         .run().changes;
       const assets = db
         .prepare(
-          `DELETE FROM assets WHERE symbol NOT IN ('USD','USDARS_BNA','USDARS_CCL')`,
+          `DELETE FROM assets WHERE symbol NOT IN (${PROTECTED_SYMBOLS_SQL})`,
         )
         .run().changes;
       const brokers = db.prepare("DELETE FROM brokers").run().changes;

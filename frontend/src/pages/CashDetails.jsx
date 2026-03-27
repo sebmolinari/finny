@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Typography,
   Paper,
@@ -7,24 +7,26 @@ import {
   Divider,
   Chip,
   Tooltip,
+  Alert,
+  Button,
 } from "@mui/material";
-import { MetricCard, CompactCard } from "../components/StyledCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { settingsAPI } from "../api/api";
+import { MetricCard, CompactCard } from "../components/data-display/StyledCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { analyticsAPI } from "../api/api";
 import { useTheme, alpha } from "@mui/material/styles";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import { formatDate } from "../utils/dateUtils";
-import StyledDataGrid from "../components/StyledDataGrid";
-import PageContainer from "../components/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function CashDetails() {
   const theme = useTheme();
   const [details, setDetails] = useState(null);
-  const [userSettings, setUserSettings] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
-  const [userSettingsLoading, setUserSettingsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { dateFormat, settingsLoading } = useUserSettings();
 
   // Load cash details
   const loadDetails = useCallback(async () => {
@@ -32,34 +34,34 @@ export default function CashDetails() {
     try {
       const res = await analyticsAPI.getCashBalanceDetails();
       setDetails(res.data);
-    } catch (error) {
-      // Optionally handle error
+    } catch (err) {
+      console.error("Error loading cash details:", err);
+      setError("Failed to load data. Please try again.");
       setDetails(null);
     } finally {
       setDetailsLoading(false);
     }
   }, []);
 
-  // Load user settings
-  const loadUserSettings = useCallback(async () => {
-    setUserSettingsLoading(true);
-    try {
-      const res = await settingsAPI.get();
-      setUserSettings(res.data);
-    } catch (error) {
-      setUserSettings(null);
-    } finally {
-      setUserSettingsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadDetails();
-    loadUserSettings();
-  }, [loadDetails, loadUserSettings]);
+  }, [loadDetails]);
 
-  if (detailsLoading || userSettingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+  if (detailsLoading || settingsLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadDetails}>Retry</Button>}
+        >
+          {error}
+        </Alert>
+      </PageContainer>
+    );
   }
 
   const columns = [
@@ -68,8 +70,7 @@ export default function CashDetails() {
       headerName: "Date",
       headerAlign: "center",
       width: 100,
-      renderCell: (params) =>
-        formatDate(params.row.date, userSettings.date_format),
+      renderCell: (params) => formatDate(params.row.date, dateFormat),
     },
     {
       field: "type",

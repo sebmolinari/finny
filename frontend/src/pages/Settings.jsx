@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Paper,
   Typography,
@@ -13,6 +13,7 @@ import {
   FormControlLabel,
   Switch,
   Divider,
+  Alert,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -24,12 +25,19 @@ import { useNavigate } from "react-router-dom";
 import { settingsAPI, assetAPI } from "../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
-import LoadingSpinner from "../components/LoadingSpinner";
-import PageContainer from "../components/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const {
+    settings: contextSettings,
+    settingsLoading,
+    settingsError,
+    refreshSettings,
+  } = useUserSettings();
   const [settings, setSettings] = useState({
     date_format: "DD/MM/YYYY",
     timezone: "America/Argentina/Buenos_Aires",
@@ -42,15 +50,23 @@ export default function Settings() {
     marginal_tax_rate: 25,
     lt_holding_period_days: 365,
   });
-  const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [assets, setAssets] = useState([]);
 
   useEffect(() => {
-    loadSettings();
     loadAssets();
     settingsAPI.markReviewed().catch(() => {});
   }, []);
+
+  // Populate form from context once settings are available
+  useEffect(() => {
+    if (!contextSettings) return;
+    setSettings({
+      ...contextSettings,
+      marginal_tax_rate: (contextSettings.marginal_tax_rate ?? 0.25) * 100,
+      risk_free_rate: (contextSettings.risk_free_rate ?? 0.05) * 100,
+    });
+  }, [contextSettings]);
 
   const loadAssets = async () => {
     try {
@@ -64,21 +80,6 @@ export default function Settings() {
       console.error("Error loading assets:", error);
     } finally {
       setLoadingAssets(false);
-    }
-  };
-
-  const loadSettings = async () => {
-    try {
-      const response = await settingsAPI.get();
-      setSettings({
-        ...response.data,
-        marginal_tax_rate: (response.data.marginal_tax_rate ?? 0.25) * 100,
-        risk_free_rate: (response.data.risk_free_rate ?? 0.05) * 100,
-      });
-    } catch (error) {
-      handleApiError(error, "Failed to load settings");
-    } finally {
-      setLoadingSettings(false);
     }
   };
 
@@ -99,14 +100,25 @@ export default function Settings() {
         risk_free_rate: settings.risk_free_rate / 100,
       });
       toast.success("Settings saved successfully");
+      refreshSettings();
       navigate("/");
     } catch (error) {
       handleApiError(error, "Failed to save settings");
     }
   };
 
-  if (loadingSettings || loadingAssets) {
-    return <LoadingSpinner maxWidth="md" />;
+  if (settingsLoading || loadingAssets) {
+    return <LoadingSpinner />;
+  }
+
+  if (settingsError) {
+    return (
+      <PageContainer maxWidth="md">
+        <Alert severity="error">
+          Failed to load settings. Please refresh the page.
+        </Alert>
+      </PageContainer>
+    );
   }
 
   return (

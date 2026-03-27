@@ -18,13 +18,14 @@ import {
   TrendingUp as TrendingUpIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
-import { analyticsAPI, settingsAPI } from "../api/api";
+import { analyticsAPI } from "../api/api";
 import { formatCurrency } from "../utils/formatNumber";
 import { getTodayInTimezone } from "../utils/dateUtils";
-import PageContainer from "../components/PageContainer";
-import StyledDataGrid from "../components/StyledDataGrid";
+import PageContainer from "../components/layout/PageContainer";
+import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import { fadeInUpSx } from "../utils/animations";
-import { StyledCard } from "../components/StyledCard";
+import { StyledCard } from "../components/data-display/StyledCard";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 const EVENT_CONFIG = {
   earnings: {
@@ -51,23 +52,24 @@ const EVENT_CONFIG = {
 
 export default function EconomicCalendar() {
   const theme = useTheme();
+  const { timezone } = useUserSettings();
   const [events, setEvents] = useState([]);
   const [fundStats, setFundStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [today, setToday] = useState("");
+  const [today, setToday] = useState(() => getTodayInTimezone("UTC"));
+
+  useEffect(() => {
+    setToday(getTodayInTimezone(timezone || "UTC"));
+  }, [timezone]);
 
   const loadCalendar = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [calRes, settingsRes] = await Promise.all([
-        analyticsAPI.getEconomicCalendar(),
-        settingsAPI.get().catch(() => ({ data: {} })),
-      ]);
+      const calRes = await analyticsAPI.getEconomicCalendar();
       setEvents(calRes.data.events ?? []);
       setFundStats(calRes.data.fund_stats ?? []);
-      setToday(getTodayInTimezone(settingsRes.data?.timezone || "UTC"));
     } catch (err) {
       setError("Failed to load economic calendar. Please try again.");
     } finally {
