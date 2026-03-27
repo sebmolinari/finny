@@ -1,4 +1,4 @@
-name: Run unit tests and Build and Push Docker Image
+name: CI Pipeline
 
 on:
   pull_request:
