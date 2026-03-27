@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Run unit tests and Build and Push Docker Image
 
 on:
   pull_request:
@@ -8,7 +8,28 @@ on:
     tags: ["v*.*.*"]
 
 jobs:
+  validate-branch:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest #🔥 validate branch policy before running any tests or builds
+
+    steps:
+      - name: Validate PR source branch #🔥 enforce PRs to master only come from develop or hotfix
+        run: |
+          echo "Base branch: ${{ github.base_ref }}"
+          echo "Head branch: ${{ github.head_ref }}"
+
+          if [[ "${{ github.base_ref }}" == "master" ]]; then
+            if [[ "${{ github.head_ref }}" != "develop" && "${{ github.head_ref }}" != "hotfix" ]]; then
+              echo "❌ PRs to master must come from 'develop' or 'hotfix'"
+              exit 1
+            fi
+          fi
+
+          echo "✅ Branch policy OK"
+
   unit-test-with-coverage:
+    needs: validate-branch # 🔥 BLOCKS tests if branch policy not met
+    if: always() # 🔥 ensures it still runs on push
     runs-on: ubuntu-latest
 
     steps:
@@ -30,9 +51,9 @@ jobs:
         working-directory: ./backend
 
   build-and-push:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    if: github.event_name == 'push' # Only run on push to master or tags, not on PRs, since we only want to publish on actual merges or releases
     needs: unit-test-with-coverage # 🔥 BLOCKS docker if tests fail or coverage not meet
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 
