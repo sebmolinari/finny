@@ -51,7 +51,7 @@ jobs:
         working-directory: ./backend
 
   build-and-push:
-    if: github.event_name == 'push' # Only run on push to master or tags, not on PRs, since we only want to publish on actual merges or releases
+    if: github.event_name == 'push' && always() # run on push only; ignore skipped dependencies but still block on test failures
     needs: unit-test-with-coverage # 🔥 BLOCKS docker if tests fail or coverage not meet
     runs-on: ubuntu-latest
     permissions:
