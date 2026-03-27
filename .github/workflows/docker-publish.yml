@@ -1,15 +1,38 @@
 name: Build and Push Docker Image
 
 on:
+  pull_request:
+    branches: [master]
   push:
-    branches:
-      - master
-    tags:
-      - "v*.*.*"
+    branches: [master]
+    tags: ["v*.*.*"]
 
 jobs:
-  build-and-push:
+  unit-test-with-coverage:
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install backend deps
+        run: npm install
+        working-directory: ./backend
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        working-directory: ./backend
+
+  build-and-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: unit-test-with-coverage # 🔥 BLOCKS docker if tests fail or coverage not meet
     permissions:
       contents: read
 
