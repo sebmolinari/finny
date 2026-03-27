@@ -5,7 +5,7 @@ on:
     branches: [master] # 🔥 ensures tests run on PR
   push:
     branches: [master]
-    tags: tags: ["v*.*.*"]
+    tags: ["v*.*.*"]
 
 jobs:
   test:
