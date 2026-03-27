@@ -11,6 +11,7 @@ const { getTodayInTimezone } = require("../utils/dateUtils");
 const {
   transactionValidation,
   validateTransactionBusiness,
+  runTransactionValidation,
 } = require("../middleware/validators/transactionValidators");
 
 /**
@@ -475,7 +476,7 @@ router.delete("/:id", authMiddleware, (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post("/bulk", authMiddleware, (req, res) => {
+router.post("/bulk", authMiddleware, async (req, res) => {
   try {
     const { transactions } = req.body;
 
@@ -498,7 +499,15 @@ router.post("/bulk", authMiddleware, (req, res) => {
       errors: [],
     };
 
-    transactions.forEach((txData, index) => {
+    // validate every entry is an object before processing
+    if (!transactions.every((t) => typeof t === "object")) {
+      return res.status(400).json({
+        message: "Each transaction must be an object",
+      });
+    }
+
+    // ✅ async-safe loop
+    for (const [index, txData] of transactions.entries()) {
       const {
         asset_symbol,
         broker_name,
@@ -517,51 +526,37 @@ router.post("/bulk", authMiddleware, (req, res) => {
       // For non-cash transactions, get the asset and broker IDs
       if (transaction_type !== "deposit" && transaction_type !== "withdraw") {
         const asset = assets.find(
-          (a) => a.symbol.toLowerCase() === asset_symbol.toLowerCase(),
+          (a) => a.symbol.toLowerCase() === asset_symbol?.toLowerCase(),
         );
         const broker = brokers.find(
-          (b) => b.name.toLowerCase() === broker_name.toLowerCase(),
+          (b) => b.name.toLowerCase() === broker_name?.toLowerCase(),
         );
         asset_id = asset?.id;
         broker_id = broker?.id;
       }
 
       try {
+        // ✅ 1. Schema validation
+        const validatedTx = await runTransactionValidation({
+          asset_id,
+          broker_id,
+          date,
+          transaction_type,
+          quantity,
+          price,
+          fee,
+          total_amount,
+          notes,
+        });
+
+        // ✅ 2. Business validation (existing)
         validateTransactionBusiness({
-          tx: {
-            asset_id,
-            broker_id,
-            transaction_type,
-            quantity,
-            price,
-            total_amount,
-          },
+          tx: validatedTx,
           userId: req.user.id,
         });
-      } catch (err) {
-        results.errors.push({
-          row: index + 2,
-          error: err.message,
-        });
-        return;
-      }
-      try {
-        // Create transaction
-        const id = Transaction.create(
-          req.user.id,
-          {
-            asset_id,
-            broker_id,
-            date,
-            transaction_type,
-            quantity: quantity,
-            price: price,
-            fee: fee,
-            total_amount,
-            notes: notes,
-          },
-          req.user.id,
-        );
+
+        // ✅ 3. Create transaction
+        const id = Transaction.create(req.user.id, validatedTx, req.user.id);
 
         results.success.push({
           row: index + 2,
@@ -588,9 +583,10 @@ router.post("/bulk", authMiddleware, (req, res) => {
         results.errors.push({
           row: index + 2,
           error: error.message,
+          details: error.details || null,
         });
       }
-    });
+    }
 
     res.json({
       message: `Bulk import completed: ${results.success.length} succeeded, ${results.errors.length} failed`,
