@@ -35,29 +35,38 @@ const transactionValidation = [
   body("asset_id")
     .optional({ checkFalsy: true })
     .isInt({ min: 1 })
-    .withMessage("Asset ID must be a positive integer")
+    .withMessage("Asset must be a positive integer")
     .toInt(),
 
   body("broker_id")
-    .optional({ checkFalsy: true })
+    .if(body("transaction_type").isIn(["buy", "sell", "transfer"]))
+    .notEmpty()
+    .withMessage("Broker is required for buy/sell/transfer")
+    .bail()
     .isInt({ min: 1 })
-    .withMessage("Broker ID must be a positive integer")
+    .withMessage("Broker must be a positive integer")
     .toInt(),
 
   body("destination_broker_id")
     .optional({ checkFalsy: true })
     .isInt({ min: 1 })
-    .withMessage("Destination broker ID must be a positive integer")
+    .withMessage("Destination broker must be a positive integer")
     .toInt(),
 
   body("quantity")
-    .optional({ checkFalsy: true })
+    .if(body("transaction_type").isIn(["buy", "sell", "transfer"]))
+    .notEmpty()
+    .withMessage("Quantity is required for buy/sell/transfer")
+    .bail()
     .isFloat({ gt: 0 })
     .withMessage("Quantity must be a positive number")
     .toFloat(),
 
   body("price")
-    .optional({ checkFalsy: true })
+    .if(body("transaction_type").isIn(["buy", "sell"]))
+    .notEmpty()
+    .withMessage("Price is required for buy/sell")
+    .bail()
     .isFloat({ gt: 0 })
     .withMessage("Price must be a positive number")
     .toFloat(),
@@ -129,15 +138,13 @@ function validateTransactionBusiness({
 
   if (assetRequiredTypes.includes(transaction_type)) {
     if (!asset_id) {
-      error("asset_id is required");
+      error("asset is required");
     }
   }
 
   if (transaction_type === "buy" || transaction_type === "sell") {
-    if (quantity === undefined || price === undefined || !broker_id) {
-      error(
-        "broker_id, asset_id, quantity, and price are required for buy/sell",
-      );
+    if (quantity == null || price == null || broker_id == null) {
+      error("broker, asset, quantity, and price are required for buy/sell");
     }
 
     // BUY: cash balance
@@ -182,7 +189,7 @@ function validateTransactionBusiness({
     const { destination_broker_id } = tx;
     if (!broker_id || !destination_broker_id || !asset_id || !quantity) {
       error(
-        "asset_id, broker_id, destination_broker_id, and quantity are required for transfer",
+        "asset, broker, destination broker, and quantity are required for transfer",
       );
     }
     if (broker_id === destination_broker_id) {
@@ -203,7 +210,38 @@ function validateTransactionBusiness({
   }
 }
 
+const { validationResult } = require("express-validator");
+
+/**
+ * Run transactionValidation programmatically (for bulk)
+ */
+async function runTransactionValidation(tx) {
+  const fakeReq = { body: tx };
+
+  // Run all validators
+  for (const validator of transactionValidation) {
+    await validator.run(fakeReq);
+  }
+
+  const result = validationResult(fakeReq);
+
+  if (!result.isEmpty()) {
+    const err = new Error(
+      result
+        .array()
+        .map((e) => e.msg)
+        .join(", "),
+    );
+    err.status = 400;
+    err.details = result.array();
+    throw err;
+  }
+
+  return fakeReq.body;
+}
+
 module.exports = {
   transactionValidation,
   validateTransactionBusiness,
+  runTransactionValidation,
 };
