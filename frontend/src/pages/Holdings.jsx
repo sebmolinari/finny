@@ -10,7 +10,6 @@ import {
   Typography,
   Alert,
   Button,
-  Skeleton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -19,7 +18,7 @@ import {
 } from "@mui/icons-material";
 import { MetricCard } from "../components/data-display/StyledCard";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
-
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { analyticsAPI } from "../api/api";
 import { getTodayInTimezone } from "../utils/dateUtils";
 import {
@@ -90,18 +89,7 @@ export default function Holdings() {
   }, [isHistorical, asOfDate, loadHistoricalData]);
 
   if (loading) {
-    return (
-      <PageContainer>
-        <Grid container spacing={2.5} sx={{ mb: 2 }}>
-          {[1, 2, 3, 4].map((i) => (
-            <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
-              <Skeleton variant="rounded" height={80} />
-            </Grid>
-          ))}
-        </Grid>
-        <Skeleton variant="rounded" height={500} />
-      </PageContainer>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error) {

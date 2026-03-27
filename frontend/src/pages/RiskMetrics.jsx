@@ -13,7 +13,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Skeleton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -45,10 +44,10 @@ import {
   formatNumber,
 } from "../utils/formatNumber";
 import { MetricCard, StyledCard } from "../components/data-display/StyledCard";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
-
 
 const RANGE_OPTIONS = [
   { label: "YTD", value: "ytd", days: null },
@@ -71,44 +70,47 @@ export default function RiskMetrics() {
   const [customEnd, setCustomEnd] = useState(() => getTodayInTimezone("UTC"));
   const [corrData, setCorrData] = useState(null);
 
-  const loadData = useCallback(async (signal) => {
-    setLoading(true);
-    try {
-      const opt = RANGE_OPTIONS.find((o) => o.value === rangeMode);
-      let startDate = null;
-      let endDate = null;
-      let days = opt?.days ?? 365;
+  const loadData = useCallback(
+    async (signal) => {
+      setLoading(true);
+      try {
+        const opt = RANGE_OPTIONS.find((o) => o.value === rangeMode);
+        let startDate = null;
+        let endDate = null;
+        let days = opt?.days ?? 365;
 
-      if (rangeMode === "custom") {
-        if (!customStart || !customEnd) {
-          setLoading(false);
-          return;
+        if (rangeMode === "custom") {
+          if (!customStart || !customEnd) {
+            setLoading(false);
+            return;
+          }
+          startDate = customStart;
+          endDate = customEnd;
+          days = 365;
+        } else if (rangeMode === "ytd") {
+          const todayStr = getTodayInTimezone(timezone || "UTC");
+          startDate = `${todayStr.substring(0, 4)}-01-01`;
+          endDate = todayStr;
+          days = 365;
+        } else if (rangeMode === "inception") {
+          days = 3650; // 10 years max for inception — backend will clip to first transaction
         }
-        startDate = customStart;
-        endDate = customEnd;
-        days = 365;
-      } else if (rangeMode === "ytd") {
-        const todayStr = getTodayInTimezone(timezone || "UTC");
-        startDate = `${todayStr.substring(0, 4)}-01-01`;
-        endDate = todayStr;
-        days = 365;
-      } else if (rangeMode === "inception") {
-        days = 3650; // 10 years max for inception — backend will clip to first transaction
-      }
 
-      const [res, corrRes] = await Promise.allSettled([
-        analyticsAPI.getRiskMetrics(days, startDate, endDate, signal),
-        analyticsAPI.getCorrelation(days, signal),
-      ]);
-      if (res.status === "fulfilled") setData(res.value.data);
-      if (corrRes.status === "fulfilled") setCorrData(corrRes.value.data);
-    } catch (err) {
-      if (err.name === "CanceledError") return;
-      console.error("Error loading risk metrics:", err);
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [rangeMode, customStart, customEnd, timezone]);
+        const [res, corrRes] = await Promise.allSettled([
+          analyticsAPI.getRiskMetrics(days, startDate, endDate, signal),
+          analyticsAPI.getCorrelation(days, signal),
+        ]);
+        if (res.status === "fulfilled") setData(res.value.data);
+        if (corrRes.status === "fulfilled") setCorrData(corrRes.value.data);
+      } catch (err) {
+        if (err.name === "CanceledError") return;
+        console.error("Error loading risk metrics:", err);
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [rangeMode, customStart, customEnd, timezone],
+  );
 
   useEffect(() => {
     setCustomEnd(getTodayInTimezone(timezone || "UTC"));
@@ -120,24 +122,7 @@ export default function RiskMetrics() {
     return () => controller.abort();
   }, [loadData]);
 
-  if (loading) return (
-    <PageContainer>
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-        <Skeleton variant="rounded" width={420} height={36} />
-      </Box>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        {[...Array(8)].map((_, i) => (
-          <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
-            <Skeleton variant="rounded" height={100} />
-          </Grid>
-        ))}
-      </Grid>
-      <Grid container spacing={2}>
-        <Grid size={12}><Skeleton variant="rounded" height={380} /></Grid>
-        <Grid size={12}><Skeleton variant="rounded" height={380} /></Grid>
-      </Grid>
-    </PageContainer>
-  );
+  if (loading) return <LoadingSpinner />;
 
   const navSeries = data?.nav_series ?? [];
   const rollingVol = data?.rolling_volatility ?? [];
@@ -331,7 +316,11 @@ export default function RiskMetrics() {
             <Box sx={fadeInUpSx(6)}>
               <MetricCard
                 title="Annualised Return"
-                value={sharpeComponents ? formatPercent(sharpeComponents.annualized_return, 2) : "—"}
+                value={
+                  sharpeComponents
+                    ? formatPercent(sharpeComponents.annualized_return, 2)
+                    : "—"
+                }
                 valueColor={
                   sharpeComponents
                     ? sharpeComponents.annualized_return >= 0
@@ -357,7 +346,11 @@ export default function RiskMetrics() {
             <Box sx={fadeInUpSx(7)}>
               <MetricCard
                 title="Period Volatility"
-                value={sharpeComponents ? formatPercent(sharpeComponents.volatility, 2) : "—"}
+                value={
+                  sharpeComponents
+                    ? formatPercent(sharpeComponents.volatility, 2)
+                    : "—"
+                }
                 icon={<StackedLineChartIcon color="warning" fontSize="small" />}
                 subtitle={
                   <Typography variant="caption" color="text.secondary">
@@ -376,14 +369,18 @@ export default function RiskMetrics() {
             <Box sx={fadeInUpSx(8)}>
               <MetricCard
                 title="Sharpe Ratio"
-                value={sharpeRatio !== null && sharpeRatio !== undefined ? formatNumber(sharpeRatio, 2) : "—"}
+                value={
+                  sharpeRatio !== null && sharpeRatio !== undefined
+                    ? formatNumber(sharpeRatio, 2)
+                    : "—"
+                }
                 valueColor={
                   sharpeRatio !== null && sharpeRatio !== undefined
                     ? sharpeRatio >= 1
                       ? theme.palette.success.main
                       : sharpeRatio >= 0
-                      ? theme.palette.warning.main
-                      : theme.palette.error.main
+                        ? theme.palette.warning.main
+                        : theme.palette.error.main
                     : undefined
                 }
                 icon={<BarChartIcon color="primary" fontSize="small" />}
@@ -406,14 +403,18 @@ export default function RiskMetrics() {
             <Box sx={fadeInUpSx(9)}>
               <MetricCard
                 title="Sortino Ratio"
-                value={sortinoRatio !== null && sortinoRatio !== undefined ? formatNumber(sortinoRatio, 2) : "—"}
+                value={
+                  sortinoRatio !== null && sortinoRatio !== undefined
+                    ? formatNumber(sortinoRatio, 2)
+                    : "—"
+                }
                 valueColor={
                   sortinoRatio !== null && sortinoRatio !== undefined
                     ? sortinoRatio >= 1
                       ? theme.palette.success.main
                       : sortinoRatio >= 0
-                      ? theme.palette.warning.main
-                      : theme.palette.error.main
+                        ? theme.palette.warning.main
+                        : theme.palette.error.main
                     : undefined
                 }
                 icon={<InsightsIcon color="secondary" fontSize="small" />}
@@ -583,24 +584,35 @@ export default function RiskMetrics() {
                 Asset Return Correlation Matrix
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                How similarly each pair of assets moves day-to-day over the selected period.{" "}
-                <strong>+1.00</strong> = always move together &nbsp;·&nbsp;{" "}
-                <strong>0.00</strong> = no relationship &nbsp;·&nbsp;{" "}
-                <strong>−1.00</strong> = always move in opposite directions.
-                Low correlation between assets reduces overall portfolio risk.
+                How similarly each pair of assets moves day-to-day over the
+                selected period. <strong>+1.00</strong> = always move together
+                &nbsp;·&nbsp; <strong>0.00</strong> = no relationship
+                &nbsp;·&nbsp; <strong>−1.00</strong> = always move in opposite
+                directions. Low correlation between assets reduces overall
+                portfolio risk.
               </Typography>
             </Box>
             <Box sx={{ p: 2, overflowX: "auto" }}>
-              <Paper variant="outlined" sx={{ display: "inline-block", minWidth: "100%" }}>
+              <Paper
+                variant="outlined"
+                sx={{ display: "inline-block", minWidth: "100%" }}
+              >
                 <Table size="small" sx={{ borderCollapse: "collapse" }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700, minWidth: 70, fontSize: 12 }} />
+                      <TableCell
+                        sx={{ fontWeight: 700, minWidth: 70, fontSize: 12 }}
+                      />
                       {corrData.assets.map((a) => (
                         <TableCell
                           key={a.id}
                           align="center"
-                          sx={{ fontWeight: 700, fontSize: 11, minWidth: 70, px: 0.5 }}
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: 11,
+                            minWidth: 70,
+                            px: 0.5,
+                          }}
                         >
                           {a.symbol}
                         </TableCell>
@@ -620,33 +632,46 @@ export default function RiskMetrics() {
                           let bg = theme.palette.action.hover;
                           let textColor = theme.palette.text.primary;
                           if (isDiag) {
-                            bg = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+                            bg = isDark
+                              ? "rgba(255,255,255,0.08)"
+                              : "rgba(0,0,0,0.06)";
                           } else if (val !== null) {
                             const absR = Math.abs(val);
                             const lightness = isDark
                               ? Math.round(20 + absR * 25)
                               : Math.round(95 - absR * 45);
-                            bg = val >= 0
-                              ? `hsl(142, 55%, ${lightness}%)`
-                              : `hsl(0, 55%, ${lightness}%)`;
+                            bg =
+                              val >= 0
+                                ? `hsl(142, 55%, ${lightness}%)`
+                                : `hsl(0, 55%, ${lightness}%)`;
                             if (!isDark && absR > 0.6) textColor = "#fff";
                             if (isDark && absR > 0.4) textColor = "#fff";
                           }
 
                           const corrLabel = (v) => {
                             const a = Math.abs(v);
-                            if (a >= 0.8) return v >= 0 ? "Very strong positive" : "Very strong negative";
-                            if (a >= 0.6) return v >= 0 ? "Strong positive" : "Strong negative";
-                            if (a >= 0.4) return v >= 0 ? "Moderate positive" : "Moderate negative";
-                            if (a >= 0.2) return v >= 0 ? "Weak positive" : "Weak negative";
+                            if (a >= 0.8)
+                              return v >= 0
+                                ? "Very strong positive"
+                                : "Very strong negative";
+                            if (a >= 0.6)
+                              return v >= 0
+                                ? "Strong positive"
+                                : "Strong negative";
+                            if (a >= 0.4)
+                              return v >= 0
+                                ? "Moderate positive"
+                                : "Moderate negative";
+                            if (a >= 0.2)
+                              return v >= 0 ? "Weak positive" : "Weak negative";
                             return "Very weak / no correlation";
                           };
 
                           const tooltipText = isDiag
                             ? `${rowAsset.symbol}: an asset always correlates perfectly with itself`
                             : val !== null
-                            ? `${rowAsset.symbol} vs ${corrData.assets[j].symbol}: ${val.toFixed(3)} — ${corrLabel(val)}`
-                            : "Insufficient overlapping price data";
+                              ? `${rowAsset.symbol} vs ${corrData.assets[j].symbol}: ${val.toFixed(3)} — ${corrLabel(val)}`
+                              : "Insufficient overlapping price data";
 
                           return (
                             <MuiTooltip key={j} title={tooltipText} arrow>
@@ -663,7 +688,11 @@ export default function RiskMetrics() {
                                   minWidth: 60,
                                 }}
                               >
-                                {isDiag ? "—" : val !== null ? val.toFixed(2) : "—"}
+                                {isDiag
+                                  ? "—"
+                                  : val !== null
+                                    ? val.toFixed(2)
+                                    : "—"}
                               </TableCell>
                             </MuiTooltip>
                           );
@@ -675,8 +704,14 @@ export default function RiskMetrics() {
               </Paper>
 
               {/* Colour legend */}
-              <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+              <Box
+                sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1.5 }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ whiteSpace: "nowrap" }}
+                >
                   −1.00
                 </Typography>
                 <Box
@@ -689,11 +724,20 @@ export default function RiskMetrics() {
                       : "linear-gradient(to right, hsl(0,55%,50%), hsl(0,55%,95%), white, hsl(142,55%,95%), hsl(142,55%,50%))",
                   }}
                 />
-                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ whiteSpace: "nowrap" }}
+                >
                   +1.00
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                  Red = negative &nbsp;·&nbsp; White/grey = neutral &nbsp;·&nbsp; Green = positive
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 1 }}
+                >
+                  Red = negative &nbsp;·&nbsp; White/grey = neutral
+                  &nbsp;·&nbsp; Green = positive
                 </Typography>
               </Box>
             </Box>

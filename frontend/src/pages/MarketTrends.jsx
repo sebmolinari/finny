@@ -48,13 +48,16 @@ export default function MarketTrends() {
   }, [loadMarketTrends]);
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={loadMarketTrends}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadMarketTrends}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>

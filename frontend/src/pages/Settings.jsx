@@ -32,7 +32,12 @@ import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { settings: contextSettings, settingsLoading, settingsError, refreshSettings } = useUserSettings();
+  const {
+    settings: contextSettings,
+    settingsLoading,
+    settingsError,
+    refreshSettings,
+  } = useUserSettings();
   const [settings, setSettings] = useState({
     date_format: "DD/MM/YYYY",
     timezone: "America/Argentina/Buenos_Aires",
@@ -103,13 +108,15 @@ export default function Settings() {
   };
 
   if (settingsLoading || loadingAssets) {
-    return <LoadingSpinner maxWidth="md" />;
+    return <LoadingSpinner />;
   }
 
   if (settingsError) {
     return (
       <PageContainer maxWidth="md">
-        <Alert severity="error">Failed to load settings. Please refresh the page.</Alert>
+        <Alert severity="error">
+          Failed to load settings. Please refresh the page.
+        </Alert>
       </PageContainer>
     );
   }

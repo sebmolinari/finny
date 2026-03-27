@@ -19,7 +19,6 @@ import {
   Tabs,
   Tab,
   LinearProgress,
-  Divider,
   Dialog,
   InputAdornment,
   CircularProgress,
@@ -27,7 +26,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Skeleton,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -46,7 +44,11 @@ import { allocationAPI, constantsAPI, assetAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
 import { formatCurrency, formatPercent } from "../utils/formatNumber";
 import { MetricCard } from "../components/data-display/StyledCard";
-import { StyledTable, StyledHeaderCell } from "../components/data-display/StyledTable";
+import {
+  StyledTable,
+  StyledHeaderCell,
+} from "../components/data-display/StyledTable";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
@@ -373,17 +375,7 @@ export default function AssetAllocation() {
   };
 
   if (loading) {
-    return (
-      <PageContainer>
-        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} variant="rounded" height={100} sx={{ flex: 1 }} />
-          ))}
-        </Box>
-        <Skeleton variant="rounded" height={48} sx={{ mb: 2 }} />
-        <Skeleton variant="rounded" height={400} />
-      </PageContainer>
-    );
+    return <LoadingSpinner />;
   }
 
   const remaining = 100 - totalAllocated;

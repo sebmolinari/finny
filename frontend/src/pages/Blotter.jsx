@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Container,
-  Paper,
   Typography,
   Button,
   Box,
@@ -14,7 +12,6 @@ import {
   IconButton,
   Tooltip,
   Alert,
-  Skeleton,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -35,7 +32,7 @@ import { toast } from "react-toastify";
 import { fadeInUpSx } from "../utils/animations";
 import { handleApiError } from "../utils/errorHandler";
 import { formatNumber, formatCurrency } from "../utils/formatNumber";
-import { getTodayInTimezone, formatDate } from "../utils/dateUtils";
+import { formatDate } from "../utils/dateUtils";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import TransactionDialog from "../components/dialogs/TransactionDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
@@ -46,7 +43,11 @@ import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Blotter() {
   const theme = useTheme();
-  const { timezone: userTimezone, dateFormat: userDateFormat, settingsLoading } = useUserSettings();
+  const {
+    timezone: userTimezone,
+    dateFormat: userDateFormat,
+    settingsLoading,
+  } = useUserSettings();
   const [transactions, setTransactions] = useState([]);
   const [assets, setAssets] = useState([]); // Active only - for dialog
   const [brokers, setBrokers] = useState([]); // Active only - for dialog
@@ -411,17 +412,16 @@ export default function Blotter() {
   ];
 
   if (transactionsLoading || settingsLoading) {
-    return (
-      <PageContainer>
-        <Skeleton variant="rounded" height={600} />
-      </PageContainer>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={loadTransactions}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadTransactions}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>
@@ -521,7 +521,7 @@ export default function Blotter() {
             />
             {importing && (
               <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-                <LoadingSpinner maxWidth="sm" />
+                <LoadingSpinner />
               </Box>
             )}
             {importResults && (

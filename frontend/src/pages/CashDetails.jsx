@@ -48,13 +48,16 @@ export default function CashDetails() {
   }, [loadDetails]);
 
   if (detailsLoading || settingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={loadDetails}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadDetails}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>
@@ -67,8 +70,7 @@ export default function CashDetails() {
       headerName: "Date",
       headerAlign: "center",
       width: 100,
-      renderCell: (params) =>
-        formatDate(params.row.date, dateFormat),
+      renderCell: (params) => formatDate(params.row.date, dateFormat),
     },
     {
       field: "type",

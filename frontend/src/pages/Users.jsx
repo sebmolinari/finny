@@ -99,7 +99,7 @@ const Users = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   const columns = [

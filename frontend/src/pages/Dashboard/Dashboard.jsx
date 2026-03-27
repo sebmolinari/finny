@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Box, Grid, Tooltip, Alert, Button, Skeleton } from "@mui/material";
+import { Box, Grid, Tooltip, Alert, Button } from "@mui/material";
 import { fadeInUpSx } from "../../utils/animations";
 import { MetricCard } from "../../components/data-display/StyledCard";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { useTheme } from "@mui/material/styles";
 import {
   AccountBalance as AccountBalanceIcon,
@@ -29,7 +30,8 @@ import { DateRangeControls } from "./components/DateRangeControls";
 
 const Dashboard = () => {
   const theme = useTheme();
-  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
+  const { timezone: userTimezone, dateFormat: userDateFormat } =
+    useUserSettings();
 
   // benchmarkSymbol lives here so it can be passed to both useDashboard and DateRangeControls
   const [benchmarkSymbol, setBenchmarkSymbol] = useState("");
@@ -76,32 +78,16 @@ const Dashboard = () => {
   }, [loadedInceptionDate]);
 
   if (loading) {
-    return (
-      <PageContainer>
-        <Grid container spacing={2.5}>
-          {[1, 2, 3].map((i) => (
-            <Grid key={i} size={{ xs: 12, md: 4 }}>
-              <Skeleton variant="rounded" height={140} />
-            </Grid>
-          ))}
-        </Grid>
-        <Grid container spacing={2.5} sx={{ mt: 1 }}>
-          {[1, 2, 3].map((i) => (
-            <Grid key={i} size={{ xs: 12, md: 4 }}>
-              <Skeleton variant="rounded" height={80} />
-            </Grid>
-          ))}
-        </Grid>
-        <Skeleton variant="rounded" height={300} sx={{ mt: 2.5 }} />
-        <Skeleton variant="rounded" height={380} sx={{ mt: 2.5 }} />
-      </PageContainer>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={reload}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={reload}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>
@@ -110,21 +96,31 @@ const Dashboard = () => {
 
   // Derive NAV sparkline data from last 30 days
   const navSparkData = sparklineData.map((d) => d.value);
-  const navXAxisData = sparklineData.map((d) => formatDate(d.date, userDateFormat));
+  const navXAxisData = sparklineData.map((d) =>
+    formatDate(d.date, userDateFormat),
+  );
   const navFirst = navSparkData[0] ?? 0;
   const navLast = navSparkData[navSparkData.length - 1] ?? 0;
-  const navChangePct = navFirst > 0 ? ((navLast - navFirst) / navFirst) * 100 : 0;
-  const navTrend = navChangePct > 0 ? "up" : navChangePct < 0 ? "down" : "neutral";
+  const navChangePct =
+    navFirst > 0 ? ((navLast - navFirst) / navFirst) * 100 : 0;
+  const navTrend =
+    navChangePct > 0 ? "up" : navChangePct < 0 ? "down" : "neutral";
   const navTrendLabel =
-    navChangePct >= 0 ? `+${navChangePct.toFixed(2)}%` : `${navChangePct.toFixed(2)}%`;
+    navChangePct >= 0
+      ? `+${navChangePct.toFixed(2)}%`
+      : `${navChangePct.toFixed(2)}%`;
 
   // Derive Liquid Holdings sparkline (30 days, real estate excluded)
   const holdingsSparkValues = holdingsSparklineData.map((d) => d.value);
-  const holdingsXAxisData = holdingsSparklineData.map((d) => formatDate(d.date, userDateFormat));
+  const holdingsXAxisData = holdingsSparklineData.map((d) =>
+    formatDate(d.date, userDateFormat),
+  );
   const holdingsFirst = holdingsSparkValues[0] ?? 0;
   const holdingsLast = holdingsSparkValues[holdingsSparkValues.length - 1] ?? 0;
   const holdingsChangePct =
-    holdingsFirst > 0 ? ((holdingsLast - holdingsFirst) / holdingsFirst) * 100 : 0;
+    holdingsFirst > 0
+      ? ((holdingsLast - holdingsFirst) / holdingsFirst) * 100
+      : 0;
   const holdingsTrend =
     holdingsChangePct > 0 ? "up" : holdingsChangePct < 0 ? "down" : "neutral";
   const holdingsTrendLabel =
@@ -134,7 +130,9 @@ const Dashboard = () => {
 
   // Derive Unrealized P&L sparkline (30 days, real estate excluded)
   const pnlSparkValues = pnlSparklineData.map((d) => d.value);
-  const pnlXAxisData = pnlSparklineData.map((d) => formatDate(d.date, userDateFormat));
+  const pnlXAxisData = pnlSparklineData.map((d) =>
+    formatDate(d.date, userDateFormat),
+  );
   const pnlInterval =
     dashboard?.transactions?.daily_pnl !== undefined
       ? `Daily P&L: ${dashboard.transactions.daily_pnl >= 0 ? "+" : ""}${formatCurrency(dashboard.transactions.daily_pnl, 0)}`
@@ -180,11 +178,18 @@ const Dashboard = () => {
               <TrendCard
                 title="Liquid Holdings"
                 icon={<TrendingUpIcon color="primary" />}
-                value={formatCurrency(dashboard?.transactions?.holdings_market_value || 0, 0)}
+                value={formatCurrency(
+                  dashboard?.transactions?.holdings_market_value || 0,
+                  0,
+                )}
                 trend={holdingsTrend}
                 trendLabel={holdingsTrendLabel}
-                data={holdingsSparkValues.length > 1 ? holdingsSparkValues : [0, 0]}
-                xAxisData={holdingsXAxisData.length > 1 ? holdingsXAxisData : ["-", "-"]}
+                data={
+                  holdingsSparkValues.length > 1 ? holdingsSparkValues : [0, 0]
+                }
+                xAxisData={
+                  holdingsXAxisData.length > 1 ? holdingsXAxisData : ["-", "-"]
+                }
               />
             </Box>
           </Tooltip>
@@ -199,7 +204,10 @@ const Dashboard = () => {
               <TrendCard
                 title="Unrealized P&L"
                 icon={<ShowChartIcon color="primary" />}
-                value={formatCurrency(dashboard?.transactions?.unrealized_gain || 0, 0)}
+                value={formatCurrency(
+                  dashboard?.transactions?.unrealized_gain || 0,
+                  0,
+                )}
                 valueColor={
                   (dashboard?.transactions?.unrealized_gain || 0) > 0
                     ? theme.palette.success.main
@@ -308,7 +316,8 @@ const Dashboard = () => {
         height={300}
         benchmarkData={benchmarkData?.benchmark_series || null}
         benchmarkLabel={
-          BENCHMARKS.find((b) => b.symbol === benchmarkSymbol)?.label || benchmarkSymbol
+          BENCHMARKS.find((b) => b.symbol === benchmarkSymbol)?.label ||
+          benchmarkSymbol
         }
         normalized={!!benchmarkData}
         controls={
@@ -328,12 +337,19 @@ const Dashboard = () => {
         }
       />
 
-      <MTMEvolutionChart data={mtmEvolution} title="Net Asset Value Evolution" height={380} />
+      <MTMEvolutionChart
+        data={mtmEvolution}
+        title="Net Asset Value Evolution"
+        height={380}
+      />
 
       {/* Best & Worst Performers */}
       {holdingsWithCost.length > 0 && (
         <Grid container spacing={2.5} sx={{ mt: 2.5 }}>
-          <PerformersList bestPerformers={bestPerformers} worstPerformers={worstPerformers} />
+          <PerformersList
+            bestPerformers={bestPerformers}
+            worstPerformers={worstPerformers}
+          />
         </Grid>
       )}
 

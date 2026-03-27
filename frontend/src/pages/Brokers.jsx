@@ -19,7 +19,8 @@ import { useUserSettings } from "../hooks/useUserSettings";
 
 export default function Brokers() {
   const { user } = useAuth();
-  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
+  const { timezone: userTimezone, dateFormat: userDateFormat } =
+    useUserSettings();
   const [brokers, setBrokers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -185,13 +186,16 @@ export default function Brokers() {
   ];
 
   if (loading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={loadBrokers}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadBrokers}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>

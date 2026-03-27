@@ -15,7 +15,6 @@ import {
   Chip,
   Tabs,
   Tab,
-  Skeleton,
 } from "@mui/material";
 import { Preview as PreviewIcon } from "@mui/icons-material";
 import { analyticsAPI, assetAPI, brokerAPI } from "../api/api";
@@ -23,6 +22,7 @@ import { formatDate } from "../utils/dateUtils";
 import { handleApiError } from "../utils/errorHandler";
 import { formatCurrency } from "../utils/formatNumber";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import PageContainer from "../components/layout/PageContainer";
 import { fadeInUpSx } from "../utils/animations";
 import { useUserSettings } from "../hooks/useUserSettings";
@@ -111,7 +111,11 @@ const holdingsColumns = [
 ];
 
 export default function TaxReport() {
-  const { settings: userSettings, dateFormat: userDateFormat, settingsLoading: userSettingsLoading } = useUserSettings();
+  const {
+    settings: userSettings,
+    dateFormat: userDateFormat,
+    settingsLoading: userSettingsLoading,
+  } = useUserSettings();
   const [tabValue, setTabValue] = useState(0);
 
   // ── year-end holdings state ──────────────────────────────────────────────
@@ -220,20 +224,7 @@ export default function TaxReport() {
   };
 
   if (userSettingsLoading) {
-    return (
-      <PageContainer>
-        <Paper sx={{ p: 2 }}>
-          <Skeleton variant="rounded" height={48} sx={{ mb: 2 }} />
-          <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
-            <Skeleton variant="rounded" width={120} height={40} />
-            <Skeleton variant="rounded" width={200} height={40} />
-            <Skeleton variant="rounded" width={200} height={40} />
-            <Skeleton variant="rounded" width={130} height={40} />
-          </Box>
-          <Skeleton variant="rounded" height={400} />
-        </Paper>
-      </PageContainer>
-    );
+    return <LoadingSpinner />;
   }
 
   // ── realized gains columns ─────────────────────────────────────────────

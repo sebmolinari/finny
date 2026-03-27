@@ -99,7 +99,7 @@ export default function IncomeAnalytics() {
   }, [loadIncome]);
 
   if (incomeLoading || settingsLoading) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   if (error) {
@@ -338,9 +338,7 @@ export default function IncomeAnalytics() {
       headerAlign: "center",
       width: 110,
       renderCell: (params) =>
-        params.value
-          ? formatDate(params.value, dateFormat)
-          : "—",
+        params.value ? formatDate(params.value, dateFormat) : "—",
     },
   ];
 
@@ -351,8 +349,7 @@ export default function IncomeAnalytics() {
       headerName: "Date",
       headerAlign: "center",
       width: 100,
-      renderCell: (params) =>
-        formatDate(params.value, dateFormat),
+      renderCell: (params) => formatDate(params.value, dateFormat),
     },
     {
       field: "transaction_type",

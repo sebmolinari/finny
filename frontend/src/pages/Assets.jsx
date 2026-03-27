@@ -6,13 +6,13 @@ import {
   Switch,
   Typography,
   Tooltip,
-  Skeleton,
 } from "@mui/material";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import AssetDialog from "../components/dialogs/AssetDialog";
 import AssetPriceDialog from "../components/dialogs/AssetPriceDialog";
 import { ToolbarButton } from "@mui/x-data-grid";
 import PageContainer from "../components/layout/PageContainer";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -34,7 +34,8 @@ import { useUserSettings } from "../hooks/useUserSettings";
 export default function Assets() {
   const theme = useTheme();
   const { user } = useAuth();
-  const { timezone: userTimezone, dateFormat: userDateFormat } = useUserSettings();
+  const { timezone: userTimezone, dateFormat: userDateFormat } =
+    useUserSettings();
   const isAdmin = user?.role === "admin";
   const [assets, setAssets] = useState([]);
   const [validAssetTypes, setValidAssetTypes] = useState([]);
@@ -390,14 +391,7 @@ export default function Assets() {
   ];
 
   if (loading) {
-    return (
-      <PageContainer>
-        <Skeleton variant="rounded" height={46} sx={{ mb: 0.5 }} />
-        {[...Array(10)].map((_, i) => (
-          <Skeleton key={i} variant="rounded" height={52} sx={{ mt: 0.5 }} />
-        ))}
-      </PageContainer>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

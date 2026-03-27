@@ -24,7 +24,10 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
   const loadDashboard = useCallback(async (signal) => {
     try {
       setError(null);
-      const response = await analyticsAPI.getPortfolioAnalytics([ASSET_TYPE_REALESTATE], signal);
+      const response = await analyticsAPI.getPortfolioAnalytics(
+        [ASSET_TYPE_REALESTATE],
+        signal,
+      );
       setDashboard(response.data);
     } catch (err) {
       if (err.name === "CanceledError") return;
@@ -38,7 +41,10 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
       const response = await analyticsAPI.getBrokerOverview(signal);
       if (response.data && Array.isArray(response.data)) {
         const chartData = response.data
-          .map((broker) => ({ name: broker.name, value: broker.current_value || 0 }))
+          .map((broker) => ({
+            name: broker.name,
+            value: broker.current_value || 0,
+          }))
           .filter((broker) => broker.value > 10)
           .sort((a, b) => b.value - a.value);
         setBrokerSummary(chartData);
@@ -61,8 +67,19 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
 
   const loadSparklineData = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getPortfolioPerformance(31, [], null, null, signal);
-      setSparklineData(response.data.map((item) => ({ date: item.date, value: item.total_value })));
+      const response = await analyticsAPI.getPortfolioPerformance(
+        31,
+        [],
+        null,
+        null,
+        signal,
+      );
+      setSparklineData(
+        response.data.map((item) => ({
+          date: item.date,
+          value: item.total_value,
+        })),
+      );
     } catch (error) {
       if (error.name === "CanceledError") return;
       console.error("Error loading sparkline data:", error);
@@ -71,8 +88,19 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
 
   const loadHoldingsSparklineData = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getPortfolioPerformance(31, [ASSET_TYPE_REALESTATE], null, null, signal);
-      setHoldingsSparklineData(response.data.map((item) => ({ date: item.date, value: item.total_value })));
+      const response = await analyticsAPI.getPortfolioPerformance(
+        31,
+        [ASSET_TYPE_REALESTATE],
+        null,
+        null,
+        signal,
+      );
+      setHoldingsSparklineData(
+        response.data.map((item) => ({
+          date: item.date,
+          value: item.total_value,
+        })),
+      );
     } catch (error) {
       if (error.name === "CanceledError") return;
       console.error("Error loading holdings sparkline data:", error);
@@ -81,8 +109,17 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
 
   const loadPnlSparklineData = useCallback(async (signal) => {
     try {
-      const response = await analyticsAPI.getUnrealizedPnlHistory(31, [ASSET_TYPE_REALESTATE], signal);
-      setPnlSparklineData(response.data.map((item) => ({ date: item.date, value: item.unrealized_gain })));
+      const response = await analyticsAPI.getUnrealizedPnlHistory(
+        31,
+        [ASSET_TYPE_REALESTATE],
+        signal,
+      );
+      setPnlSparklineData(
+        response.data.map((item) => ({
+          date: item.date,
+          value: item.unrealized_gain,
+        })),
+      );
     } catch (error) {
       if (error.name === "CanceledError") return;
       console.error("Error loading P&L sparkline data:", error);
@@ -108,44 +145,59 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     }
   }, []);
 
-  const loadPerformanceForRange = useCallback(async (signal) => {
-    const range = getActiveRange();
-    if (!range) return;
-    try {
-      const response = await analyticsAPI.getPortfolioPerformance(
-        undefined,
-        undefined,
-        range.startDate,
-        range.endDate,
-        signal,
-      );
-      setPerformanceData(response.data.map((item) => ({ date: item.date, value: item.total_value })));
-    } catch (error) {
-      if (error.name === "CanceledError") return;
-      console.error("Error loading performance data:", error);
-    }
-  }, [getActiveRange]);
+  const loadPerformanceForRange = useCallback(
+    async (signal) => {
+      const range = getActiveRange();
+      if (!range) return;
+      try {
+        const response = await analyticsAPI.getPortfolioPerformance(
+          undefined,
+          undefined,
+          range.startDate,
+          range.endDate,
+          signal,
+        );
+        setPerformanceData(
+          response.data.map((item) => ({
+            date: item.date,
+            value: item.total_value,
+          })),
+        );
+      } catch (error) {
+        if (error.name === "CanceledError") return;
+        console.error("Error loading performance data:", error);
+      }
+    },
+    [getActiveRange],
+  );
 
-  const loadRangeMetrics = useCallback(async (signal) => {
-    const range = getActiveRange();
-    if (!range) {
-      setRangeMetrics(null);
-      return;
-    }
-    try {
-      setRangeMetricsLoading(true);
-      const response = await analyticsAPI.getDateRangeMetrics(range.startDate, range.endDate, signal);
-      setRangeMetrics(response.data);
-    } catch (error) {
-      if (error.name === "CanceledError") return;
-      console.error("Error loading range metrics:", error);
-      setRangeMetrics(null);
-    } finally {
-      if (!signal?.aborted) setRangeMetricsLoading(false);
-    }
-  }, [getActiveRange]);
+  const loadRangeMetrics = useCallback(
+    async (signal) => {
+      const range = getActiveRange();
+      if (!range) {
+        setRangeMetrics(null);
+        return;
+      }
+      try {
+        setRangeMetricsLoading(true);
+        const response = await analyticsAPI.getDateRangeMetrics(
+          range.startDate,
+          range.endDate,
+          signal,
+        );
+        setRangeMetrics(response.data);
+      } catch (error) {
+        if (error.name === "CanceledError") return;
+        console.error("Error loading range metrics:", error);
+        setRangeMetrics(null);
+      } finally {
+        if (!signal?.aborted) setRangeMetricsLoading(false);
+      }
+    },
+    [getActiveRange],
+  );
 
-  // Initial load — wait for all 6 calls before clearing the skeleton
+  // Initial load — wait for all 6 calls before clearing the Loading
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -182,7 +234,14 @@ export function useDashboard(getActiveRange, activeRangeKey, benchmarkSymbol) {
     if (!range) return;
     const controller = new AbortController();
     analyticsAPI
-      .getBenchmark({ symbol: benchmarkSymbol, startDate: range.startDate, endDate: range.endDate }, controller.signal)
+      .getBenchmark(
+        {
+          symbol: benchmarkSymbol,
+          startDate: range.startDate,
+          endDate: range.endDate,
+        },
+        controller.signal,
+      )
       .then((res) => setBenchmarkData(res.data || null))
       .catch((err) => {
         if (err.name !== "CanceledError") setBenchmarkData(null);

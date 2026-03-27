@@ -1,27 +1,67 @@
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Fade } from "@mui/material";
 
-export default function LoadingSpinner({ maxWidth = "xl", message }) {
+export default function LoadingSpinner({
+  message = "Loading...",
+  fullScreen = false,
+  size = 48,
+}) {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "400px",
-        gap: 2,
-      }}
-    >
-      <CircularProgress
-        size={40}
-        thickness={3.5}
-        sx={{ color: "primary.main" }}
-      />
-      {message && (
-        <Typography variant="body2" color="text.secondary">
-          {message}
-        </Typography>
-      )}
-    </Box>
+    <Fade in timeout={400}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: fullScreen ? "100vh" : "300px",
+          width: "100%",
+          gap: 2,
+        }}
+      >
+        {/* Spinner with subtle glow */}
+        <Box
+          sx={{
+            position: "relative",
+            display: "inline-flex",
+          }}
+        >
+          <CircularProgress
+            size={size}
+            thickness={4}
+            sx={{
+              color: "primary.main",
+            }}
+          />
+
+          {/* Optional soft background ring */}
+          <CircularProgress
+            variant="determinate"
+            value={100}
+            size={size}
+            thickness={4}
+            sx={{
+              color: "rgba(0,0,0,0.05)",
+              position: "absolute",
+              left: 0,
+            }}
+          />
+        </Box>
+
+        {/* Message */}
+        {message && (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              fontSize: "0.9rem",
+              letterSpacing: 0.3,
+              textAlign: "center",
+            }}
+          >
+            {message}
+          </Typography>
+        )}
+      </Box>
+    </Fade>
   );
 }

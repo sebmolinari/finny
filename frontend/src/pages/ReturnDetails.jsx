@@ -1,5 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { Typography, Paper, Box, Grid, Divider, Alert, Button } from "@mui/material";
+import {
+  Typography,
+  Paper,
+  Box,
+  Grid,
+  Divider,
+  Alert,
+  Button,
+} from "@mui/material";
 import { analyticsAPI } from "../api/api";
 import { formatCurrency, formatNumber } from "../utils/formatNumber";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
@@ -38,13 +46,16 @@ export default function ReturnDetails() {
   }, [loadDetails]);
 
   if (detailsLoading || settingsLoading || !details) {
-    return <LoadingSpinner maxWidth="lg" />;
+    return <LoadingSpinner />;
   }
 
   if (error) {
     return (
       <PageContainer>
-        <Alert severity="error" action={<Button onClick={loadDetails}>Retry</Button>}>
+        <Alert
+          severity="error"
+          action={<Button onClick={loadDetails}>Retry</Button>}
+        >
           {error}
         </Alert>
       </PageContainer>
@@ -57,8 +68,7 @@ export default function ReturnDetails() {
       headerName: "Date",
       headerAlign: "center",
       flex: 1,
-      renderCell: (params) =>
-        formatDate(params.row.date, dateFormat),
+      renderCell: (params) => formatDate(params.row.date, dateFormat),
     },
     { field: "type", headerName: "Type", headerAlign: "center", width: 120 },
     {
