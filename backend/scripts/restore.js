@@ -70,7 +70,7 @@ async function restoreDatabase() {
   }
 
   // Get target database path
-  const targetDbPath = path.join(__dirname, `../${process.env.DATABASE_PATH}`);
+  const targetDbPath = path.join(__dirname, `../${process.env.DB_PATH}`);
 
   console.log("\n📋 Restore Summary:");
   console.log(`   Source: ${backupPath}`);

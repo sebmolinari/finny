@@ -17,7 +17,7 @@ import { StyledCard } from "./StyledCard";
 const SECTIONS = [
   {
     label: "Server",
-    keys: ["NODE_ENV", "PORT", "DATABASE_PATH", "JWT_EXPIRATION"],
+    keys: ["NODE_ENV", "PORT", "DB_PATH", "JWT_EXPIRATION"],
   },
   {
     label: "Security",
@@ -76,7 +76,9 @@ const SystemConfigCard = () => {
     <StyledCard>
       <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          <SettingsRoundedIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
+          <SettingsRoundedIcon
+            sx={{ mr: 1, color: "text.secondary", fontSize: 20 }}
+          />
           <Typography variant="body2" fontWeight={600} color="text.secondary">
             System Configuration
           </Typography>
@@ -98,7 +100,10 @@ const SystemConfigCard = () => {
               <Table size="small" sx={{ mt: 0.5 }}>
                 <TableBody>
                   {section.keys.map((key) => (
-                    <TableRow key={key} sx={{ "&:last-child td": { border: 0 } }}>
+                    <TableRow
+                      key={key}
+                      sx={{ "&:last-child td": { border: 0 } }}
+                    >
                       <TableCell
                         sx={{
                           py: 0.5,
@@ -133,7 +138,10 @@ const SystemConfigCard = () => {
                             sx={{
                               fontFamily: "monospace",
                               fontSize: "0.75rem",
-                              color: config[key] === "(not set)" ? "text.disabled" : "text.primary",
+                              color:
+                                config[key] === "(not set)"
+                                  ? "text.disabled"
+                                  : "text.primary",
                             }}
                           >
                             {config[key] ?? "(not set)"}

@@ -2,7 +2,8 @@ require("dotenv").config({ quiet: true });
 
 process.env.NODE_ENV = process.env.NODE_ENV || "production";
 
-process.env.DATABASE_PATH = process.env.DATABASE_PATH || "data/database.db";
+process.env.DB_PATH = process.env.DB_PATH || "data/database.db";
+process.env.DB_VERBOSE = process.env.DB_VERBOSE || "false";
 
 process.env.JWT_EXPIRATION = process.env.JWT_EXPIRATION || "12h";
 
@@ -23,4 +24,3 @@ process.env.EMAIL_USER = process.env.EMAIL_USER || "";
 process.env.EMAIL_APP_PASSWORD = process.env.EMAIL_APP_PASSWORD || "";
 process.env.EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "Finny Portfolio Manager";
 process.env.EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || "noreply@finny.com";
-

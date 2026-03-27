@@ -77,15 +77,6 @@ frontend/src/
 - Admin-only pages use `<ProtectedRoute role="admin">` in `router.jsx` and appear under `adminItems` in `MenuContent.jsx`.
 - `handleApiError(err, fallbackMsg, setError)` from `utils/errorHandler.js` is the standard error handler in page components.
 
-## Environment
-
-Backend requires a `.env` file. See `backend/.env.example` for all variables. Key ones:
-
-- `DATABASE_PATH` — path to the encrypted SQLite file (relative to `/backend`)
-- `DB_KEY` — encryption key (min 8 chars)
-- `JWT_SECRET` — min 32 chars
-- `EMAIL_ENABLED=true` — enables nodemailer (requires SMTP vars)
-
 ## Database
 
 Migrations run automatically at startup via `migrationRunner.js`. To add a migration, create a numbered SQL file in `backend/migrations/` (e.g. `006_*.sql`).
