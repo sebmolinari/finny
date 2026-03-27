@@ -21,11 +21,7 @@ All notable changes to this project are documented below.
 
 ### Changed
 
-- Admin Control Panel activity feeds (recent price refreshes, audit log, scheduler runs, and stale assets) now show 5 entries instead of 10–20, keeping the overview compact
-
-### Fixed
-
-- Docker CI/CD workflow no longer incorrectly tags versioned releases as `latest`; the `latest` tag is only applied on pushes to the master branch
+- Admin Control Panel activity feeds (recent price refreshes, audit log, scheduler runs, and stale assets) now show 5 entries, keeping the overview compact
 
 ## [1.0.1] – 2026-03-24
 
