@@ -13,7 +13,7 @@ const logger = require("../utils/logger");
  *     summary: Get all schedulers
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: query
  *         name: limit
@@ -63,7 +63,7 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Create a new scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -174,7 +174,7 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Get a scheduler by ID
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -214,7 +214,7 @@ router.get("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Update a scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -351,7 +351,7 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Purge all scheduler instances (execution history)
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: All instances deleted
@@ -388,7 +388,7 @@ router.delete("/instances", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Delete a scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -446,7 +446,7 @@ router.delete("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Get execution history for a scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id

@@ -2,10 +2,10 @@
  * @swagger
  * /metrics/host-metrics:
  *   get:
- *     summary: Get host system metrics (admin only)
+ *     summary: Get host system metrics
  *     tags: [Metrics]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: Host system metrics

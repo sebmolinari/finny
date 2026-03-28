@@ -13,10 +13,10 @@ router.use(adminMiddleware);
  * @swagger
  * /audit:
  *   get:
- *     summary: Get all audit logs (admin only)
+ *     summary: Get all audit logs
  *     tags: [Audit]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: query
  *         name: user_id
@@ -94,10 +94,10 @@ router.get("/", (req, res) => {
  * @swagger
  * /audit/{id}:
  *   get:
- *     summary: Get audit log by ID (admin only)
+ *     summary: Get audit log by ID
  *     tags: [Audit]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -133,10 +133,10 @@ router.get("/:id", (req, res) => {
  * @swagger
  * /audit/user/{userId}/logins:
  *   get:
- *     summary: Get login history for a user (admin only)
+ *     summary: Get login history for a user
  *     tags: [Audit]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -175,10 +175,10 @@ router.get("/user/:userId/logins", (req, res) => {
  * @swagger
  * /audit/user/{userId}/summary:
  *   get:
- *     summary: Get activity summary for a user (admin only)
+ *     summary: Get activity summary for a user
  *     tags: [Audit]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -217,10 +217,10 @@ router.get("/user/:userId/summary", (req, res) => {
  * @swagger
  * /audit/cleanup:
  *   delete:
- *     summary: Delete old audit logs (maintenance endpoint, admin only)
+ *     summary: Delete old audit logs
  *     tags: [Audit]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: query
  *         name: days

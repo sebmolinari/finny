@@ -190,3 +190,8 @@ Finny is a finance management web application for tracking investments across mu
 - Real-time server monitoring: CPU load (1/5/15 min), memory, disk space, uptime
 - CPU temperature (Linux/Raspberry Pi)
 - Platform, architecture and hostname details
+
+### 📖 API Documentation
+
+- Interactive Swagger UI available at `/api/v1/api-docs` in all environments
+- All endpoints documented with request/response schemas

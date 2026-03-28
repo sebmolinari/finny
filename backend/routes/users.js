@@ -32,10 +32,10 @@ router.get("/", (req, res) => {
  * @swagger
  * /users:
  *   get:
- *     summary: Get all users (admin only)
+ *     summary: Get all users
  *     tags: [Users]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -84,7 +84,7 @@ router.patch(
        *     summary: Update user status (enable/disable)
        *     tags: [Users]
        *     security:
-       *       - bearerAuth: []
+       *       - adminAuth: []
        *     parameters:
        *       - in: path
        *         name: id
@@ -174,7 +174,7 @@ router.patch("/:id/role", validate(updateUserRoleValidation), (req, res) => {
      *     summary: Update user role
      *     tags: [Users]
      *     security:
-     *       - bearerAuth: []
+     *       - adminAuth: []
      *     parameters:
      *       - in: path
      *         name: id
@@ -268,7 +268,7 @@ router.delete("/:id", (req, res) => {
      *     summary: Delete a user
      *     tags: [Users]
      *     security:
-     *       - bearerAuth: []
+     *       - adminAuth: []
      *     parameters:
      *       - in: path
      *         name: id
