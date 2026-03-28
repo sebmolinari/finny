@@ -17,7 +17,14 @@ import { StyledCard } from "./StyledCard";
 const SECTIONS = [
   {
     label: "Server",
-    keys: ["NODE_ENV", "PORT", "DB_PATH", "DB_VERBOSE", "JWT_EXPIRATION"],
+    keys: [
+      "NODE_ENV",
+      "PORT",
+      "DB_PATH",
+      "DB_VERBOSE",
+      "DB_AUDIT_QUERIES",
+      "JWT_EXPIRATION",
+    ],
   },
   {
     label: "Security",

@@ -993,13 +993,16 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
  * @swagger
  * /analytics/missing-prices:
  *   get:
- *     summary: Find transactions that predate all available price data for the asset
+ *     summary: Find transactions with missing or stale price data
  *     description: >
  *       Returns buy/sell transactions where no price record exists on or before the trade date
  *       (status='no_price'). A transaction is NOT flagged when an older price is available and
  *       can be used as a fallback — e.g. a price from t-6 will satisfy a trade on t-2.
  *       Only transactions that predate every existing price record for the asset are listed.
- *       Use this to identify which assets need historical price data added.
+ *       When includeStale=true, also surfaces assets whose latest price is older than today
+ *       (status='stale_price'), generating one issue per missing day up to today (or the last
+ *       transaction date for closed positions). Assets with price_source='manual' are excluded
+ *       from stale detection.
  *     tags: [Analytics]
  *     security:
  *       - bearerAuth: []
@@ -1011,6 +1014,23 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
  *           enum: [json, csv]
  *           default: json
  *         description: Response format. Use 'csv' to download a spreadsheet-ready file.
+ *       - in: query
+ *         name: includeStale
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: >
+ *           When true, also returns stale_price issues — assets that have at least one price
+ *           record but none more recent than today. Assets with price_source='manual' are
+ *           excluded from stale detection and reported in stale_metadata instead.
+ *       - in: query
+ *         name: assetId
+ *         schema:
+ *           type: integer
+ *         description: >
+ *           Debug filter — restrict results to a single asset ID. Useful for
+ *           inspecting exactly which issues are detected for one asset without
+ *           noise from the rest of the portfolio.
  *     responses:
  *       200:
  *         description: List of transactions with missing or stale prices
@@ -1028,39 +1048,70 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
  *                     properties:
  *                       transaction_id:
  *                         type: integer
+ *                         nullable: true
+ *                         description: null for stale_price issues (not tied to a specific transaction)
  *                       trade_date:
  *                         type: string
  *                         format: date
  *                       transaction_type:
  *                         type: string
  *                         enum: [buy, sell]
+ *                         nullable: true
+ *                         description: null for stale_price issues
  *                       asset_id:
  *                         type: integer
  *                       symbol:
  *                         type: string
+ *                       price_symbol:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Ticker symbol used for price lookups (may differ from symbol)
+ *                       price_source:
+ *                         type: string
+ *                         nullable: true
+ *                         description: >
+ *                           Price data source configured for this asset (e.g. yahoo, coingecko,
+ *                           manual). Non-yahoo sources may not be fetchable via the /fetch endpoint.
  *                       name:
  *                         type: string
  *                       asset_type:
  *                         type: string
  *                       broker_name:
  *                         type: string
+ *                         nullable: true
  *                       status:
  *                         type: string
- *                         enum: [no_price]
- *                         description: no price data exists for this asset on or before the trade date
+ *                         enum: [no_price, stale_price]
+ *                         description: >
+ *                           no_price — no price record exists for this asset on or before the trade date.
+ *                           stale_price — returned only when includeStale=true; the asset has prices
+ *                           but none more recent than today.
  *                       closest_price_date:
  *                         type: string
  *                         format: date
  *                         nullable: true
- *                         description: Date of the closest available price (null if no_price)
+ *                         description: Date of the closest available price (null for no_price)
  *                       closest_price:
  *                         type: number
  *                         nullable: true
- *                         description: Value of the closest available price (null if no_price)
+ *                         description: Value of the closest available price (null for no_price and stale_price)
  *                       days_without_price:
  *                         type: integer
  *                         nullable: true
- *                         description: Days between closest price and trade date (null if no_price)
+ *                         description: Days since the closest available price (null for no_price)
+ *                 stale_metadata:
+ *                   type: object
+ *                   nullable: true
+ *                   description: Only present when includeStale=true
+ *                   properties:
+ *                     excluded_manual_count:
+ *                       type: integer
+ *                       description: Number of assets skipped because price_source='manual'
+ *                     excluded_manual_symbols:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: Symbols of the excluded manual-priced assets
  *       401:
  *         description: Authentication required
  *       500:
@@ -1068,7 +1119,16 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
  */
 router.get("/missing-prices", authMiddleware, (req, res) => {
   try {
-    const result = AnalyticsService.getMissingPrices(req.user.id);
+    const includeStale = req.query.includeStale === "true";
+    const assetId = req.query.assetId ? parseInt(req.query.assetId, 10) : null;
+    let result = AnalyticsService.getMissingPrices(req.user.id, { includeStale });
+    if (assetId) {
+      result = {
+        ...result,
+        issues: result.issues.filter((i) => i.asset_id === assetId),
+        total_issues: result.issues.filter((i) => i.asset_id === assetId).length,
+      };
+    }
 
     if (req.query.format === "csv") {
       const headers = [

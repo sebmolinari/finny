@@ -70,6 +70,13 @@ class PriceData {
     return result.changes > 0;
   }
 
+  static bulkDelete(ids) {
+    const placeholders = ids.map(() => "?").join(",");
+    const stmt = db.prepare(`DELETE FROM price_data WHERE id IN (${placeholders})`);
+    const result = stmt.run(...ids);
+    return result.changes;
+  }
+
   // Helper: Map DB row to API response (convert integer to float)
   static _mapRowToApi(row) {
     if (!row) return null;
