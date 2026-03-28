@@ -154,6 +154,27 @@ router.put(
   },
 );
 
+/**
+ * @swagger
+ * /settings/reviewed:
+ *   post:
+ *     summary: Mark settings as reviewed by the user
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Settings marked as reviewed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *       500:
+ *         description: Server error
+ */
 router.post("/reviewed", authMiddleware, (req, res) => {
   try {
     UserSettings.markSettingsReviewed(req.user.id);
@@ -172,6 +193,27 @@ router.post("/reviewed", authMiddleware, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /settings/onboarding-complete:
+ *   post:
+ *     summary: Mark onboarding as completed for the user
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Onboarding marked as complete
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *       500:
+ *         description: Server error
+ */
 router.post("/onboarding-complete", authMiddleware, (req, res) => {
   try {
     UserSettings.markOnboardingComplete(req.user.id);

@@ -6,6 +6,7 @@ All notable changes to this project are documented below.
 
 - All page bundles are now loaded on demand (code splitting), reducing initial app load time
 - Frontend and Backend libraries upgraded to latest compatible versions
+- Swagger API documentation is now available in all environments (including production) at `/api/v1/api-docs`
 
 ### Fixed
 

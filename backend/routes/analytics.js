@@ -1109,6 +1109,72 @@ router.get("/missing-prices", authMiddleware, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /analytics/missing-prices/fetch:
+ *   post:
+ *     summary: Fetch proposed prices from Yahoo Finance for missing date/asset pairs
+ *     description: Does NOT write to DB — returns price proposals for review.
+ *     tags: [Analytics]
+ *     security:
+ *       - adminAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - items
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     asset_id:
+ *                       type: integer
+ *                     price_symbol:
+ *                       type: string
+ *                     trade_date:
+ *                       type: string
+ *                       format: date
+ *     responses:
+ *       200:
+ *         description: Fetched price proposals
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       asset_id:
+ *                         type: integer
+ *                       trade_date:
+ *                         type: string
+ *                         format: date
+ *                       price_symbol:
+ *                         type: string
+ *                         nullable: true
+ *                       fetched_price:
+ *                         type: number
+ *                         nullable: true
+ *                       status:
+ *                         type: string
+ *                         enum: [ok, not_found]
+ *       400:
+ *         description: items array is required
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Server error
+ */
 // Fetch proposed prices from Yahoo Finance for a batch of missing date/asset pairs.
 // Admin only. Does NOT write to DB — returns proposals for review.
 router.post(
@@ -1165,6 +1231,63 @@ router.post(
   },
 );
 
+/**
+ * @swagger
+ * /analytics/missing-prices/apply:
+ *   post:
+ *     summary: Apply reviewed prices to the database
+ *     description: Accepts raw float prices from the frontend and creates or updates price_data records.
+ *     tags: [Analytics]
+ *     security:
+ *       - adminAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - items
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - asset_id
+ *                     - trade_date
+ *                     - price
+ *                   properties:
+ *                     asset_id:
+ *                       type: integer
+ *                     trade_date:
+ *                       type: string
+ *                       format: date
+ *                     price:
+ *                       type: number
+ *     responses:
+ *       200:
+ *         description: Prices applied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 applied:
+ *                   type: integer
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       400:
+ *         description: items array is required
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Server error
+ */
 // Apply reviewed/edited prices to the database.
 // Admin only. Accepts raw float prices from the frontend.
 router.post(
@@ -1238,6 +1361,41 @@ router.post(
 );
 
 // ── 1.3 Risk Metrics: Volatility & Drawdown ─────────────────────────────────
+/**
+ * @swagger
+ * /analytics/portfolio/risk-metrics:
+ *   get:
+ *     summary: Get portfolio volatility and drawdown metrics
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 365
+ *         description: Lookback window in days
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (overrides days)
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (overrides days)
+ *     responses:
+ *       200:
+ *         description: Risk metrics
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
 router.get("/portfolio/risk-metrics", authMiddleware, (req, res) => {
   try {
     const { days = 365, start_date, end_date } = req.query;
@@ -1254,6 +1412,32 @@ router.get("/portfolio/risk-metrics", authMiddleware, (req, res) => {
 });
 
 // ── 2.1 Historical Holdings ──────────────────────────────────────────────────
+/**
+ * @swagger
+ * /analytics/portfolio/historical-holdings:
+ *   get:
+ *     summary: Get portfolio holdings as of a specific date
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: as_of
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Date in YYYY-MM-DD format
+ *     responses:
+ *       200:
+ *         description: Historical holdings as of the given date
+ *       400:
+ *         description: as_of query parameter is required or invalid
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
 router.get("/portfolio/historical-holdings", authMiddleware, (req, res) => {
   try {
     const { as_of } = req.query;
@@ -1278,6 +1462,47 @@ router.get("/portfolio/historical-holdings", authMiddleware, (req, res) => {
 // Helper: obtain a Yahoo Finance session cookie + crumb required by v11 API
 // (kept as no-op — replaced by yahoo-finance2 which handles auth internally)
 
+/**
+ * @swagger
+ * /analytics/economic-calendar:
+ *   get:
+ *     summary: Get upcoming earnings and dividend events for held assets
+ *     description: Queries Yahoo Finance for earnings dates and ex-dividend dates for all held assets that support it (excludes crypto, currency, and manual/coingecko/dolarapi price sources).
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Economic calendar events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 events:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       symbol:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                         description: "earnings or dividend"
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                 fund_stats:
+ *                   type: object
+ *                 symbols_queried:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
 router.get("/economic-calendar", authMiddleware, async (req, res) => {
   try {
     const YahooFinance = require("yahoo-finance2").default;
@@ -1536,6 +1761,24 @@ router.get("/income", authMiddleware, validate(incomeValidation), (req, res) => 
 });
 
 // ── 10.3 Admin Overview ──────────────────────────────────────────────────────
+/**
+ * @swagger
+ * /analytics/admin/overview:
+ *   get:
+ *     summary: Get admin analytics overview
+ *     tags: [Analytics]
+ *     security:
+ *       - adminAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin overview statistics
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Server error
+ */
 router.get("/admin/overview", authMiddleware, adminMiddleware, (req, res) => {
   try {
     const result = AnalyticsService.getAdminOverview();
@@ -1548,6 +1791,48 @@ router.get("/admin/overview", authMiddleware, adminMiddleware, (req, res) => {
 // ── 11. Benchmark Comparison ─────────────────────────────────────────────────
 // Fetches a market index from Yahoo Finance (e.g. ^GSPC) and returns both
 // portfolio NAV and index series normalized to base 100 for comparison.
+/**
+ * @swagger
+ * /analytics/portfolio/benchmark:
+ *   get:
+ *     summary: Compare portfolio NAV against a market index
+ *     description: Fetches a market index from Yahoo Finance and returns portfolio NAV and index series normalized to base 100.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: symbol
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Yahoo Finance index symbol (e.g. ^GSPC, ^IXIC)
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 365
+ *         description: Lookback days when startDate/endDate are not provided
+ *     responses:
+ *       200:
+ *         description: Benchmark comparison series
+ *       400:
+ *         description: symbol is required
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
 router.get("/portfolio/benchmark", authMiddleware, async (req, res) => {
   try {
     const { symbol, startDate, endDate, days } = req.query;
@@ -1569,6 +1854,37 @@ router.get("/portfolio/benchmark", authMiddleware, async (req, res) => {
 
 // ── 12. Performance Attribution ──────────────────────────────────────────────
 // Returns per-asset contribution to portfolio return over a date range
+/**
+ * @swagger
+ * /analytics/portfolio/attribution:
+ *   get:
+ *     summary: Get per-asset contribution to portfolio return
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Performance attribution by asset
+ *       400:
+ *         description: startDate and endDate are required
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
 router.get("/portfolio/attribution", authMiddleware, (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -1590,6 +1906,29 @@ router.get("/portfolio/attribution", authMiddleware, (req, res) => {
 
 // ── 13. Correlation Matrix ────────────────────────────────────────────────────
 // Returns Pearson correlation matrix of daily returns for held assets
+/**
+ * @swagger
+ * /analytics/portfolio/correlation:
+ *   get:
+ *     summary: Get Pearson correlation matrix of daily returns for held assets
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 365
+ *         description: Lookback window in days
+ *     responses:
+ *       200:
+ *         description: Correlation matrix
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
 router.get("/portfolio/correlation", authMiddleware, (req, res) => {
   try {
     const { days } = req.query;

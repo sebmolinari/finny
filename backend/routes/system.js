@@ -12,7 +12,7 @@ const mask = (value) => (value ? "••••••••" : "(not set)");
  *     summary: Get sanitized server configuration
  *     tags: [System]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: Server configuration with secrets masked

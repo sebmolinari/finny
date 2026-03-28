@@ -132,10 +132,10 @@ router.get("/symbol/:symbol", authMiddleware, (req, res) => {
  * @swagger
  * /assets:
  *   post:
- *     summary: Create a new asset (Admin only)
+ *     summary: Create a new asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -236,10 +236,10 @@ router.post(
  * @swagger
  * /assets/{id}:
  *   put:
- *     summary: Update an asset (Admin only)
+ *     summary: Update an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -363,10 +363,10 @@ router.put(
  * @swagger
  * /assets/{id}:
  *   delete:
- *     summary: Delete an asset (Admin only)
+ *     summary: Delete an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -507,10 +507,10 @@ router.get("/:id/price/latest", authMiddleware, (req, res) => {
  * @swagger
  * /assets/{id}/prices:
  *   post:
- *     summary: Add price data for an asset (Admin only)
+ *     summary: Add price data for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -591,10 +591,10 @@ router.post(
  * @swagger
  * /assets/{id}/prices/{priceId}:
  *   put:
- *     summary: Update price data for an asset (Admin only)
+ *     summary: Update price data for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -681,10 +681,10 @@ router.put(
  * @swagger
  * /assets/{id}/prices/bulk:
  *   post:
- *     summary: Bulk import price data for an asset (Admin only)
+ *     summary: Bulk import price data for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -754,10 +754,10 @@ router.post(
  * @swagger
  * /assets/{id}/prices/{priceId}:
  *   delete:
- *     summary: Delete a price entry for an asset (Admin only)
+ *     summary: Delete a price entry for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -822,7 +822,7 @@ router.delete(
  * @swagger
  * /assets/prices/refresh-all:
  *   post:
- *     summary: Refresh prices for all assets (Admin only)
+ *     summary: Refresh prices for all assets
  *     tags: [Assets]
  *     security: []
  *     responses:

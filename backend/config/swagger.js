@@ -36,6 +36,14 @@ All financial values use decimal notation in the API but are stored internally a
           scheme: "bearer",
           bearerFormat: "JWT",
         },
+        adminAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description:
+            "Admin-only endpoint. Pass the same JWT Bearer token as bearerAuth. " +
+            "The server returns 403 if the authenticated user does not have role === 'admin'.",
+        },
       },
     },
     security: [
