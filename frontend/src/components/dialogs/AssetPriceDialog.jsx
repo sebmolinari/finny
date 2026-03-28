@@ -16,6 +16,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
+import { ToolbarButton } from "@mui/x-data-grid";
+import Tooltip from "@mui/material/Tooltip";
 import { assetAPI } from "../../api/api";
 import { toast } from "react-toastify";
 import { handleApiError } from "../../utils/errorHandler";
@@ -50,6 +52,8 @@ export default function AssetPriceDialog({
     open: false,
     priceId: null,
   });
+  const [selectionModel, setSelectionModel] = useState({ type: "include", ids: new Set() });
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   // Load prices whenever the dialog opens for a new asset
   useEffect(() => {
@@ -57,6 +61,7 @@ export default function AssetPriceDialog({
     loadPrices();
     setPriceFormData({ date: getTodayInTimezone(userTimezone), price: "" });
     setEditingPrice(null);
+    setSelectionModel({ type: "include", ids: new Set() });
   }, [open, asset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPrices = async () => {
@@ -127,10 +132,35 @@ export default function AssetPriceDialog({
     }
   };
 
+  const selectedCount =
+    selectionModel.type === "exclude"
+      ? priceData.length - selectionModel.ids.size
+      : selectionModel.ids.size;
+
+  const getSelectedIds = () =>
+    selectionModel.type === "exclude"
+      ? priceData.filter((p) => !selectionModel.ids.has(p.id)).map((p) => p.id)
+      : [...selectionModel.ids];
+
+  const handleBulkDeleteConfirmed = async () => {
+    setBulkDeleteConfirm(false);
+    try {
+      const ids = getSelectedIds();
+      const { data } = await assetAPI.bulkDeletePrices(asset.id, ids);
+      toast.success(`${data.deleted} price${data.deleted !== 1 ? "s" : ""} deleted`);
+      setSelectionModel({ type: "include", ids: new Set() });
+      await loadPrices();
+      onPriceChange();
+    } catch (error) {
+      handleApiError(error, "Failed to delete prices");
+    }
+  };
+
   const handleClose = () => {
     setEditingPrice(null);
     setPriceData([]);
     setPriceFormData({ date: getTodayInTimezone(userTimezone), price: "" });
+    setSelectionModel({ type: "include", ids: new Set() });
     onClose();
   };
 
@@ -285,10 +315,26 @@ export default function AssetPriceDialog({
                   rows={priceData}
                   columns={columns}
                   autoHeight
+                  checkboxSelection={isAdmin}
                   disableRowSelectionOnClick
+                  rowSelectionModel={selectionModel}
+                  onRowSelectionModelChange={(model) => setSelectionModel(model)}
                   getRowId={(row) => row.id}
                   pageSize={25}
                   rowsPerPageOptions={[10, 25, 50]}
+                  slotProps={{
+                    toolbar: {
+                      actions: isAdmin && (
+                        <Box sx={{ visibility: selectedCount > 0 ? "visible" : "hidden" }}>
+                          <Tooltip title={`Delete ${selectedCount} selected`}>
+                            <ToolbarButton color="error" onClick={() => setBulkDeleteConfirm(true)}>
+                              <DeleteIcon fontSize="small" />
+                            </ToolbarButton>
+                          </Tooltip>
+                        </Box>
+                      ),
+                    },
+                  }}
                 />
               </div>
             </Paper>
@@ -310,6 +356,16 @@ export default function AssetPriceDialog({
         confirmLabel="Delete"
         onConfirm={handleDeletePriceConfirmed}
         onClose={() => setDeletePriceConfirm({ open: false, priceId: null })}
+      />
+
+      <ConfirmPhraseDialog
+        open={bulkDeleteConfirm}
+        title={`Delete ${selectedCount} Price${selectedCount !== 1 ? "s" : ""}`}
+        phrase="delete"
+        description={`This will permanently remove ${selectedCount} price record${selectedCount !== 1 ? "s" : ""}.`}
+        confirmLabel="Delete"
+        onConfirm={handleBulkDeleteConfirmed}
+        onClose={() => setBulkDeleteConfirm(false)}
       />
     </>
   );

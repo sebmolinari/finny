@@ -26,6 +26,7 @@ router.get("/config", authMiddleware, adminMiddleware, (_req, res) => {
     PORT: process.env.PORT,
     DB_KEY: mask(process.env.DB_KEY),
     DB_VERBOSE: process.env.DB_VERBOSE,
+    DB_AUDIT_QUERIES: process.env.DB_AUDIT_QUERIES,
     JWT_SECRET: mask(process.env.JWT_SECRET),
     JWT_EXPIRATION: process.env.JWT_EXPIRATION,
     RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,

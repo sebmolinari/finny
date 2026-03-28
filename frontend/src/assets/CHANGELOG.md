@@ -4,7 +4,7 @@ All notable changes to this project are documented below.
 
 ### Added
 
-- **Stale price detection** on the Missing Prices page — toggle "Detect stale prices" to surface assets whose last price record is older than today (or the last transaction date for fully closed positions). Stale gaps are filled using the same Yahoo Finance batch-fetch and review workflow as missing prices. Assets with manual pricing are excluded automatically and listed in a warning banner. A **Status** column distinguishes "No Price" from "Stale" issues in the issues table.
+- **Stale price detection** on the Missing Prices page — toggle "Detect stale prices" to surface assets whose last price record is older than today (or the last transaction date for fully closed positions). Stale gaps are filled using the same Yahoo Finance batch-fetch and review workflow as missing prices. Assets with manual pricing are excluded automatically and listed in a warning banner.
 
 ---
 

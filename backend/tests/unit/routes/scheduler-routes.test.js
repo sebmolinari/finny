@@ -319,3 +319,46 @@ describe("GET /scheduler/:id/instances", () => {
     expect((await request(app).get("/scheduler/1/instances")).status).toBe(500);
   });
 });
+
+// ── PUT /:id — frequency-specific metadata validation ─────────────────────────
+
+describe("PUT /scheduler/:id — weekly/monthly metadata validation", () => {
+  const base = {
+    name: "Test",
+    type: "asset_refresh",
+    time_of_day: "09:00",
+    enabled: true,
+  };
+
+  it("returns 400 when weekly frequency has no day_of_week (line 338)", async () => {
+    const res = await request(app)
+      .put("/scheduler/1")
+      .send({ ...base, frequency: "weekly" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/day_of_week/);
+  });
+
+  it("returns 400 when weekly frequency has out-of-range day_of_week", async () => {
+    const res = await request(app)
+      .put("/scheduler/1")
+      .send({ ...base, frequency: "weekly", metadata: { day_of_week: 7 } });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/day_of_week/);
+  });
+
+  it("returns 400 when monthly frequency has no day_of_month (lines 345-351)", async () => {
+    const res = await request(app)
+      .put("/scheduler/1")
+      .send({ ...base, frequency: "monthly" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/day_of_month/);
+  });
+
+  it("returns 400 when monthly frequency has out-of-range day_of_month", async () => {
+    const res = await request(app)
+      .put("/scheduler/1")
+      .send({ ...base, frequency: "monthly", metadata: { day_of_month: 32 } });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/day_of_month/);
+  });
+});

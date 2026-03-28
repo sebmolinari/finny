@@ -868,6 +868,83 @@ router.post(
 
 /**
  * @swagger
+ * /assets/{id}/prices/bulk-delete:
+ *   delete:
+ *     summary: Delete multiple price entries for an asset
+ *     tags: [Assets]
+ *     security:
+ *       - adminAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Asset ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of price entry IDs to delete
+ *     responses:
+ *       200:
+ *         description: Price entries deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deleted:
+ *                   type: integer
+ *                   description: Number of records deleted
+ *       400:
+ *         description: ids array is required
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Server error
+ */
+router.delete(
+  "/:id/prices/bulk-delete",
+  authMiddleware,
+  adminMiddleware,
+  (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "ids array is required" });
+      }
+
+      const deleted = PriceData.bulkDelete(ids);
+
+      AuditLog.logDelete(
+        req.user.id,
+        req.user.username,
+        "price_data",
+        null,
+        { asset_id: req.params.id, ids, count: deleted },
+        req.ip,
+        req.get("user-agent"),
+      );
+
+      res.json({ deleted });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
+
+/**
+ * @swagger
  * /assets/{id}/prices/{priceId}:
  *   delete:
  *     summary: Delete a price entry for an asset

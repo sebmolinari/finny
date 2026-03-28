@@ -551,10 +551,6 @@ USDC,USD Coin,currency,USD,,`;
     },
   ];
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
   return (
     <PageContainer>
       <Box sx={{ ...fadeInUpSx(1) }}>

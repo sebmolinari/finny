@@ -1431,6 +1431,7 @@ class AnalyticsService {
         a.name,
         a.asset_type,
         a.price_symbol,
+        a.price_source,
         b.name        AS broker_name,
         (
           SELECT MAX(pd.date)
@@ -1468,7 +1469,8 @@ class AnalyticsService {
         status = "ok";
       }
 
-      if (status !== "no_price") continue;
+      if (status === "ok") continue;
+      if (status === "stale_price" && !includeStale) continue;
 
       issues.push({
         transaction_id: row.transaction_id,
@@ -1477,6 +1479,7 @@ class AnalyticsService {
         asset_id: row.asset_id,
         symbol: row.symbol,
         price_symbol: row.price_symbol || null,
+        price_source: row.price_source || null,
         name: row.name,
         asset_type: row.asset_type,
         broker_name: row.broker_name,
@@ -1561,6 +1564,7 @@ class AnalyticsService {
             asset_id: asset.asset_id,
             symbol: asset.symbol,
             price_symbol: asset.price_symbol || null,
+            price_source: asset.price_source || null,
             name: asset.name,
             asset_type: asset.asset_type,
             broker_name: null,

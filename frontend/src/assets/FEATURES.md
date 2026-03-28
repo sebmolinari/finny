@@ -50,6 +50,7 @@ Finny is a finance management web application for tracking investments across mu
 - Asset catalog with configurable price sources per asset: CoinGecko, Yahoo Finance, DolarAPI, Supabase or Manual
 - Optional price symbol override and price factor for unit conversions
 - Historical price data with daily snapshots; edit or delete individual data points
+- **Bulk delete prices** — select multiple price records in the Asset Price dialog and delete them all in one confirmed action (admin only)
 - Automatic portfolio valuation based on latest prices
 - **Save & Add Another** — add multiple assets in sequence without reopening the dialog
 - **Bulk import** — paste CSV to create multiple assets or import historical prices in bulk from the Assets page toolbar
@@ -185,7 +186,9 @@ Finny is a finance management web application for tracking investments across mu
 - Identifies assets with transactions on dates that have no price data
 - **Stale price detection** — toggle to also surface assets whose last price record is older than today (open positions) or older than their last transaction date (closed positions); the engine would otherwise silently roll the last known price forward
 - Assets with manual pricing are excluded from stale detection and listed in a warning banner
-- Batch-fetch historical closing prices from Yahoo Finance with a progress bar
+- **Price Source column** — shows the configured price source per asset; non-Yahoo sources are highlighted and auto-excluded from Yahoo Finance fetches with a warning banner
+- **Year-by-year fetch** — select a specific year and fetch up to 100 dates per round; review and apply before continuing to the next chunk to avoid rate limits and keep the review manageable
+- Batch-fetch historical closing prices from Yahoo Finance with a progress bar; results shown only after the full round completes
 - Review and edit proposed prices before applying; manual entry for gaps Yahoo Finance could not fill
 - Status column distinguishes "No Price" issues from "Stale" issues when stale detection is enabled
 

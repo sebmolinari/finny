@@ -28,6 +28,9 @@ export const assetAPI = {
   deletePrice: (assetId, priceId) =>
     api.delete(`/assets/${assetId}/prices/${priceId}`),
 
+  bulkDeletePrices: (assetId, ids) =>
+    api.delete(`/assets/${assetId}/prices/bulk-delete`, { data: { ids } }),
+
   refreshAllPrices: () => api.post("/assets/prices/refresh-all"),
 
   refreshAssetPrice: (assetId) => api.post(`/assets/${assetId}/prices/refresh`),

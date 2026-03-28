@@ -39,4 +39,23 @@ describe("adminMiddleware", () => {
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
   });
+
+  it("returns 403 via catch block when req.user.role getter throws (lines 19-20)", () => {
+    // Simulate an unexpected error during role access to exercise the catch branch
+    const req = {};
+    Object.defineProperty(req, "user", {
+      get() {
+        throw new Error("unexpected error accessing user");
+      },
+    });
+    const res = makeRes();
+
+    adminMiddleware(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Access denied" }),
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
 });

@@ -1005,6 +1005,19 @@ describe("AnalyticsService.getTaxHarvestingSuggestions", () => {
 
 describe("AnalyticsService.getMissingPrices", () => {
   let userId, assetId;
+  const { toValueScale } = require("../../../utils/valueScale");
+
+  const insertTx = (aid, date, type = "buy", qty = 5, price = 50) =>
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).run(userId, aid, date, type,
+      toValueScale(qty, 8).value, toValueScale(price, 6).value, 0,
+      toValueScale(qty * price, 4).value, userId).lastInsertRowid;
+
+  const insertPrice = (aid, date, price = 50, source = "yahoo") =>
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
+    ).run(aid, date, toValueScale(price, 6).value, source, userId).lastInsertRowid;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -1023,105 +1036,209 @@ describe("AnalyticsService.getMissingPrices", () => {
     db.clearAll();
   });
 
-  it("returns no_price issues for transactions with no price data (lines 1314, 1323)", () => {
-    const { toValueScale } = require("../../../utils/valueScale");
-    db.prepare(
-      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
-    ).run(userId, assetId, "2024-01-15", "buy",
-      toValueScale(5, 8).value, toValueScale(50, 6).value, 0, toValueScale(250, 4).value, userId);
+  // ── no_price ──────────────────────────────────────────────────────────────
+
+  it("returns no_price issue when transaction has no price data at all", () => {
+    insertTx(assetId, "2024-01-15");
 
     const result = AnalyticsService.getMissingPrices(userId);
     expect(result.total_issues).toBe(1);
+    expect(result.total_issues).toBe(result.issues.length);
     expect(result.issues[0].status).toBe("no_price");
     expect(result.issues[0].symbol).toBe("NOPRICE");
+    expect(result.issues[0].transaction_id).not.toBeNull();
+    expect(result.issues[0].closest_price_date).toBeNull();
+    expect(result.issues[0].closest_price).toBeNull();
+    expect(result.issues[0].days_without_price).toBeNull();
   });
 
-  it("returns empty when no buy/sell transactions", () => {
+  it("returns empty when there are no buy/sell transactions", () => {
     const result = AnalyticsService.getMissingPrices(userId);
     expect(result.total_issues).toBe(0);
     expect(result.issues).toEqual([]);
-  });
-
-  it("does not include stale_price issues when includeStale is false (default)", () => {
-    const { toValueScale } = require("../../../utils/valueScale");
-    // Transaction with a price that is clearly in the past (not today)
-    db.prepare(
-      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
-    ).run(userId, assetId, "2020-01-01", "buy",
-      toValueScale(5, 8).value, toValueScale(50, 6).value, 0, toValueScale(250, 4).value, userId);
-    db.prepare(
-      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
-    ).run(assetId, "2020-01-01", toValueScale(50, 6).value, "yahoo", userId);
-
-    const result = AnalyticsService.getMissingPrices(userId, { includeStale: false });
-    // The price exists on the transaction date, so no no_price issues
-    expect(result.issues.filter((i) => i.status === "stale_price")).toHaveLength(0);
     expect(result.stale_metadata).toBeNull();
   });
 
-  it("detects stale prices when includeStale is true", () => {
-    const { toValueScale } = require("../../../utils/valueScale");
-    db.prepare(
-      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
-    ).run(userId, assetId, "2020-01-01", "buy",
-      toValueScale(5, 8).value, toValueScale(50, 6).value, 0, toValueScale(250, 4).value, userId);
-    // Insert a price clearly in the past
-    db.prepare(
-      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
-    ).run(assetId, "2020-01-01", toValueScale(50, 6).value, "yahoo", userId);
+  it("does not flag a transaction when an exact price exists on the trade date", () => {
+    insertTx(assetId, "2024-06-01");
+    insertPrice(assetId, "2024-06-01");
 
+    // No transaction-level issue (no_price or stale tx) — the exact price satisfies the trade
     const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
-    const staleIssues = result.issues.filter((i) => i.status === "stale_price");
-    // Should have stale issues for every day from 2020-01-02 to today
-    expect(staleIssues.length).toBeGreaterThan(0);
-    expect(staleIssues[0].asset_id).toBe(assetId);
-    expect(staleIssues[0].symbol).toBe("NOPRICE");
-    expect(staleIssues[0].transaction_id).toBeNull();
-    expect(staleIssues[0].closest_price_date).toBe("2020-01-01");
-    // First stale date is the day after the last price
-    expect(staleIssues[0].trade_date).toBe("2020-01-02");
-    expect(result.stale_metadata).not.toBeNull();
+    const txIssues = result.issues.filter((i) => i.transaction_id !== null);
+    expect(txIssues).toHaveLength(0);
   });
 
-  it("excludes assets with price_source=manual from stale detection", () => {
-    const { toValueScale } = require("../../../utils/valueScale");
-    // Create a manual-priced asset
+  it("does not flag a transaction when an older price exists as a fallback", () => {
+    insertTx(assetId, "2024-06-10");
+    insertPrice(assetId, "2024-06-01"); // earlier price — engine can use it
+
+    // With includeStale=false: no issues (the tx itself is ok, stale suppressed)
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: false });
+    expect(result.issues.filter((i) => i.status === "no_price")).toHaveLength(0);
+  });
+
+  it("includes price_source in no_price issues", () => {
+    const cgAssetId = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, price_source, active, created_by) VALUES (?,?,?,?,?,1,?)"
+    ).run("BTC", "Bitcoin", "crypto", "USD", "coingecko", userId).lastInsertRowid;
+
+    insertTx(cgAssetId, "2024-03-01", "buy", 1, 60000);
+
+    const result = AnalyticsService.getMissingPrices(userId);
+    expect(result.issues[0].price_source).toBe("coingecko");
+  });
+
+  it("ignores dividend and non-buy/sell transactions", () => {
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).run(userId, assetId, "2024-01-01", "dividend", 0, 0, 0, toValueScale(10, 4).value, userId);
+
+    const result = AnalyticsService.getMissingPrices(userId);
+    expect(result.total_issues).toBe(0);
+  });
+
+  // ── transaction-level stale_price ─────────────────────────────────────────
+
+  it("includes transaction-level stale_price when price exists but predates the trade date", () => {
+    insertPrice(assetId, "2024-01-01");
+    insertTx(assetId, "2024-02-15");
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    const txStale = result.issues.filter(
+      (i) => i.status === "stale_price" && i.transaction_id !== null,
+    );
+    expect(txStale).toHaveLength(1);
+    expect(txStale[0].trade_date).toBe("2024-02-15");
+    expect(txStale[0].closest_price_date).toBe("2024-01-01");
+    expect(txStale[0].days_without_price).toBe(45);
+  });
+
+  it("suppresses transaction-level stale_price when includeStale is false", () => {
+    insertPrice(assetId, "2024-01-01"); // price before tx
+    insertTx(assetId, "2024-02-15");
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: false });
+    expect(result.issues.filter((i) => i.status === "stale_price")).toHaveLength(0);
+  });
+
+  it("propagates price_source into transaction-level stale_price issues", () => {
+    const cgAssetId = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, price_source, active, created_by) VALUES (?,?,?,?,?,1,?)"
+    ).run("ETH", "Ethereum", "crypto", "USD", "coingecko", userId).lastInsertRowid;
+
+    insertPrice(cgAssetId, "2024-01-01", 3000);
+    insertTx(cgAssetId, "2024-03-01", "buy", 1, 3500);
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    const txStale = result.issues.filter(
+      (i) => i.status === "stale_price" && i.transaction_id !== null,
+    );
+    expect(txStale[0].price_source).toBe("coingecko");
+  });
+
+  // ── asset-level stale_price (gap-fill) ────────────────────────────────────
+
+  it("generates one stale issue per missing day from latest price to today (open position)", () => {
+    insertTx(assetId, "2020-01-01");
+    insertPrice(assetId, "2020-01-01"); // latest price is 2020-01-01, open position
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    const assetStale = result.issues.filter(
+      (i) => i.status === "stale_price" && i.transaction_id === null,
+    );
+    expect(assetStale.length).toBeGreaterThan(0);
+    expect(assetStale[0].trade_date).toBe("2020-01-02"); // day after latest price
+    expect(assetStale[0].closest_price_date).toBe("2020-01-01");
+    expect(assetStale[0].days_without_price).toBe(1);
+    expect(assetStale[0].transaction_id).toBeNull();
+    expect(assetStale[0].symbol).toBe("NOPRICE");
+  });
+
+  it("stops asset-level stale at last transaction date for a closed position", () => {
+    // buy 5 then sell 5 → net_quantity = 0 → closed position
+    insertTx(assetId, "2024-01-01", "buy", 5);
+    insertTx(assetId, "2024-03-01", "sell", 5);
+    insertPrice(assetId, "2024-01-01");
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    const assetStale = result.issues.filter(
+      (i) => i.status === "stale_price" && i.transaction_id === null,
+    );
+    expect(assetStale.length).toBeGreaterThan(0);
+    const lastDate = assetStale[assetStale.length - 1].trade_date;
+    expect(lastDate).toBe("2024-03-01"); // stops at last tx, not today
+  });
+
+  it("propagates price_source into asset-level stale_price issues", () => {
+    const cgAssetId = db.prepare(
+      "INSERT INTO assets (symbol, name, asset_type, currency, price_source, active, created_by) VALUES (?,?,?,?,?,1,?)"
+    ).run("BTC", "Bitcoin", "crypto", "USD", "coingecko", userId).lastInsertRowid;
+
+    insertTx(cgAssetId, "2024-01-01", "buy", 1, 40000);
+    insertPrice(cgAssetId, "2024-01-01", 40000);
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    const assetStale = result.issues.filter(
+      (i) => i.status === "stale_price" && i.transaction_id === null && i.asset_id === cgAssetId,
+    );
+    expect(assetStale.length).toBeGreaterThan(0);
+    expect(assetStale[0].price_source).toBe("coingecko");
+  });
+
+  it("does not generate asset-level stale issues when latest price is today", () => {
+    const { getTodayInTimezone } = require("../../../utils/dateUtils");
+    const today = getTodayInTimezone("UTC");
+
+    insertTx(assetId, today);
+    insertPrice(assetId, today);
+
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    expect(result.issues.filter((i) => i.status === "stale_price" && i.transaction_id === null)).toHaveLength(0);
+  });
+
+  it("excludes assets with price_source=manual from asset-level stale detection", () => {
     const manualAssetId = db.prepare(
       "INSERT INTO assets (symbol, name, asset_type, currency, price_source, active, created_by) VALUES (?,?,?,?,?,1,?)"
     ).run("MANL", "Manual Asset", "realestate", "USD", "manual", userId).lastInsertRowid;
 
-    db.prepare(
-      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
-    ).run(userId, manualAssetId, "2020-01-01", "buy",
-      toValueScale(1, 8).value, toValueScale(100, 6).value, 0, toValueScale(100, 4).value, userId);
-    db.prepare(
-      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
-    ).run(manualAssetId, "2020-01-01", toValueScale(100, 6).value, "manual", userId);
+    insertTx(manualAssetId, "2020-01-01", "buy", 1, 100);
+    insertPrice(manualAssetId, "2020-01-01", 100, "manual");
 
     const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
-    const staleIssues = result.issues.filter((i) => i.status === "stale_price");
-    // Manual asset should not appear in stale issues
-    expect(staleIssues.every((i) => i.asset_id !== manualAssetId)).toBe(true);
+    expect(result.issues.filter((i) => i.asset_id === manualAssetId && i.status === "stale_price")).toHaveLength(0);
     expect(result.stale_metadata.excluded_manual_count).toBe(1);
     expect(result.stale_metadata.excluded_manual_symbols).toContain("MANL");
   });
 
-  it("does not generate stale issues for an asset whose latest price is today", () => {
-    const { toValueScale } = require("../../../utils/valueScale");
-    const { getTodayInTimezone } = require("../../../utils/dateUtils");
-    const today = getTodayInTimezone("UTC");
+  // ── stale_metadata ────────────────────────────────────────────────────────
 
-    db.prepare(
-      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)"
-    ).run(userId, assetId, today, "buy",
-      toValueScale(5, 8).value, toValueScale(50, 6).value, 0, toValueScale(250, 4).value, userId);
-    db.prepare(
-      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)"
-    ).run(assetId, today, toValueScale(50, 6).value, "yahoo", userId);
+  it("returns stale_metadata=null when includeStale is false", () => {
+    const result = AnalyticsService.getMissingPrices(userId, { includeStale: false });
+    expect(result.stale_metadata).toBeNull();
+  });
+
+  it("returns stale_metadata with zero counts when no manual assets exist", () => {
+    insertTx(assetId, "2020-01-01");
+    insertPrice(assetId, "2020-01-01");
 
     const result = AnalyticsService.getMissingPrices(userId, { includeStale: true });
-    const staleIssues = result.issues.filter((i) => i.status === "stale_price");
-    expect(staleIssues).toHaveLength(0);
+    expect(result.stale_metadata).not.toBeNull();
+    expect(result.stale_metadata.excluded_manual_count).toBe(0);
+    expect(result.stale_metadata.excluded_manual_symbols).toEqual([]);
+  });
+
+  // ── total_issues consistency ──────────────────────────────────────────────
+
+  it("total_issues always equals issues.length", () => {
+    insertTx(assetId, "2024-01-15");
+    insertPrice(assetId, "2023-12-01"); // price before tx → stale_price tx-level
+
+    const withStale = AnalyticsService.getMissingPrices(userId, { includeStale: true });
+    expect(withStale.total_issues).toBe(withStale.issues.length);
+
+    const withoutStale = AnalyticsService.getMissingPrices(userId, { includeStale: false });
+    expect(withoutStale.total_issues).toBe(withoutStale.issues.length);
   });
 });
 
