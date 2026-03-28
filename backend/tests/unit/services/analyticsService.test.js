@@ -1422,4 +1422,62 @@ describe("AnalyticsService.getPortfolioUnrealizedPnlHistory", () => {
       expect(entry.unrealized_gain).toBeCloseTo(1000, 2);
     });
   });
+
+  it("exhausts an entire lot (FIFO oldest.quantityValue <= remaining branch)", () => {
+    const assetId = db
+      .prepare(
+        "INSERT INTO assets (symbol, name, asset_type, currency, active, created_by) VALUES (?,?,?,?,1,?)",
+      )
+      .run("TST3", "Test Asset 3", "equity", "USD", userId).lastInsertRowid;
+
+    // Buy 5 units at $100 each → lot A: qty=5, cost=$500
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId, assetId, "2023-01-01", "buy",
+      toValueScale(5, QTY_SCALE).value,
+      toValueScale(100, PRICE_SCALE).value,
+      0,
+      toValueScale(500, AMOUNT_SCALE).value,
+      userId,
+    );
+
+    // Buy another 5 units at $120 each → lot B: qty=5, cost=$600
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId, assetId, "2023-02-01", "buy",
+      toValueScale(5, QTY_SCALE).value,
+      toValueScale(120, PRICE_SCALE).value,
+      0,
+      toValueScale(600, AMOUNT_SCALE).value,
+      userId,
+    );
+
+    // Sell 7 units → exhausts lot A entirely (5 units, hits oldest.quantityValue <= remaining),
+    // then partially deducts lot B (2 units from 5)
+    db.prepare(
+      "INSERT INTO transactions (user_id, asset_id, date, transaction_type, quantity, price, fee, total_amount, created_by) VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      userId, assetId, "2023-06-01", "sell",
+      toValueScale(7, QTY_SCALE).value,
+      toValueScale(150, PRICE_SCALE).value,
+      0,
+      toValueScale(1050, AMOUNT_SCALE).value,
+      userId,
+    );
+
+    // Current price $150 → 3 remaining units, cost basis = 3/5 * $600 = $360
+    // unrealized gain = 3 * 150 - 360 = $90
+    db.prepare(
+      "INSERT INTO price_data (asset_id, date, price, source, created_by) VALUES (?,?,?,?,?)",
+    ).run(assetId, "2023-01-01", toValueScale(150, PRICE_SCALE).value, "manual", userId);
+
+    const result = AnalyticsService.getPortfolioUnrealizedPnlHistory(userId, 2, []);
+
+    expect(result).toHaveLength(2);
+    result.forEach((entry) => {
+      expect(entry.unrealized_gain).toBeCloseTo(90, 2);
+    });
+  });
 });

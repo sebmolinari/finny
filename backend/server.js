@@ -115,12 +115,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Swagger API docs (only in development)
-if (process.env.NODE_ENV !== "production") {
-  const swaggerSetup = require("./config/swagger");
-  swaggerSetup(app);
-  logger.info("Swagger API docs available at /api/v1/api-docs");
-}
+// Swagger API docs
+const swaggerSetup = require("./config/swagger");
+swaggerSetup(app);
+logger.info("Swagger API docs available at /api/v1/api-docs");
 
 // API v1 Routes
 app.use("/api/v1/auth", authLimiter, authRoutes);

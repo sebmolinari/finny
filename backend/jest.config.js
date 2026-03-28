@@ -15,7 +15,7 @@ module.exports = {
   },
 
   // Silence console output from the app during tests (optional: comment out to debug)
-  silent: false,
+  silent: true,
 
   // Exit after all tests complete, even if there are open handles (timer leaks)
   forceExit: true,

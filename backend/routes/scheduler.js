@@ -13,7 +13,7 @@ const logger = require("../utils/logger");
  *     summary: Get all schedulers
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: query
  *         name: limit
@@ -63,7 +63,7 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Create a new scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -85,14 +85,14 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
  *                 description: Type of scheduler
  *               frequency:
  *                 type: string
- *                 enum: [daily, weekly, monthly]
+ *                 enum: [daily, weekly, monthly, weekdays]
  *                 description: Frequency of execution
  *               time_of_day:
  *                 type: string
  *                 description: Time to execute (HH:MM format)
  *               metadata:
  *                 type: object
- *                 description: Additional configuration (frequency for send_report, day_of_week for weekly, etc.)
+ *                 description: Additional configuration — day_of_week (0–6, required for weekly), day_of_month (1–31, required for monthly)
  *     responses:
  *       201:
  *         description: Scheduler created successfully
@@ -105,7 +105,7 @@ router.get("/", authMiddleware, adminMiddleware, (req, res) => {
  */
 router.post("/", authMiddleware, adminMiddleware, (req, res) => {
   try {
-    const { name, type, frequency, time_of_day } = req.body;
+    const { name, type, frequency, time_of_day, metadata } = req.body;
 
     // Validate required fields
     if (!name || !type || !frequency || !time_of_day) {
@@ -121,10 +121,37 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
       });
     }
 
-    if (!["daily", "weekly", "monthly"].includes(frequency)) {
+    if (!["daily", "weekly", "monthly", "weekdays"].includes(frequency)) {
       return res.status(400).json({
-        message: "Invalid frequency. Must be 'daily', 'weekly', or 'monthly'",
+        message: "Invalid frequency. Must be 'daily', 'weekly', 'monthly', or 'weekdays'",
       });
+    }
+
+    // Validate frequency-specific metadata
+    if (frequency === "weekly") {
+      if (
+        metadata?.day_of_week === undefined ||
+        !Number.isInteger(metadata.day_of_week) ||
+        metadata.day_of_week < 0 ||
+        metadata.day_of_week > 6
+      ) {
+        return res.status(400).json({
+          message: "day_of_week must be an integer between 0 (Sunday) and 6 (Saturday) for weekly frequency",
+        });
+      }
+    }
+
+    if (frequency === "monthly") {
+      if (
+        metadata?.day_of_month === undefined ||
+        !Number.isInteger(metadata.day_of_month) ||
+        metadata.day_of_month < 1 ||
+        metadata.day_of_month > 31
+      ) {
+        return res.status(400).json({
+          message: "day_of_month must be an integer between 1 and 31 for monthly frequency",
+        });
+      }
     }
 
     // Time format validation is done in the service
@@ -134,6 +161,7 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
       frequency,
       time_of_day,
       req.user.id,
+      metadata || null,
     );
 
     // Log audit trail
@@ -142,7 +170,7 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
       req.user.username,
       "schedulers",
       schedulerId,
-      { name, type, frequency, time_of_day },
+      { name, type, frequency, time_of_day, metadata },
       req.ip,
       req.get("user-agent"),
     );
@@ -174,7 +202,7 @@ router.post("/", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Get a scheduler by ID
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -214,7 +242,7 @@ router.get("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Update a scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -241,13 +269,14 @@ router.get("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *                 enum: [send_report, asset_refresh]
  *               frequency:
  *                 type: string
- *                 enum: [daily, weekly, monthly]
+ *                 enum: [daily, weekly, monthly, weekdays]
  *               time_of_day:
  *                 type: string
  *               enabled:
  *                 type: boolean
  *               metadata:
  *                 type: object
+ *                 description: day_of_week (0–6, required for weekly), day_of_month (1–31, required for monthly)
  *     responses:
  *       200:
  *         description: Scheduler updated successfully
@@ -263,7 +292,7 @@ router.get("/:id", authMiddleware, adminMiddleware, (req, res) => {
 router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
   try {
     const { id } = req.params;
-    const { name, type, frequency, time_of_day, enabled } = req.body;
+    const { name, type, frequency, time_of_day, enabled, metadata } = req.body;
 
     // Check if scheduler exists
     const scheduler = SchedulerService.getSchedulerById(id);
@@ -292,10 +321,37 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
       });
     }
 
-    if (!["daily", "weekly", "monthly"].includes(frequency)) {
+    if (!["daily", "weekly", "monthly", "weekdays"].includes(frequency)) {
       return res.status(400).json({
-        message: "Invalid frequency. Must be 'daily', 'weekly', or 'monthly'",
+        message: "Invalid frequency. Must be 'daily', 'weekly', 'monthly', or 'weekdays'",
       });
+    }
+
+    // Validate frequency-specific metadata
+    if (frequency === "weekly") {
+      if (
+        metadata?.day_of_week === undefined ||
+        !Number.isInteger(metadata.day_of_week) ||
+        metadata.day_of_week < 0 ||
+        metadata.day_of_week > 6
+      ) {
+        return res.status(400).json({
+          message: "day_of_week must be an integer between 0 (Sunday) and 6 (Saturday) for weekly frequency",
+        });
+      }
+    }
+
+    if (frequency === "monthly") {
+      if (
+        metadata?.day_of_month === undefined ||
+        !Number.isInteger(metadata.day_of_month) ||
+        metadata.day_of_month < 1 ||
+        metadata.day_of_month > 31
+      ) {
+        return res.status(400).json({
+          message: "day_of_month must be an integer between 1 and 31 for monthly frequency",
+        });
+      }
     }
 
     const changes = SchedulerService.updateScheduler(
@@ -306,6 +362,7 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
       time_of_day,
       enabled ? 1 : 0,
       req.user.id,
+      metadata || null,
     );
 
     if (changes === 0) {
@@ -319,7 +376,7 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
       "schedulers",
       id,
       scheduler,
-      { name, type, frequency, time_of_day, enabled },
+      { name, type, frequency, time_of_day, enabled, metadata },
       req.ip,
       req.get("user-agent"),
     );
@@ -351,7 +408,7 @@ router.put("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Purge all scheduler instances (execution history)
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: All instances deleted
@@ -388,7 +445,7 @@ router.delete("/instances", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Delete a scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -446,7 +503,7 @@ router.delete("/:id", authMiddleware, adminMiddleware, (req, res) => {
  *     summary: Get execution history for a scheduler
  *     tags: [Schedulers]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id

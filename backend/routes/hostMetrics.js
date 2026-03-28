@@ -2,10 +2,10 @@
  * @swagger
  * /metrics/host-metrics:
  *   get:
- *     summary: Get host system metrics (admin only)
+ *     summary: Get host system metrics
  *     tags: [Metrics]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: Host system metrics
@@ -77,6 +77,7 @@ function getCpuTemperature() {
 
 // Helper to get disk space (root fs)
 function getDiskSpace() {
+  if (process.platform !== "linux") return null;
   try {
     const { execSync } = require("child_process");
     const output = execSync("df -h / | tail -1", { encoding: "utf8" });

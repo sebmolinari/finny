@@ -161,11 +161,11 @@ router.patch("/:id/read", (req, res) => {
  * @swagger
  * /notifications/admin/purge:
  *   delete:
- *     summary: (Admin) Delete all notifications for the authenticated user
+ *     summary: Delete all notifications for the authenticated user
  *     description: Permanently removes every notification (read and unread) for the requesting user. Useful for resetting notification state so fresh alerts are generated on the next poll cycle.
  *     tags: [Notifications]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: All notifications deleted

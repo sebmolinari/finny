@@ -25,11 +25,11 @@ const PROTECTED_SYMBOLS_SQL = PROTECTED_SYMBOLS.map((s) => `'${s}'`).join(",");
  * @swagger
  * /database/wal-checkpoint:
  *   post:
- *     summary: Run a WAL TRUNCATE checkpoint (admin only)
+ *     summary: Run a WAL TRUNCATE checkpoint
  *     description: Flushes all committed WAL frames to the main database file and truncates the WAL file back to zero bytes.
  *     tags: [Database]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     responses:
  *       200:
  *         description: Checkpoint completed
@@ -66,6 +66,45 @@ router.post("/wal-checkpoint", authMiddleware, adminMiddleware, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /database/reset:
+ *   delete:
+ *     summary: Reset all user data
+ *     description: Deletes all transactions, price data (except protected symbols), assets (except protected symbols), brokers, allocation targets, notifications, and audit logs. Also resets onboarding and settings_reviewed flags.
+ *     tags: [Database]
+ *     security:
+ *       - adminAuth: []
+ *     responses:
+ *       200:
+ *         description: Data reset summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deleted:
+ *                   type: object
+ *                   properties:
+ *                     allocationTargets:
+ *                       type: integer
+ *                     transactions:
+ *                       type: integer
+ *                     priceData:
+ *                       type: integer
+ *                     assets:
+ *                       type: integer
+ *                     brokers:
+ *                       type: integer
+ *                     auditLogs:
+ *                       type: integer
+ *                     notifications:
+ *                       type: integer
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Reset failed
+ */
 router.delete("/reset", authMiddleware, adminMiddleware, (req, res) => {
   try {
     const resetAll = db.transaction(() => {
@@ -115,6 +154,41 @@ router.delete("/reset", authMiddleware, adminMiddleware, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /database/seed:
+ *   post:
+ *     summary: Seed database with sample data
+ *     description: Loads brokers, assets, price history, transactions, and allocation targets from the bundled sample_data/data.json file. Skips protected symbols and logs conflicts as warnings.
+ *     tags: [Database]
+ *     security:
+ *       - adminAuth: []
+ *     responses:
+ *       200:
+ *         description: Seed counts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 created:
+ *                   type: object
+ *                   properties:
+ *                     brokers:
+ *                       type: integer
+ *                     assets:
+ *                       type: integer
+ *                     priceData:
+ *                       type: integer
+ *                     transactions:
+ *                       type: integer
+ *                     allocationTargets:
+ *                       type: integer
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Seed failed
+ */
 router.post("/seed", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const sampleData = require(
@@ -188,12 +262,14 @@ router.post("/seed", authMiddleware, adminMiddleware, async (req, res) => {
     for (const tx of sampleData.transactions || []) {
       const assetId = tx.asset_symbol ? assetIds[tx.asset_symbol] : undefined;
       const brokerId = tx.broker_name ? brokerIds[tx.broker_name] : undefined;
+      const destBrokerId = tx.destination_broker_name ? brokerIds[tx.destination_broker_name] : undefined;
       try {
         Transaction.create(
           userId,
           {
             asset_id: assetId || null,
             broker_id: brokerId || null,
+            destination_broker_id: destBrokerId || null,
             date: tx.date,
             transaction_type: tx.transaction_type,
             quantity: tx.quantity,

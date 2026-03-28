@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import {
   Typography,
   Button,
@@ -41,6 +41,35 @@ import PageContainer from "../components/layout/PageContainer";
 import ConfirmPhraseDialog from "../components/dialogs/ConfirmPhraseDialog";
 import { useUserSettings } from "../hooks/useUserSettings";
 
+const BlotterToolbarActions = memo(function BlotterToolbarActions({
+  selectedCount,
+  onBulkDelete,
+  onAdd,
+  onImport,
+}) {
+  return (
+    <>
+      <Box sx={{ visibility: selectedCount > 0 ? "visible" : "hidden" }}>
+        <Tooltip title={`Delete ${selectedCount} selected`}>
+          <ToolbarButton color="error" onClick={onBulkDelete}>
+            <DeleteIcon fontSize="small" />
+          </ToolbarButton>
+        </Tooltip>
+      </Box>
+      <Tooltip title="Add transaction">
+        <ToolbarButton color="primary" onClick={onAdd}>
+          <AddIcon fontSize="small" />
+        </ToolbarButton>
+      </Tooltip>
+      <Tooltip title="Import">
+        <ToolbarButton color="primary" onClick={onImport}>
+          <UploadIcon fontSize="small" />
+        </ToolbarButton>
+      </Tooltip>
+    </>
+  );
+});
+
 export default function Blotter() {
   const theme = useTheme();
   const {
@@ -58,6 +87,8 @@ export default function Blotter() {
   const [openDialog, setOpenDialog] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
+  const [selectionModel, setSelectionModel] = useState({ type: "include", ids: new Set() });
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
   const [importResults, setImportResults] = useState(null);
@@ -128,19 +159,43 @@ export default function Blotter() {
     loadValidTransactionTypes();
   }, [loadAssets, loadBrokers, loadValidTransactionTypes]);
 
-  const handleOpenDialog = (transaction = null) => {
+  const handleOpenDialog = useCallback((transaction = null) => {
     loadCashBalance();
     setEditingTransaction(transaction || null);
     setOpenDialog(true);
-  };
+  }, [loadCashBalance]);
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingTransaction(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = useCallback((id) => {
     setDeleteConfirm({ open: true, id });
+  }, []);
+
+  const selectedCount =
+    selectionModel.type === "exclude"
+      ? transactions.length - selectionModel.ids.size
+      : selectionModel.ids.size;
+
+  const handleBulkDelete = useCallback(() => setBulkDeleteConfirm(true), []);
+
+  const handleBulkDeleteConfirmed = async () => {
+    const count = selectedCount;
+    const ids =
+      selectionModel.type === "exclude"
+        ? transactions.filter((t) => !selectionModel.ids.has(t.id)).map((t) => t.id)
+        : [...selectionModel.ids];
+    setBulkDeleteConfirm(false);
+    try {
+      await transactionAPI.bulkDelete(ids);
+      toast.success(`${count} transaction(s) deleted successfully`);
+      setSelectionModel({ type: "include", ids: new Set() });
+      loadTransactions();
+    } catch (error) {
+      handleApiError(error, "Failed to delete transactions");
+    }
   };
 
   const handleDeleteConfirmed = async () => {
@@ -155,11 +210,11 @@ export default function Blotter() {
     }
   };
 
-  const handleOpenImportDialog = () => {
+  const handleOpenImportDialog = useCallback(() => {
     setOpenImportDialog(true);
     setImportText("");
     setImportResults(null);
-  };
+  }, []);
 
   const handleCloseImportDialog = () => {
     setOpenImportDialog(false);
@@ -289,7 +344,7 @@ export default function Blotter() {
     }
   };
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       field: "date",
       headerName: "Date",
@@ -409,7 +464,22 @@ export default function Blotter() {
         </Box>
       ),
     },
-  ];
+  ], [userDateFormat, handleOpenDialog, handleDelete]);
+
+  const getRowId = useCallback((row) => row.id, []);
+
+  const gridSlotProps = useMemo(() => ({
+    toolbar: {
+      actions: (
+        <BlotterToolbarActions
+          selectedCount={selectedCount}
+          onBulkDelete={handleBulkDelete}
+          onAdd={handleOpenDialog}
+          onImport={handleOpenImportDialog}
+        />
+      ),
+    },
+  }), [selectedCount, handleBulkDelete, handleOpenDialog, handleOpenImportDialog]);
 
   if (transactionsLoading || settingsLoading) {
     return <LoadingSpinner />;
@@ -436,31 +506,11 @@ export default function Blotter() {
           rows={transactions}
           columns={columns}
           loading={transactionsLoading}
-          getRowId={(row) => row.id}
-          slotProps={{
-            toolbar: {
-              actions: (
-                <>
-                  <Tooltip title="Add transaction">
-                    <ToolbarButton
-                      color="primary"
-                      onClick={() => handleOpenDialog()}
-                    >
-                      <AddIcon fontSize="small" />
-                    </ToolbarButton>
-                  </Tooltip>
-                  <Tooltip title="Import">
-                    <ToolbarButton
-                      color="primary"
-                      onClick={() => handleOpenImportDialog()}
-                    >
-                      <UploadIcon fontSize="small" />
-                    </ToolbarButton>
-                  </Tooltip>
-                </>
-              ),
-            },
-          }}
+          getRowId={getRowId}
+          checkboxSelection
+          rowSelectionModel={selectionModel}
+          onRowSelectionModelChange={(model) => setSelectionModel(model)}
+          slotProps={gridSlotProps}
         />
       </Box>
 
@@ -597,6 +647,14 @@ export default function Blotter() {
         }
         onConfirm={handleDeleteConfirmed}
         onClose={() => setDeleteConfirm({ open: false, id: null })}
+      />
+      <ConfirmPhraseDialog
+        open={bulkDeleteConfirm}
+        title={`Delete ${selectedCount} Transaction${selectedCount !== 1 ? "s" : ""}`}
+        phrase="delete"
+        description={`This will permanently remove ${selectedCount} transaction(s). Type "delete" to confirm.`}
+        onConfirm={handleBulkDeleteConfirmed}
+        onClose={() => setBulkDeleteConfirm(false)}
       />
     </PageContainer>
   );

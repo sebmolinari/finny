@@ -11,6 +11,7 @@ const {
   assetValidation,
   assetPriceValidation,
   bulkImportPricesValidation,
+  runAssetValidation,
 } = require("../middleware/validators/assetValidators");
 const logger = require("../utils/logger");
 
@@ -132,10 +133,10 @@ router.get("/symbol/:symbol", authMiddleware, (req, res) => {
  * @swagger
  * /assets:
  *   post:
- *     summary: Create a new asset (Admin only)
+ *     summary: Create a new asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -236,10 +237,10 @@ router.post(
  * @swagger
  * /assets/{id}:
  *   put:
- *     summary: Update an asset (Admin only)
+ *     summary: Update an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -363,10 +364,10 @@ router.put(
  * @swagger
  * /assets/{id}:
  *   delete:
- *     summary: Delete an asset (Admin only)
+ *     summary: Delete an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -413,6 +414,121 @@ router.delete("/:id", authMiddleware, adminMiddleware, (req, res) => {
     res.json({ message: "Asset deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /assets/prices/bulk-import:
+ *   post:
+ *     summary: Bulk import prices for multiple assets by symbol
+ *     tags: [Assets]
+ *     security:
+ *       - adminAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               prices:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [symbol, date, price]
+ *                   properties:
+ *                     symbol:
+ *                       type: string
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                     price:
+ *                       type: number
+ *     responses:
+ *       200:
+ *         description: Bulk import results
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Admin access required
+ */
+router.post("/prices/bulk-import", authMiddleware, adminMiddleware, async (req, res, next) => {
+  try {
+    const { prices } = req.body;
+    if (!Array.isArray(prices) || prices.length === 0)
+      return res.status(400).json({ message: "prices array is required" });
+
+    const results = { success: [], errors: [] };
+    for (const [index, item] of prices.entries()) {
+      try {
+        if (!item.symbol) throw new Error("symbol is required");
+        if (!item.date) throw new Error("date is required");
+        if (!item.price || isNaN(item.price) || item.price <= 0)
+          throw new Error("price must be a positive number");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date))
+          throw new Error("date must be YYYY-MM-DD");
+
+        const asset = Asset.findBySymbol(item.symbol.toUpperCase());
+        if (!asset) throw new Error(`asset "${item.symbol}" not found`);
+
+        const existing = PriceData.findByAssetAndDate(asset.id, item.date);
+        if (existing) {
+          const old = { price: existing.price };
+          PriceData.update(existing.id, item.price, "manual", req.user.id);
+          AuditLog.logUpdate(
+            req.user.id,
+            req.user.username,
+            "price_data",
+            existing.id,
+            old,
+            { price: item.price },
+            req.ip,
+            req.get("user-agent"),
+          );
+          results.success.push({
+            row: index + 2,
+            symbol: item.symbol,
+            action: "updated",
+          });
+        } else {
+          const id = PriceData.create(
+            asset.id,
+            item.date,
+            item.price,
+            "manual",
+            req.user.id,
+          );
+          AuditLog.logCreate(
+            req.user.id,
+            req.user.username,
+            "price_data",
+            id,
+            { ...item, bulk_import: true },
+            req.ip,
+            req.get("user-agent"),
+          );
+          results.success.push({
+            row: index + 2,
+            symbol: item.symbol,
+            action: "created",
+          });
+        }
+      } catch (err) {
+        results.errors.push({
+          row: index + 2,
+          symbol: item.symbol,
+          error: err.message,
+        });
+      }
+    }
+
+    res.json({
+      message: `Bulk import completed: ${results.success.length} succeeded, ${results.errors.length} failed`,
+      results,
+    });
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -507,10 +623,10 @@ router.get("/:id/price/latest", authMiddleware, (req, res) => {
  * @swagger
  * /assets/{id}/prices:
  *   post:
- *     summary: Add price data for an asset (Admin only)
+ *     summary: Add price data for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -591,10 +707,10 @@ router.post(
  * @swagger
  * /assets/{id}/prices/{priceId}:
  *   put:
- *     summary: Update price data for an asset (Admin only)
+ *     summary: Update price data for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -681,10 +797,10 @@ router.put(
  * @swagger
  * /assets/{id}/prices/bulk:
  *   post:
- *     summary: Bulk import price data for an asset (Admin only)
+ *     summary: Bulk import price data for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -754,10 +870,10 @@ router.post(
  * @swagger
  * /assets/{id}/prices/{priceId}:
  *   delete:
- *     summary: Delete a price entry for an asset (Admin only)
+ *     summary: Delete a price entry for an asset
  *     tags: [Assets]
  *     security:
- *       - bearerAuth: []
+ *       - adminAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -822,7 +938,7 @@ router.delete(
  * @swagger
  * /assets/prices/refresh-all:
  *   post:
- *     summary: Refresh prices for all assets (Admin only)
+ *     summary: Refresh prices for all assets
  *     tags: [Assets]
  *     security: []
  *     responses:
@@ -916,6 +1032,118 @@ router.post("/:id/prices/refresh", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: error.message });
     }
     res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /assets/bulk:
+ *   post:
+ *     summary: Bulk import assets
+ *     tags: [Assets]
+ *     security:
+ *       - adminAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               assets:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     symbol:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     asset_type:
+ *                       type: string
+ *                     currency:
+ *                       type: string
+ *                     price_source:
+ *                       type: string
+ *                     price_symbol:
+ *                       type: string
+ *                     price_factor:
+ *                       type: number
+ *                     active:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: Bulk import completed
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+router.post("/bulk", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { assets } = req.body;
+
+    if (!Array.isArray(assets) || assets.length === 0) {
+      return res.status(400).json({ message: "Assets array is required" });
+    }
+
+    if (!assets.every((a) => typeof a === "object")) {
+      return res.status(400).json({ message: "Each asset must be an object" });
+    }
+
+    const results = { success: [], errors: [] };
+
+    for (const [index, assetData] of assets.entries()) {
+      try {
+        const validated = await runAssetValidation({ ...assetData });
+        const {
+          symbol,
+          name,
+          asset_type,
+          currency,
+          price_source,
+          price_symbol,
+          price_factor,
+        } = validated;
+        const active = assetData.active === undefined ? 1 : assetData.active ? 1 : 0;
+
+        const id = Asset.create(
+          symbol,
+          name,
+          asset_type,
+          currency,
+          price_source,
+          price_symbol,
+          active,
+          price_factor,
+          req.user.id,
+        );
+
+        results.success.push({ row: index + 2, id, symbol });
+
+        AuditLog.logCreate(
+          req.user.id,
+          req.user.username,
+          "assets",
+          id,
+          { symbol, name, asset_type, currency, bulk_import: true },
+          req.ip,
+          req.get("user-agent"),
+        );
+      } catch (error) {
+        const message = error.message.includes("UNIQUE constraint failed")
+          ? `Asset with symbol '${assetData.symbol}' already exists`
+          : error.message;
+        results.errors.push({ row: index + 2, error: message, details: error.details || null });
+      }
+    }
+
+    res.json({
+      message: `Bulk import completed: ${results.success.length} succeeded, ${results.errors.length} failed`,
+      results,
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
 });
 

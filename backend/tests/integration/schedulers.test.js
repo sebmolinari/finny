@@ -50,6 +50,83 @@ describe("POST /api/v1/schedulers", () => {
     const res = await request(app).post("/api/v1/schedulers").set(headers).send({});
     expect(res.status).toBe(400);
   });
+
+  it("creates a weekdays scheduler", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Weekday Refresh",
+      type: "asset_refresh",
+      frequency: "weekdays",
+      time_of_day: "08:00",
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.frequency).toBe("weekdays");
+  });
+
+  it("creates a weekly scheduler with valid day_of_week", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Weekly Monday",
+      type: "asset_refresh",
+      frequency: "weekly",
+      time_of_day: "08:00",
+      metadata: { day_of_week: 1 },
+    });
+    expect(res.status).toBe(201);
+    expect(JSON.parse(res.body.data.metadata)).toEqual({ day_of_week: 1 });
+  });
+
+  it("returns 400 for weekly scheduler without metadata", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Bad Weekly",
+      type: "asset_refresh",
+      frequency: "weekly",
+      time_of_day: "08:00",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for weekly scheduler with out-of-range day_of_week", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Bad Weekly 2",
+      type: "asset_refresh",
+      frequency: "weekly",
+      time_of_day: "08:00",
+      metadata: { day_of_week: 7 },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("creates a monthly scheduler with valid day_of_month", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Monthly 15th",
+      type: "asset_refresh",
+      frequency: "monthly",
+      time_of_day: "08:00",
+      metadata: { day_of_month: 15 },
+    });
+    expect(res.status).toBe(201);
+    expect(JSON.parse(res.body.data.metadata)).toEqual({ day_of_month: 15 });
+  });
+
+  it("returns 400 for monthly scheduler without metadata", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Bad Monthly",
+      type: "asset_refresh",
+      frequency: "monthly",
+      time_of_day: "08:00",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for monthly scheduler with out-of-range day_of_month", async () => {
+    const res = await request(app).post("/api/v1/schedulers").set(headers).send({
+      name: "Bad Monthly 2",
+      type: "asset_refresh",
+      frequency: "monthly",
+      time_of_day: "08:00",
+      metadata: { day_of_month: 32 },
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /api/v1/schedulers/:id", () => {

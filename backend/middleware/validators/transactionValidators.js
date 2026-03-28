@@ -19,11 +19,7 @@ const transactionValidation = [
     .notEmpty()
     .withMessage("Transaction type is required")
     .isIn(VALID_VALUES.TRANSACTION_TYPES)
-    .withMessage(
-      `Invalid transaction type. Valid types: ${VALID_VALUES.TRANSACTION_TYPES.join(
-        ", ",
-      )}`,
-    ),
+    .withMessage(`Invalid transaction type. Valid types: ${VALID_VALUES.TRANSACTION_TYPES.join(", ")}`),
 
   body("total_amount")
     .notEmpty()
@@ -35,29 +31,38 @@ const transactionValidation = [
   body("asset_id")
     .optional({ checkFalsy: true })
     .isInt({ min: 1 })
-    .withMessage("Asset ID must be a positive integer")
+    .withMessage("Asset must be a positive integer")
     .toInt(),
 
   body("broker_id")
-    .optional({ checkFalsy: true })
+    .if(body("transaction_type").isIn(["buy", "sell", "dividend", "coupon", "interest", "rental", "transfer"]))
+    .notEmpty()
+    .withMessage("Broker is required for buy/sell/transfer")
+    .bail()
     .isInt({ min: 1 })
-    .withMessage("Broker ID must be a positive integer")
+    .withMessage("Broker must be a positive integer")
     .toInt(),
 
   body("destination_broker_id")
     .optional({ checkFalsy: true })
     .isInt({ min: 1 })
-    .withMessage("Destination broker ID must be a positive integer")
+    .withMessage("Destination broker must be a positive integer")
     .toInt(),
 
   body("quantity")
-    .optional({ checkFalsy: true })
+    .if(body("transaction_type").isIn(["buy", "sell", "transfer"]))
+    .notEmpty()
+    .withMessage("Quantity is required for buy/sell/transfer")
+    .bail()
     .isFloat({ gt: 0 })
     .withMessage("Quantity must be a positive number")
     .toFloat(),
 
   body("price")
-    .optional({ checkFalsy: true })
+    .if(body("transaction_type").isIn(["buy", "sell"]))
+    .notEmpty()
+    .withMessage("Price is required for buy/sell")
+    .bail()
     .isFloat({ gt: 0 })
     .withMessage("Price must be a positive number")
     .toFloat(),
@@ -72,10 +77,7 @@ const transactionValidation = [
     .trim()
     .custom((value, { req }) => {
       // Notes are mandatory for sell transactions
-      if (
-        req.body.transaction_type === "sell" &&
-        (!value || value.trim() === "")
-      ) {
+      if (req.body.transaction_type === "sell" && (!value || value.trim() === "")) {
         throw new Error("Notes are required for sell transactions");
       }
       return true;
@@ -92,20 +94,8 @@ const transactionValidation = [
  * @param {boolean} params.isUpdate
  * @param {Object|null} params.currentTx   Existing transaction (PUT only)
  */
-function validateTransactionBusiness({
-  tx,
-  userId,
-  isUpdate = false,
-  currentTx = null,
-}) {
-  const {
-    asset_id,
-    broker_id,
-    transaction_type,
-    quantity,
-    price,
-    total_amount,
-  } = tx;
+function validateTransactionBusiness({ tx, userId, isUpdate = false, currentTx = null }) {
+  const { asset_id, broker_id, transaction_type, quantity, price, total_amount } = tx;
 
   const userSettings = UserSettings.findByUserId(userId);
   const validateCash = userSettings.validate_cash_balance;
@@ -117,15 +107,7 @@ function validateTransactionBusiness({
     throw err;
   };
 
-  const assetRequiredTypes = [
-    "buy",
-    "sell",
-    "dividend",
-    "interest",
-    "rental",
-    "coupon",
-    "transfer",
-  ];
+  const assetRequiredTypes = ["buy", "sell", "dividend", "interest", "rental", "coupon", "transfer"];
 
   if (assetRequiredTypes.includes(transaction_type)) {
     if (!asset_id) {
@@ -134,10 +116,8 @@ function validateTransactionBusiness({
   }
 
   if (transaction_type === "buy" || transaction_type === "sell") {
-    if (quantity === undefined || price === undefined || !broker_id) {
-      error(
-        "broker_id, asset_id, quantity, and price are required for buy/sell",
-      );
+    if (quantity == null || price == null || broker_id == null) {
+      error("broker_id, quantity, and price are required for buy/sell");
     }
 
     // BUY: cash balance
@@ -151,19 +131,13 @@ function validateTransactionBusiness({
       }
 
       if (total_amount > availableCash) {
-        error(
-          `Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`,
-        );
+        error(`Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`);
       }
     }
 
     // SELL: asset balance
     if (transaction_type === "sell" && validateSell) {
-      let availableQuantity = Transaction.getAssetBrokerBalance(
-        userId,
-        asset_id,
-        broker_id,
-      );
+      let availableQuantity = Transaction.getAssetBrokerBalance(userId, asset_id, broker_id);
 
       // PUT: add back existing sell quantity
       if (isUpdate && currentTx && currentTx.transaction_type === "sell") {
@@ -171,9 +145,7 @@ function validateTransactionBusiness({
       }
 
       if (quantity > availableQuantity) {
-        error(
-          `Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`,
-        );
+        error(`Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`);
       }
     }
   }
@@ -181,19 +153,13 @@ function validateTransactionBusiness({
   if (transaction_type === "transfer") {
     const { destination_broker_id } = tx;
     if (!broker_id || !destination_broker_id || !asset_id || !quantity) {
-      error(
-        "asset_id, broker_id, destination_broker_id, and quantity are required for transfer",
-      );
+      error("asset, broker, destination broker, and quantity are required for transfer");
     }
     if (broker_id === destination_broker_id) {
       error("Source and destination brokers must be different");
     }
     if (validateSell) {
-      const availableQuantity = Transaction.getAssetBrokerBalance(
-        userId,
-        asset_id,
-        broker_id,
-      );
+      const availableQuantity = Transaction.getAssetBrokerBalance(userId, asset_id, broker_id);
       if (quantity > availableQuantity) {
         error(
           `Insufficient holdings at source broker. Available: ${availableQuantity}, attempted to transfer: ${quantity}`,
@@ -203,7 +169,38 @@ function validateTransactionBusiness({
   }
 }
 
+const { validationResult } = require("express-validator");
+
+/**
+ * Run transactionValidation programmatically (for bulk)
+ */
+async function runTransactionValidation(tx) {
+  const fakeReq = { body: tx };
+
+  // Run all validators
+  for (const validator of transactionValidation) {
+    await validator.run(fakeReq);
+  }
+
+  const result = validationResult(fakeReq);
+
+  if (!result.isEmpty()) {
+    const err = new Error(
+      result
+        .array()
+        .map((e) => e.msg)
+        .join(", "),
+    );
+    err.status = 400;
+    err.details = result.array();
+    throw err;
+  }
+
+  return fakeReq.body;
+}
+
 module.exports = {
   transactionValidation,
   validateTransactionBusiness,
+  runTransactionValidation,
 };

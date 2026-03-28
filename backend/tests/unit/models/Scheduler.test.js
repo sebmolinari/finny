@@ -32,6 +32,19 @@ describe("Scheduler.create", () => {
       Scheduler.create("Bad Scheduler", "price_fetch", "daily", "0800", userId)
     ).toThrow(ValidationError);
   });
+
+  it("persists metadata when provided", () => {
+    const meta = { day_of_week: 3 };
+    const id = Scheduler.create("Weekly Wed", "price_fetch", "weekly", "08:00", userId, meta);
+    const s = Scheduler.findById(id);
+    expect(JSON.parse(s.metadata)).toEqual(meta);
+  });
+
+  it("stores null metadata when not provided", () => {
+    const id = Scheduler.create("Daily No Meta", "price_fetch", "daily", "08:00", userId);
+    const s = Scheduler.findById(id);
+    expect(s.metadata).toBeNull();
+  });
 });
 
 describe("Scheduler.findById", () => {
@@ -93,6 +106,21 @@ describe("Scheduler.update", () => {
     expect(() =>
       Scheduler.update(id, "UpdateBad", "price_fetch", "daily", "bad", 1, userId)
     ).toThrow(ValidationError);
+  });
+
+  it("persists metadata on update", () => {
+    const id = Scheduler.create("Monthly", "price_fetch", "monthly", "09:00", userId);
+    const meta = { day_of_month: 15 };
+    Scheduler.update(id, "Monthly", "price_fetch", "monthly", "09:00", 1, userId, meta);
+    const s = Scheduler.findById(id);
+    expect(JSON.parse(s.metadata)).toEqual(meta);
+  });
+
+  it("clears metadata when null passed on update", () => {
+    const id = Scheduler.create("Weekly", "price_fetch", "weekly", "09:00", userId, { day_of_week: 2 });
+    Scheduler.update(id, "Weekly", "price_fetch", "daily", "09:00", 1, userId, null);
+    const s = Scheduler.findById(id);
+    expect(s.metadata).toBeNull();
   });
 });
 

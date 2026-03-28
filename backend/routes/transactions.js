@@ -11,6 +11,7 @@ const { getTodayInTimezone } = require("../utils/dateUtils");
 const {
   transactionValidation,
   validateTransactionBusiness,
+  runTransactionValidation,
 } = require("../middleware/validators/transactionValidators");
 
 /**
@@ -367,6 +368,83 @@ router.put(
 
 /**
  * @swagger
+ * /transactions/bulk:
+ *   delete:
+ *     summary: Bulk delete transactions by IDs
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: Bulk delete completed
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+router.delete("/bulk", authMiddleware, async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array" });
+    }
+    if (!ids.every((id) => Number.isInteger(id) && id > 0)) {
+      return res.status(400).json({ message: "All ids must be positive integers" });
+    }
+
+    const results = { success: [], errors: [] };
+
+    for (const id of ids) {
+      try {
+        const transaction = Transaction.findById(id, req.user.id);
+        const deleted = Transaction.delete(id, req.user.id);
+        if (!deleted) {
+          results.errors.push({ id, error: "Not found" });
+        } else {
+          results.success.push({ id });
+          if (transaction) {
+            AuditLog.logDelete(
+              req.user.id,
+              req.user.username,
+              "transactions",
+              id,
+              {
+                transaction_type: transaction.transaction_type,
+                total_amount: transaction.total_amount,
+              },
+              req.ip,
+              req.get("user-agent"),
+            );
+          }
+        }
+      } catch (err) {
+        results.errors.push({ id, error: err.message });
+      }
+    }
+
+    res.json({
+      message: `Bulk delete completed: ${results.success.length} deleted, ${results.errors.length} failed`,
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
  * /transactions/{id}:
  *   delete:
  *     summary: Delete an transaction transaction by ID
@@ -475,7 +553,7 @@ router.delete("/:id", authMiddleware, (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post("/bulk", authMiddleware, (req, res) => {
+router.post("/bulk", authMiddleware, async (req, res) => {
   try {
     const { transactions } = req.body;
 
@@ -498,7 +576,15 @@ router.post("/bulk", authMiddleware, (req, res) => {
       errors: [],
     };
 
-    transactions.forEach((txData, index) => {
+    // validate every entry is an object before processing
+    if (!transactions.every((t) => typeof t === "object")) {
+      return res.status(400).json({
+        message: "Each transaction must be an object",
+      });
+    }
+
+    // ✅ async-safe loop
+    for (const [index, txData] of transactions.entries()) {
       const {
         asset_symbol,
         broker_name,
@@ -517,51 +603,37 @@ router.post("/bulk", authMiddleware, (req, res) => {
       // For non-cash transactions, get the asset and broker IDs
       if (transaction_type !== "deposit" && transaction_type !== "withdraw") {
         const asset = assets.find(
-          (a) => a.symbol.toLowerCase() === asset_symbol.toLowerCase(),
+          (a) => a.symbol.toLowerCase() === asset_symbol?.toLowerCase(),
         );
         const broker = brokers.find(
-          (b) => b.name.toLowerCase() === broker_name.toLowerCase(),
+          (b) => b.name.toLowerCase() === broker_name?.toLowerCase(),
         );
         asset_id = asset?.id;
         broker_id = broker?.id;
       }
 
       try {
+        // ✅ 1. Schema validation
+        const validatedTx = await runTransactionValidation({
+          asset_id,
+          broker_id,
+          date,
+          transaction_type,
+          quantity,
+          price,
+          fee,
+          total_amount,
+          notes,
+        });
+
+        // ✅ 2. Business validation (existing)
         validateTransactionBusiness({
-          tx: {
-            asset_id,
-            broker_id,
-            transaction_type,
-            quantity,
-            price,
-            total_amount,
-          },
+          tx: validatedTx,
           userId: req.user.id,
         });
-      } catch (err) {
-        results.errors.push({
-          row: index + 2,
-          error: err.message,
-        });
-        return;
-      }
-      try {
-        // Create transaction
-        const id = Transaction.create(
-          req.user.id,
-          {
-            asset_id,
-            broker_id,
-            date,
-            transaction_type,
-            quantity: quantity,
-            price: price,
-            fee: fee,
-            total_amount,
-            notes: notes,
-          },
-          req.user.id,
-        );
+
+        // ✅ 3. Create transaction
+        const id = Transaction.create(req.user.id, validatedTx, req.user.id);
 
         results.success.push({
           row: index + 2,
@@ -588,9 +660,10 @@ router.post("/bulk", authMiddleware, (req, res) => {
         results.errors.push({
           row: index + 2,
           error: error.message,
+          details: error.details || null,
         });
       }
-    });
+    }
 
     res.json({
       message: `Bulk import completed: ${results.success.length} succeeded, ${results.errors.length} failed`,
@@ -654,6 +727,7 @@ router.post("/bulk", authMiddleware, (req, res) => {
 router.post("/transfer", authMiddleware, (req, res) => {
   try {
     const {
+      id,
       asset_id,
       broker_id,
       destination_broker_id,
@@ -693,11 +767,28 @@ router.post("/transfer", authMiddleware, (req, res) => {
       return res.status(404).json({ message: "Destination broker not found" });
 
     // Check source broker has sufficient holdings
-    const availableQuantity = Transaction.getAssetBrokerBalance(
+    let availableQuantity = Transaction.getAssetBrokerBalance(
       req.user.id,
       asset_id,
       broker_id,
     );
+
+    // When updating an existing transfer, add back the original quantity so it
+    // isn't double-counted against the new quantity being validated
+    let existingTx = null;
+    if (id) {
+      existingTx = Transaction.findById(id, req.user.id);
+      if (!existingTx) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      if (
+        existingTx.broker_id === parseInt(broker_id) &&
+        existingTx.asset_id === parseInt(asset_id)
+      ) {
+        availableQuantity += existingTx.quantity;
+      }
+    }
+
     if (quantity > availableQuantity) {
       return res.status(400).json({
         message: `Insufficient holdings at source broker. Available: ${availableQuantity}, attempted to transfer: ${quantity}`,
@@ -721,31 +812,65 @@ router.post("/transfer", authMiddleware, (req, res) => {
         : 0;
     const totalCostTransferred = costPerUnit * quantity;
 
-    const id = Transaction.create(
-      req.user.id,
-      {
-        asset_id: parseInt(asset_id),
-        broker_id: parseInt(broker_id),
-        destination_broker_id: parseInt(destination_broker_id),
-        date,
-        transaction_type: "transfer",
-        quantity,
-        price: costPerUnit,
-        fee: 0,
-        total_amount: totalCostTransferred,
-        notes:
-          notes || `Transfer from ${sourceBroker.name} to ${destBroker.name}`,
-      },
-      req.user.id,
-    );
+    const transferData = {
+      asset_id: parseInt(asset_id),
+      broker_id: parseInt(broker_id),
+      destination_broker_id: parseInt(destination_broker_id),
+      date,
+      transaction_type: "transfer",
+      quantity,
+      price: costPerUnit,
+      fee: 0,
+      total_amount: totalCostTransferred,
+      notes:
+        notes || `Transfer from ${sourceBroker.name} to ${destBroker.name}`,
+    };
 
-    const transaction = Transaction.findById(id, req.user.id);
+    if (id) {
+      // Update existing transfer
+      Transaction.update(id, req.user.id, transferData, req.user.id);
+
+      const transaction = Transaction.findById(id, req.user.id);
+
+      AuditLog.logUpdate(
+        req.user.id,
+        req.user.username,
+        "transactions",
+        parseInt(id),
+        {
+          transaction_type: existingTx.transaction_type,
+          asset_id: existingTx.asset_id,
+          broker_id: existingTx.broker_id,
+          destination_broker_id: existingTx.destination_broker_id,
+          quantity: existingTx.quantity,
+          date: existingTx.date,
+          notes: existingTx.notes,
+        },
+        {
+          transaction_type: "transfer",
+          asset_id,
+          broker_id,
+          destination_broker_id,
+          quantity,
+          date,
+          notes: transferData.notes,
+        },
+        req.ip,
+        req.get("user-agent"),
+      );
+
+      return res.json(transaction);
+    }
+
+    const newId = Transaction.create(req.user.id, transferData, req.user.id);
+
+    const transaction = Transaction.findById(newId, req.user.id);
 
     AuditLog.logCreate(
       req.user.id,
       req.user.username,
       "transactions",
-      id,
+      newId,
       {
         transaction_type: "transfer",
         asset_id,

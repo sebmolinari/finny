@@ -22,34 +22,38 @@ class Scheduler {
     return db.prepare("SELECT * FROM schedulers WHERE id = ?").get(id);
   }
 
-  static create(name, type, frequency, timeOfDay, createdBy) {
+  static create(name, type, frequency, timeOfDay, createdBy, metadata = null) {
     if (!/^\d{2}:\d{2}$/.test(timeOfDay)) {
       throw new ValidationError("Invalid time format. Use HH:MM");
     }
 
+    const metadataStr = metadata != null ? JSON.stringify(metadata) : null;
+
     const result = db
       .prepare(
-        `INSERT INTO schedulers (name, type, frequency, time_of_day, created_by, updated_by)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO schedulers (name, type, frequency, time_of_day, metadata, created_by, updated_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(name, type, frequency, timeOfDay, createdBy, createdBy);
+      .run(name, type, frequency, timeOfDay, metadataStr, createdBy, createdBy);
 
     return result.lastInsertRowid;
   }
 
-  static update(id, name, type, frequency, timeOfDay, enabled, updatedBy) {
+  static update(id, name, type, frequency, timeOfDay, enabled, updatedBy, metadata = null) {
     if (!/^\d{2}:\d{2}$/.test(timeOfDay)) {
       throw new ValidationError("Invalid time format. Use HH:MM");
     }
+
+    const metadataStr = metadata != null ? JSON.stringify(metadata) : null;
 
     return db
       .prepare(
         `UPDATE schedulers
          SET name = ?, type = ?, frequency = ?, time_of_day = ?, enabled = ?,
-             updated_by = ?, updated_at = CURRENT_TIMESTAMP
+             metadata = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
       )
-      .run(name, type, frequency, timeOfDay, enabled, updatedBy, id).changes;
+      .run(name, type, frequency, timeOfDay, enabled, metadataStr, updatedBy, id).changes;
   }
 
   /** Soft-delete: disable rather than hard-delete */

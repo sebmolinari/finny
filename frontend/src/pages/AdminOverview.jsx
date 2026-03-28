@@ -1116,7 +1116,13 @@ export default function AdminOverview() {
                             <DeleteSweepIcon fontSize="small" />
                           )
                         }
-                        onClick={() => setPurgeHistoryDialogOpen(true)}
+                        onClick={() => {
+                          if (env === "development") {
+                            handlePurgeSchedulerHistory();
+                            return;
+                          }
+                          setPurgeHistoryDialogOpen(true);
+                        }}
                         disabled={purgingHistory}
                       >
                         Purge Scheduler History
@@ -1249,6 +1255,10 @@ export default function AdminOverview() {
                           )
                         }
                         onClick={() => {
+                          if (env === "development") {
+                            handleDeleteAllData();
+                            return;
+                          }
                           const word =
                             DELETE_CONFIRM_WORDS[
                               Math.floor(
@@ -1268,7 +1278,12 @@ export default function AdminOverview() {
                     <Alert severity="success" sx={{ py: 0, px: 1 }}>
                       Deleted: {deleteDataResult.deleted.transactions}{" "}
                       transactions, {deleteDataResult.deleted.assets} assets,{" "}
-                      {deleteDataResult.deleted.brokers} brokers.
+                      {deleteDataResult.deleted.brokers} brokers,{" "}
+                      {deleteDataResult.deleted.allocationTargets} allocation
+                      targets, {deleteDataResult.deleted.priceData} price
+                      records, {deleteDataResult.deleted.notifications}{" "}
+                      notifications, {deleteDataResult.deleted.auditLogs} audit
+                      logs.
                     </Alert>
                   )}
                   {deleteDataResult?.error && (

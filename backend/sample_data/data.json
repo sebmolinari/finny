@@ -16,7 +16,8 @@
     { "symbol": "TLT",    "name": "iShares 20+ Year Treasury Bond ETF","type": "fixedincome", "currency": "USD", "price_source": "yahoo",     "price_symbol": "TLT",     "active": 1 },
     { "symbol": "GLD",    "name": "SPDR Gold Shares",                  "type": "equity",      "currency": "USD", "price_source": "yahoo",     "price_symbol": "GLD",     "active": 1 },
     { "symbol": "USD",    "name": "US Dollar",                         "type": "currency",    "currency": "USD", "price_source": "manual",                               "active": 1 },
-    { "symbol": "EURUSD", "name": "Euro to US Dollar",                 "type": "currency",    "currency": "USD", "price_source": "yahoo",     "price_symbol": "EURUSD=X","active": 1 }
+    { "symbol": "EURUSD", "name": "Euro to US Dollar",                 "type": "currency",    "currency": "USD", "price_source": "yahoo",     "price_symbol": "EURUSD=X","active": 1 },
+    { "symbol": "PROP",   "name": "Rental Property",                   "type": "realestate",  "currency": "USD", "price_source": "manual",                               "active": 1 }
   ],
   "priceHistory": {
     "AAPL": [
@@ -372,6 +373,15 @@
       { "date": "2026-01-24", "price": 1.0521 },
       { "date": "2026-02-24", "price": 1.0456 },
       { "date": "2026-03-24", "price": 1.0497 }
+    ],
+    "PROP": [
+      { "date": "2023-09-01", "price": 280000 },
+      { "date": "2024-01-01", "price": 285000 },
+      { "date": "2024-07-01", "price": 292000 },
+      { "date": "2025-01-01", "price": 298000 },
+      { "date": "2025-07-01", "price": 305000 },
+      { "date": "2026-01-01", "price": 312000 },
+      { "date": "2026-03-01", "price": 315000 }
     ]
   },
   "transactions": [
@@ -536,6 +546,23 @@
       "notes": "Trimming AAPL on August pullback"
     },
     {
+      "date": "2023-08-25",
+      "transaction_type": "deposit",
+      "total_amount": 45000,
+      "notes": "Savings set aside for property down payment"
+    },
+    {
+      "date": "2023-09-01",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "buy",
+      "quantity": 1,
+      "price": 56000,
+      "fee": 5500,
+      "total_amount": 61500,
+      "notes": "Rental property acquisition — $56,000 down payment + $5,500 closing costs (mortgage financed)"
+    },
+    {
       "date": "2023-09-05",
       "asset_symbol": "SPY",
       "broker_name": "Broker A",
@@ -569,6 +596,17 @@
       "notes": "Q3 2023 dividend — 15 shares × $1.61"
     },
     {
+      "date": "2023-09-28",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1800,
+      "notes": "September 2023 rental income"
+    },
+    {
       "date": "2023-10-02",
       "asset_symbol": "TLT",
       "broker_name": "Broker B",
@@ -584,6 +622,17 @@
       "transaction_type": "deposit",
       "total_amount": 20000,
       "notes": "Additional capital injection"
+    },
+    {
+      "date": "2023-10-31",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1800,
+      "notes": "October 2023 rental income"
     },
     {
       "date": "2023-11-07",
@@ -641,6 +690,28 @@
       "notes": "Q4 2023 dividend — 15 shares × $1.65"
     },
     {
+      "date": "2023-11-30",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1800,
+      "notes": "November 2023 rental income"
+    },
+    {
+      "date": "2023-12-15",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker B",
+      "transaction_type": "interest",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 5.25,
+      "notes": "Monthly interest income — 5 shares × $1.05"
+    },
+    {
       "date": "2023-12-20",
       "asset_symbol": "TLT",
       "broker_name": "Broker B",
@@ -650,6 +721,17 @@
       "fee": 0,
       "total_amount": 26.25,
       "notes": "Semi-annual coupon — 15 shares × $1.75"
+    },
+    {
+      "date": "2023-12-29",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1800,
+      "notes": "December 2023 rental income"
     },
     {
       "date": "2024-01-16",
@@ -694,6 +776,28 @@
       "fee": 0.50,
       "total_amount": 2495.50,
       "notes": "Adding to SPY — broad market uptrend"
+    },
+    {
+      "date": "2024-01-31",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1850,
+      "notes": "January 2024 rental income"
+    },
+    {
+      "date": "2024-02-29",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1850,
+      "notes": "February 2024 rental income"
     },
     {
       "date": "2024-03-04",
@@ -760,6 +864,34 @@
       "fee": 0,
       "total_amount": 3.60,
       "notes": "Q2 2024 dividend — 15 shares × $0.24"
+    },
+    {
+      "date": "2024-05-31",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1850,
+      "notes": "Q2 2024 rental income (Mar–May)"
+    },
+    {
+      "date": "2024-06-01",
+      "transaction_type": "withdraw",
+      "total_amount": 5000,
+      "notes": "Cash withdrawal for personal expenses"
+    },
+    {
+      "date": "2024-06-15",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker B",
+      "transaction_type": "interest",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 5.25,
+      "notes": "Monthly interest income — 5 shares × $1.05"
     },
     {
       "date": "2024-06-07",
@@ -861,6 +993,28 @@
       "notes": "Q3 2024 dividend — 15 shares × $0.75"
     },
     {
+      "date": "2024-08-31",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1850,
+      "notes": "Q3 2024 rental income (Jun–Aug)"
+    },
+    {
+      "date": "2024-09-15",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker B",
+      "transaction_type": "interest",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 5.25,
+      "notes": "Monthly interest income — 5 shares × $1.05"
+    },
+    {
       "date": "2024-09-20",
       "asset_symbol": "SPY",
       "broker_name": "Broker A",
@@ -909,6 +1063,17 @@
       "fee": 0,
       "total_amount": 7.20,
       "notes": "Q4 2024 dividend — 30 shares × $0.24"
+    },
+    {
+      "date": "2024-11-30",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1900,
+      "notes": "Q4 2024 rental income (Sep–Nov)"
     },
     {
       "date": "2024-12-09",
@@ -999,6 +1164,28 @@
       "notes": "Q1 2025 dividend — 10 shares × $0.75"
     },
     {
+      "date": "2025-02-28",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1900,
+      "notes": "Q1 2025 rental income (Dec–Feb)"
+    },
+    {
+      "date": "2025-03-15",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker B",
+      "transaction_type": "interest",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 5.25,
+      "notes": "Monthly interest income — 5 shares × $1.05"
+    },
+    {
       "date": "2025-03-21",
       "asset_symbol": "SPY",
       "broker_name": "Broker A",
@@ -1041,6 +1228,23 @@
       "fee": 0,
       "total_amount": 7.20,
       "notes": "Q2 2025 dividend — 30 shares × $0.24"
+    },
+    {
+      "date": "2025-05-31",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1900,
+      "notes": "Q2 2025 rental income (Mar–May)"
+    },
+    {
+      "date": "2025-06-01",
+      "transaction_type": "withdraw",
+      "total_amount": 8000,
+      "notes": "Cash withdrawal — annual tax payment"
     },
     {
       "date": "2025-06-04",
@@ -1137,6 +1341,28 @@
       "notes": "Q3 2025 dividend — 15 shares × $0.75"
     },
     {
+      "date": "2025-08-31",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1950,
+      "notes": "Q3 2025 rental income (Jun–Aug)"
+    },
+    {
+      "date": "2025-09-15",
+      "asset_symbol": "TLT",
+      "broker_name": "Broker B",
+      "transaction_type": "interest",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 5.25,
+      "notes": "Monthly interest income — 5 shares × $1.05"
+    },
+    {
       "date": "2025-09-19",
       "asset_symbol": "SPY",
       "broker_name": "Broker A",
@@ -1201,6 +1427,17 @@
       "fee": 0,
       "total_amount": 11.25,
       "notes": "Q4 2025 dividend — 15 shares × $0.75"
+    },
+    {
+      "date": "2025-11-30",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1950,
+      "notes": "Q4 2025 rental income (Sep–Nov)"
     },
     {
       "date": "2025-12-19",
@@ -1269,6 +1506,27 @@
       "notes": "Adding TLT — building duration as rates fall"
     },
     {
+      "date": "2026-01-15",
+      "asset_symbol": "SPY",
+      "broker_name": "Broker A",
+      "destination_broker_name": "Broker C",
+      "transaction_type": "transfer",
+      "quantity": 5,
+      "total_amount": 0,
+      "notes": "Transfer 5 SPY shares from Broker A to Broker C — consolidating positions"
+    },
+    {
+      "date": "2026-02-28",
+      "asset_symbol": "PROP",
+      "broker_name": "Broker A",
+      "transaction_type": "rental",
+      "quantity": 0,
+      "price": 0,
+      "fee": 0,
+      "total_amount": 1950,
+      "notes": "Q1 2026 rental income (Dec–Feb)"
+    },
+    {
       "date": "2026-03-12",
       "asset_symbol": "MSFT",
       "broker_name": "Broker C",
@@ -1293,9 +1551,10 @@
   ],
   "allocationTargets": {
     "byType": [
-      { "asset_type": "equity",      "target_percentage": 60 },
-      { "asset_type": "crypto",      "target_percentage": 20 },
-      { "asset_type": "fixedincome", "target_percentage": 20 }
+      { "asset_type": "equity",      "target_percentage": 50 },
+      { "asset_type": "crypto",      "target_percentage": 15 },
+      { "asset_type": "fixedincome", "target_percentage": 20 },
+      { "asset_type": "realestate",  "target_percentage": 15 }
     ],
     "byAsset": [
       { "symbol": "AAPL",  "target_percentage": 30 },
@@ -1304,7 +1563,8 @@
       { "symbol": "SPY",   "target_percentage": 25 },
       { "symbol": "BTC",   "target_percentage": 60 },
       { "symbol": "ETH",   "target_percentage": 40 },
-      { "symbol": "TLT",   "target_percentage": 100 }
+      { "symbol": "TLT",   "target_percentage": 100 },
+      { "symbol": "PROP",  "target_percentage": 100 }
     ]
   }
 }

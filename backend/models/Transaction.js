@@ -62,6 +62,7 @@ class Transaction {
     const {
       asset_id,
       broker_id,
+      destination_broker_id,
       date,
       transaction_type,
       quantity,
@@ -78,8 +79,8 @@ class Transaction {
     const _fee = toValueScale(fee, FEE_SCALE);
 
     const stmt = db.prepare(`
-      UPDATE transactions 
-      SET asset_id = ?, broker_id = ?, date = ?, transaction_type = ?, quantity = ?, 
+      UPDATE transactions
+      SET asset_id = ?, broker_id = ?, destination_broker_id = ?, date = ?, transaction_type = ?, quantity = ?,
           price = ?, fee = ?, total_amount = ?, notes = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND user_id = ?
     `);
@@ -87,6 +88,7 @@ class Transaction {
     const result = stmt.run(
       asset_id,
       broker_id,
+      destination_broker_id || null,
       date,
       transaction_type,
       _qty.value,
