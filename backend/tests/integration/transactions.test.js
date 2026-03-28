@@ -180,3 +180,52 @@ describe("POST /api/v1/transactions/transfer", () => {
     expect([201, 400]).toContain(res.status); // 400 if validation fails
   });
 });
+
+describe("DELETE /api/v1/transactions/bulk", () => {
+  let tx1Id, tx2Id;
+
+  beforeEach(async () => {
+    db.prepare("DELETE FROM transactions").run();
+    const r1 = await request(app).post("/api/v1/transactions").set(headers).send(txDepositPayload());
+    const r2 = await request(app).post("/api/v1/transactions").set(headers).send(txDepositPayload());
+    tx1Id = r1.body.id;
+    tx2Id = r2.body.id;
+  });
+
+  afterEach(() => db.prepare("DELETE FROM transactions").run());
+
+  it("deletes multiple transactions and returns 200", async () => {
+    const res = await request(app)
+      .delete("/api/v1/transactions/bulk")
+      .set(headers)
+      .send({ ids: [tx1Id, tx2Id] });
+    expect(res.status).toBe(200);
+    expect(res.body.results.success).toHaveLength(2);
+    expect(res.body.results.errors).toHaveLength(0);
+  });
+
+  it("returns 400 for empty ids array", async () => {
+    const res = await request(app).delete("/api/v1/transactions/bulk").set(headers).send({ ids: [] });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for missing ids", async () => {
+    const res = await request(app).delete("/api/v1/transactions/bulk").set(headers).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("reports errors for unknown ids without failing the whole request", async () => {
+    const res = await request(app)
+      .delete("/api/v1/transactions/bulk")
+      .set(headers)
+      .send({ ids: [tx1Id, 99999] });
+    expect(res.status).toBe(200);
+    expect(res.body.results.success).toHaveLength(1);
+    expect(res.body.results.errors).toHaveLength(1);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).delete("/api/v1/transactions/bulk").send({ ids: [tx1Id] });
+    expect(res.status).toBe(401);
+  });
+});

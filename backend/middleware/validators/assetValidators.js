@@ -133,8 +133,26 @@ const bulkImportPricesValidation = [
     .withMessage("Source must not exceed 50 characters"),
 ];
 
+const { validationResult } = require("express-validator");
+
+async function runAssetValidation(data) {
+  const fakeReq = { body: data };
+  for (const validator of assetValidation) {
+    await validator.run(fakeReq);
+  }
+  const result = validationResult(fakeReq);
+  if (!result.isEmpty()) {
+    const err = new Error(result.array().map((e) => e.msg).join(", "));
+    err.status = 400;
+    err.details = result.array();
+    throw err;
+  }
+  return fakeReq.body;
+}
+
 module.exports = {
   assetValidation,
   assetPriceValidation,
   bulkImportPricesValidation,
+  runAssetValidation,
 };

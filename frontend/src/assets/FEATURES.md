@@ -33,6 +33,7 @@ Finny is a finance management web application for tracking investments across mu
 - Cash flow management (deposits/withdrawals) per broker
 - Support for Crypto, Currency, Equity, Fixed Income and Real Estate
 - **Save & Add Another** — create multiple transactions in sequence without reopening the dialog
+- **Bulk delete** — select multiple rows with checkboxes and delete them all in one confirmed action
 
 ## 📥 Data Import / Export
 
@@ -40,6 +41,9 @@ Finny is a finance management web application for tracking investments across mu
 - Transaction export to CSV via the table toolbar
 - Flexible import template with optional fields
 - Per-row validation on import: date format, broker/asset existence, and numeric field correctness; invalid rows are rejected with a clear error message without blocking valid rows
+- **Bulk import for assets** — paste CSV (Symbol, Name, Asset Type, Currency, Price Source, Price Symbol) to create multiple assets at once; includes an example template and per-row error reporting
+- **Bulk import for asset prices** — paste CSV (Symbol, Date, Price) to import historical prices in bulk; existing price records are updated, missing ones are created
+- **Bulk import for brokers** — paste CSV (Name, Description, Website) to create multiple brokers at once with per-row error reporting
 
 ## 🏦 Assets & Prices
 
@@ -48,6 +52,7 @@ Finny is a finance management web application for tracking investments across mu
 - Historical price data with daily snapshots; edit or delete individual data points
 - Automatic portfolio valuation based on latest prices
 - **Save & Add Another** — add multiple assets in sequence without reopening the dialog
+- **Bulk import** — paste CSV to create multiple assets or import historical prices in bulk from the Assets page toolbar
 
 ## 🏢 Brokers
 
@@ -55,6 +60,7 @@ Finny is a finance management web application for tracking investments across mu
 - Portfolio exposure and cash balance tracked per broker — broker-to-broker transfers correctly shift exposure from source to destination
 - Transactions and holdings scoped to each broker
 - **Save & Add Another** — add multiple brokers in sequence without reopening the dialog
+- **Bulk import** — paste CSV to create multiple brokers at once from the Brokers page toolbar
 
 ## 🎯 Asset Allocation & Rebalancing
 
@@ -187,7 +193,7 @@ Finny is a finance management web application for tracking investments across mu
 
 - Create, edit, enable/disable and delete scheduled background jobs
 - Supported job types: `send_report` (portfolio emails) and `asset_refresh` (price updates)
-- Configurable frequency (daily, weekly, monthly) and time of day
+- Configurable frequency: daily, **weekdays (Mon–Fri)**, weekly (pick a day), or monthly (pick a day of the month)
 - Per-scheduler execution history with status, result, error message and timestamps
 - Warning banner shown when email is disabled but `send_report` schedulers are active
 

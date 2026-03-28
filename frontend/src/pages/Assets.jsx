@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Box,
+  Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Switch,
-  Typography,
+  TextField,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import StyledDataGrid from "../components/data-display/StyledDataGrid";
 import AssetDialog from "../components/dialogs/AssetDialog";
@@ -19,6 +25,9 @@ import {
   Delete as DeleteIcon,
   ShowChart as ShowChartIcon,
   Refresh as RefreshIcon,
+  Upload as UploadIcon,
+  CloseRounded as CloseIcon,
+  PriceCheckRounded as PriceCheckIcon,
 } from "@mui/icons-material";
 import { assetAPI, constantsAPI } from "../api/api";
 import { useTheme } from "@mui/material/styles";
@@ -110,6 +119,14 @@ export default function Assets() {
 
   const [openPriceDialog, setOpenPriceDialog] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [openImportDialog, setOpenImportDialog] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importResults, setImportResults] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [openPriceImportDialog, setOpenPriceImportDialog] = useState(false);
+  const [priceImportText, setPriceImportText] = useState("");
+  const [priceImportResults, setPriceImportResults] = useState(null);
+  const [priceImporting, setPriceImporting] = useState(false);
 
   const handleDelete = (id) => {
     const asset = assets.find((a) => a.id === id);
@@ -157,6 +174,150 @@ export default function Assets() {
   const handleClosePriceDialog = () => {
     setOpenPriceDialog(false);
     setSelectedAsset(null);
+  };
+
+  const handleOpenImportDialog = () => {
+    setOpenImportDialog(true);
+    setImportText("");
+    setImportResults(null);
+  };
+
+  const handleCloseImportDialog = () => {
+    setOpenImportDialog(false);
+    setImportText("");
+    setImportResults(null);
+  };
+
+  const getImportTemplate = () =>
+    `Symbol,Name,Asset Type,Currency,Price Source,Price Symbol
+AAPL,Apple Inc,equity,USD,yahoo,AAPL
+BTC,Bitcoin,crypto,USD,coingecko,bitcoin
+USDC,USD Coin,currency,USD,,`;
+
+  const handleBulkImport = async () => {
+    if (importing) return;
+    try {
+      setImporting(true);
+      const lines = importText.trim().split("\n");
+      if (lines.length < 2) {
+        toast.error("CSV must have at least a header row and one data row");
+        return;
+      }
+      const headerRow = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
+      const assets = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim().replace(/"/g, ""));
+        const asset = {};
+        headerRow.forEach((header, index) => {
+          const value = values[index];
+          switch (header.toLowerCase()) {
+            case "symbol":
+              asset.symbol = value;
+              break;
+            case "name":
+              asset.name = value;
+              break;
+            case "asset type":
+              asset.asset_type = value;
+              break;
+            case "currency":
+              asset.currency = value;
+              break;
+            case "price source":
+              asset.price_source = value || undefined;
+              break;
+            case "price symbol":
+              asset.price_symbol = value || undefined;
+              break;
+            case "price factor":
+              asset.price_factor = value ? parseFloat(value) : undefined;
+              break;
+            default:
+              break;
+          }
+        });
+        assets.push(asset);
+      }
+      const response = await assetAPI.bulkImport(assets);
+      setImportResults(response.data.results);
+      toast.success(response.data.message);
+      const successCount = response.data.results.success.length;
+      const errorCount = response.data.results.errors.length;
+      if (successCount === assets.length && errorCount === 0) {
+        loadAssets();
+        setOpenImportDialog(false);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to import assets");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleOpenPriceImportDialog = () => {
+    setOpenPriceImportDialog(true);
+    setPriceImportText("");
+    setPriceImportResults(null);
+  };
+
+  const handleClosePriceImportDialog = () => {
+    if (priceImporting) return;
+    setOpenPriceImportDialog(false);
+    setPriceImportText("");
+    setPriceImportResults(null);
+  };
+
+  const getPriceImportTemplate = () =>
+    `Symbol,Date,Price\nAAPL,2026-03-28,172.50\nBTC,2026-03-28,68400.00`;
+
+  const handleBulkImportPrices = async () => {
+    if (priceImporting) return;
+    try {
+      setPriceImporting(true);
+      const lines = priceImportText.trim().split("\n");
+      if (lines.length < 2) {
+        toast.error("CSV must have at least a header row and one data row");
+        return;
+      }
+      const headerRow = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
+      const prices = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim().replace(/"/g, ""));
+        const entry = {};
+        headerRow.forEach((header, index) => {
+          const value = values[index];
+          switch (header.toLowerCase()) {
+            case "symbol":
+              entry.symbol = value;
+              break;
+            case "date":
+              entry.date = value;
+              break;
+            case "price":
+              entry.price = value ? parseFloat(value) : undefined;
+              break;
+            default:
+              break;
+          }
+        });
+        prices.push(entry);
+      }
+      const response = await assetAPI.bulkImportPrices(prices);
+      setPriceImportResults(response.data.results);
+      toast.success(response.data.message);
+      const successCount = response.data.results.success.length;
+      const errorCount = response.data.results.errors.length;
+      if (successCount === prices.length && errorCount === 0) {
+        loadAssets();
+        setOpenPriceImportDialog(false);
+      } else if (successCount > 0) {
+        loadAssets();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to import prices");
+    } finally {
+      setPriceImporting(false);
+    }
   };
 
   const handleRefreshAllPrices = async () => {
@@ -422,14 +583,32 @@ export default function Assets() {
               actions: (
                 <>
                   {isAdmin && (
-                    <Tooltip title="Add asset">
-                      <ToolbarButton
-                        color="primary"
-                        onClick={() => handleOpenDialog()}
-                      >
-                        <AddIcon fontSize="small" />
-                      </ToolbarButton>
-                    </Tooltip>
+                    <>
+                      <Tooltip title="Add asset">
+                        <ToolbarButton
+                          color="primary"
+                          onClick={() => handleOpenDialog()}
+                        >
+                          <AddIcon fontSize="small" />
+                        </ToolbarButton>
+                      </Tooltip>
+                      <Tooltip title="Import assets">
+                        <ToolbarButton
+                          color="primary"
+                          onClick={() => handleOpenImportDialog()}
+                        >
+                          <UploadIcon fontSize="small" />
+                        </ToolbarButton>
+                      </Tooltip>
+                      <Tooltip title="Import prices">
+                        <ToolbarButton
+                          color="primary"
+                          onClick={handleOpenPriceImportDialog}
+                        >
+                          <PriceCheckIcon fontSize="small" />
+                        </ToolbarButton>
+                      </Tooltip>
+                    </>
                   )}
                   <Tooltip title="Refresh all prices">
                     <ToolbarButton
@@ -473,6 +652,225 @@ export default function Assets() {
         onConfirm={handleDeleteConfirmed}
         onClose={() => setDeleteConfirm({ open: false, id: null, symbol: "" })}
       />
+      <Dialog
+        open={openImportDialog}
+        onClose={handleCloseImportDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
+          Bulk Import Assets
+          <IconButton size="small" onClick={handleCloseImportDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Paste CSV data below. The first row should be headers. Columns:
+              Symbol, Name, Asset Type, Currency, Price Source, Price Symbol
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setImportText(getImportTemplate())}
+            >
+              Load Example CSV
+            </Button>
+            <TextField
+              label="CSV Data"
+              multiline
+              rows={12}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              fullWidth
+              placeholder="Symbol,Name,Asset Type,Currency,Price Source,Price Symbol"
+            />
+            {importing && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <LoadingSpinner />
+              </Box>
+            )}
+            {importResults && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Import Results:
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color={theme.palette.success.main}
+                  gutterBottom
+                >
+                  ✓ {importResults.success.length} assets imported successfully
+                </Typography>
+                {importResults.errors.length > 0 && (
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      color={theme.palette.error.main}
+                      gutterBottom
+                    >
+                      ✗ {importResults.errors.length} assets failed:
+                    </Typography>
+                    <Box
+                      sx={{
+                        maxHeight: 200,
+                        overflow: "auto",
+                        bgcolor: "#ffebee",
+                        p: 1,
+                        borderRadius: 1,
+                      }}
+                    >
+                      {importResults.errors.map((err, idx) => (
+                        <Typography
+                          key={idx}
+                          variant="body2"
+                          sx={{ fontFamily: "monospace" }}
+                        >
+                          Row {err.row}: {err.error}
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={handleCloseImportDialog}
+            disabled={importing}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={handleBulkImport}
+            variant="contained"
+            disabled={!importText.trim() || importing}
+          >
+            {importing ? "Importing..." : "Import"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={openPriceImportDialog}
+        onClose={handleClosePriceImportDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            pr: 1,
+          }}
+        >
+          Bulk Import Prices
+          <IconButton size="small" onClick={handleClosePriceImportDialog}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Paste CSV data below. The first row should be headers. Columns:
+              Symbol, Date (YYYY-MM-DD), Price
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setPriceImportText(getPriceImportTemplate())}
+            >
+              Load Example CSV
+            </Button>
+            <TextField
+              label="CSV Data"
+              multiline
+              rows={12}
+              value={priceImportText}
+              onChange={(e) => setPriceImportText(e.target.value)}
+              fullWidth
+              placeholder="Symbol,Date,Price"
+            />
+            {priceImporting && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <LoadingSpinner />
+              </Box>
+            )}
+            {priceImportResults && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Import Results:
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color={theme.palette.success.main}
+                  gutterBottom
+                >
+                  ✓ {priceImportResults.success.length} prices imported
+                  successfully
+                </Typography>
+                {priceImportResults.errors.length > 0 && (
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      color={theme.palette.error.main}
+                      gutterBottom
+                    >
+                      ✗ {priceImportResults.errors.length} prices failed:
+                    </Typography>
+                    <Box
+                      sx={{
+                        maxHeight: 200,
+                        overflow: "auto",
+                        bgcolor: "#ffebee",
+                        p: 1,
+                        borderRadius: 1,
+                      }}
+                    >
+                      {priceImportResults.errors.map((err, idx) => (
+                        <Typography
+                          key={idx}
+                          variant="body2"
+                          sx={{ fontFamily: "monospace" }}
+                        >
+                          Row {err.row}: {err.error}
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={handleClosePriceImportDialog}
+            disabled={priceImporting}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={handleBulkImportPrices}
+            variant="contained"
+            disabled={!priceImportText.trim() || priceImporting}
+          >
+            {priceImporting ? "Importing..." : "Import"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </PageContainer>
   );
 }

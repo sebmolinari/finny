@@ -6,6 +6,7 @@ const authMiddleware = require("../middleware/auth");
 const { validate } = require("../utils/validationMiddleware");
 const {
   brokerValidation,
+  runBrokerValidation,
 } = require("../middleware/validators/brokerValidators");
 
 // Get all brokers for user
@@ -300,6 +301,99 @@ router.delete("/:id", authMiddleware, (req, res) => {
     res.json({ message: "Broker deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /brokers/bulk:
+ *   post:
+ *     summary: Bulk import brokers
+ *     tags: [Brokers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               brokers:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     website:
+ *                       type: string
+ *                     active:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: Bulk import completed
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+router.post("/bulk", authMiddleware, async (req, res) => {
+  try {
+    const { brokers } = req.body;
+
+    if (!Array.isArray(brokers) || brokers.length === 0) {
+      return res.status(400).json({ message: "Brokers array is required" });
+    }
+
+    if (!brokers.every((b) => typeof b === "object")) {
+      return res.status(400).json({ message: "Each broker must be an object" });
+    }
+
+    const results = { success: [], errors: [] };
+
+    for (const [index, brokerData] of brokers.entries()) {
+      try {
+        const validated = await runBrokerValidation({ ...brokerData });
+        const { name, description, website } = validated;
+        const active = brokerData.active === undefined ? 1 : brokerData.active ? 1 : 0;
+
+        const id = Broker.create(
+          req.user.id,
+          name,
+          description,
+          website,
+          active,
+          req.user.id,
+        );
+
+        results.success.push({ row: index + 2, id, name });
+
+        AuditLog.logCreate(
+          req.user.id,
+          req.user.username,
+          "brokers",
+          id,
+          { name, description, website, active, bulk_import: true },
+          req.ip,
+          req.get("user-agent"),
+        );
+      } catch (error) {
+        const message = error.message.includes("UNIQUE constraint failed")
+          ? `A broker named '${brokerData.name}' already exists for your account`
+          : error.message;
+        results.errors.push({ row: index + 2, error: message, details: error.details || null });
+      }
+    }
+
+    res.json({
+      message: `Bulk import completed: ${results.success.length} succeeded, ${results.errors.length} failed`,
+      results,
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
 });
 

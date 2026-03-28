@@ -77,6 +77,7 @@ function getCpuTemperature() {
 
 // Helper to get disk space (root fs)
 function getDiskSpace() {
+  if (process.platform !== "linux") return null;
   try {
     const { execSync } = require("child_process");
     const output = execSync("df -h / | tail -1", { encoding: "utf8" });

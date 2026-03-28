@@ -10,13 +10,22 @@ All notable changes to this project are documented below.
 
 ## [1.0.3] – 2026-03-28
 
+### Added
+
 - **Save & Add Another** on the Asset and Broker creation dialogs — create multiple records in sequence without reopening the dialog each time; the button is hidden when editing an existing record
+- **Bulk Import — Assets** — paste CSV directly into the Assets page to create multiple assets at once; includes an example template and per-row error reporting
+- **Bulk Import — Asset Prices** — paste CSV (Symbol, Date, Price) into the Assets page to import historical prices in bulk; existing records are updated, new ones are created
+- **Bulk Import — Brokers** — paste CSV into the Brokers page to create multiple brokers at once with the same per-row error reporting
+- **Bulk Delete — Transactions** — select multiple rows in the Blotter with checkboxes and delete them all in one confirmed action
+- **Scheduler "Weekdays" frequency** — new `Weekdays (Mon–Fri)` option for schedulers that should only fire on business days
+- **Scheduler day selectors** — weekly schedulers now require selecting a specific day of the week; monthly schedulers require selecting a day of the month (1–31)
 
 ### Changed
 
 - All page bundles are now loaded on demand (code splitting), reducing initial app load time
 - Frontend and Backend libraries upgraded to latest compatible versions
 - Swagger API documentation is now available in all environments (including production) at `/api/v1/api-docs`
+- Admin Control Panel "Reset All Data" success message now lists all deleted record types (allocation targets, price records, notifications and audit logs)
 
 ### Fixed
 
