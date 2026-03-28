@@ -1068,7 +1068,8 @@ router.get("/tax-harvesting", authMiddleware, (req, res) => {
  */
 router.get("/missing-prices", authMiddleware, (req, res) => {
   try {
-    const result = AnalyticsService.getMissingPrices(req.user.id);
+    const includeStale = req.query.includeStale === "true";
+    const result = AnalyticsService.getMissingPrices(req.user.id, { includeStale });
 
     if (req.query.format === "csv") {
       const headers = [

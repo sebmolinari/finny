@@ -177,8 +177,11 @@ Finny is a finance management web application for tracking investments across mu
 ### 🔍 Missing Prices
 
 - Identifies assets with transactions on dates that have no price data
+- **Stale price detection** — toggle to also surface assets whose last price record is older than today (open positions) or older than their last transaction date (closed positions); the engine would otherwise silently roll the last known price forward
+- Assets with manual pricing are excluded from stale detection and listed in a warning banner
 - Batch-fetch historical closing prices from Yahoo Finance with a progress bar
 - Review and edit proposed prices before applying; manual entry for gaps Yahoo Finance could not fill
+- Status column distinguishes "No Price" issues from "Stale" issues when stale detection is enabled
 
 ### ⏱️ Schedulers
 

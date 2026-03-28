@@ -10,6 +10,8 @@ import {
   TextField,
   Checkbox,
   LinearProgress,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
   PriceCheck as PriceCheckIcon,
@@ -36,7 +38,8 @@ export default function MissingPrices() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const [issues, setIssues] = useState(null); // { total_issues, issues: [] }
+  const [includeStale, setIncludeStale] = useState(false);
+  const [issues, setIssues] = useState(null); // { total_issues, issues: [], stale_metadata }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -55,14 +58,16 @@ export default function MissingPrices() {
     setLoading(true);
     setError(null);
     try {
-      const res = await analyticsAPI.getMissingPrices();
+      const res = await analyticsAPI.getMissingPrices(
+        includeStale ? { includeStale: true } : {},
+      );
       setIssues(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load missing prices.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [includeStale]);
 
   useEffect(() => {
     loadIssues();
@@ -80,9 +85,11 @@ export default function MissingPrices() {
               name: issue.name,
               asset_type: issue.asset_type,
               dates: [],
+              statuses: {},
             };
           }
           acc[issue.asset_id].dates.push(issue.trade_date);
+          acc[issue.asset_id].statuses[issue.trade_date] = issue.status;
           return acc;
         }, {}),
       )
@@ -241,9 +248,34 @@ export default function MissingPrices() {
     return !isNaN(n) && n > 0;
   }).length;
 
+  const staleMetadata = issues?.stale_metadata;
+  const hasExcludedManual =
+    staleMetadata && staleMetadata.excluded_manual_count > 0;
+
   return (
     <PageContainer>
-      <Alert severity="info" sx={{ mb: 3 }}>
+      <Alert
+        severity="info"
+        sx={{ mb: 2 }}
+        action={
+          <FormControlLabel
+            control={
+              <Switch
+                checked={includeStale}
+                onChange={(e) => setIncludeStale(e.target.checked)}
+                size="small"
+              />
+            }
+            label={
+              <Typography variant="caption" noWrap>
+                Detect stale prices
+              </Typography>
+            }
+            labelPlacement="start"
+            sx={{ mr: 0, ml: 1 }}
+          />
+        }
+      >
         A <strong>missing price</strong> means no price record exists on or
         before the transaction date — the portfolio valuation engine has nothing
         to fall back on. If your earliest price for an asset is on{" "}
@@ -251,7 +283,27 @@ export default function MissingPrices() {
         <strong>not</strong> a missing price: the engine will use the{" "}
         <em>t&#8209;2</em> price. Only transactions that predate every existing
         price record are listed here.
+        {includeStale && (
+          <>
+            <br />
+            A <strong>stale price</strong> means the asset has at least one
+            price record, but none more recent than today — the engine silently
+            rolls the last known price forward. Enable this toggle to surface
+            those gaps and fill them in.
+          </>
+        )}
       </Alert>
+
+      {includeStale && hasExcludedManual && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Stale price detection excludes{" "}
+          <strong>{staleMetadata.excluded_manual_count}</strong> asset
+          {staleMetadata.excluded_manual_count !== 1 ? "s" : ""} with manual
+          pricing:{" "}
+          <strong>{staleMetadata.excluded_manual_symbols.join(", ")}</strong>.
+          These must be updated manually.
+        </Alert>
+      )}
 
       {/* ── Summary metrics ── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -360,6 +412,9 @@ export default function MissingPrices() {
                   <StyledHeaderCell>Name</StyledHeaderCell>
                   <StyledHeaderCell>Type</StyledHeaderCell>
                   <StyledHeaderCell>Missing Dates</StyledHeaderCell>
+                  {includeStale && (
+                    <StyledHeaderCell>Status</StyledHeaderCell>
+                  )}
                 </StyledHeaderRow>
               </TableHead>
               <TableBody>
@@ -414,6 +469,37 @@ export default function MissingPrices() {
                           : ""}
                       </Typography>
                     </TableCell>
+                    {includeStale && (
+                      <TableCell>
+                        {(() => {
+                          const uniqueStatuses = [
+                            ...new Set(Object.values(group.statuses)),
+                          ];
+                          return (
+                            <Box sx={{ display: "flex", gap: 0.5 }}>
+                              {uniqueStatuses.includes("no_price") && (
+                                <Chip
+                                  label="No Price"
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  sx={{ fontSize: "0.7rem" }}
+                                />
+                              )}
+                              {uniqueStatuses.includes("stale_price") && (
+                                <Chip
+                                  label="Stale"
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                  sx={{ fontSize: "0.7rem" }}
+                                />
+                              )}
+                            </Box>
+                          );
+                        })()}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

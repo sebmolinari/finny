@@ -1,5 +1,13 @@
 All notable changes to this project are documented below.
 
+## [1.1.0] – 2026-03-28
+
+### Added
+
+- **Stale price detection** on the Missing Prices page — toggle "Detect stale prices" to surface assets whose last price record is older than today (or the last transaction date for fully closed positions). Stale gaps are filled using the same Yahoo Finance batch-fetch and review workflow as missing prices. Assets with manual pricing are excluded automatically and listed in a warning banner. A **Status** column distinguishes "No Price" from "Stale" issues in the issues table.
+
+---
+
 ## [1.0.3] – 2026-03-28
 
 - **Save & Add Another** on the Asset and Broker creation dialogs — create multiple records in sequence without reopening the dialog each time; the button is hidden when editing an existing record
