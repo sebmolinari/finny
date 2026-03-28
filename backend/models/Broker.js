@@ -88,10 +88,11 @@ class Broker {
     const brokersStmt = db.prepare(brokersQuery);
     const brokers = brokersStmt.all(userId);
 
-    // Get all transactions with latest prices
+    // Get all transactions with latest prices (buy, sell, and transfers)
     const transactionsQuery = `
       SELECT
         t.broker_id,
+        t.destination_broker_id,
         t.transaction_type,
         t.quantity,
         p.price
@@ -103,7 +104,7 @@ class Broker {
           FROM price_data
           WHERE asset_id = a.id
         )
-      WHERE t.user_id = ? AND t.transaction_type IN ('buy', 'sell')
+      WHERE t.user_id = ? AND t.transaction_type IN ('buy', 'sell', 'transfer')
     `;
 
     const transactionsStmt = db.prepare(transactionsQuery);
@@ -116,14 +117,25 @@ class Broker {
     });
 
     transactions.forEach((tx) => {
-      if (!tx.broker_id || !brokerValues[tx.broker_id]) return;
       if (!tx.price || !tx.quantity) return;
 
       const quantity = fromValueScale(tx.quantity, QUANTITY_SCALE);
       const price = fromValueScale(tx.price, PRICE_SCALE);
-      const signedQty = tx.transaction_type === "buy" ? quantity : -quantity;
 
-      brokerValues[tx.broker_id].current_value += signedQty * price;
+      if (tx.transaction_type === "buy" || tx.transaction_type === "sell") {
+        if (!tx.broker_id || !brokerValues[tx.broker_id]) return;
+        const signedQty = tx.transaction_type === "buy" ? quantity : -quantity;
+        brokerValues[tx.broker_id].current_value += signedQty * price;
+      } else if (tx.transaction_type === "transfer") {
+        // Outgoing: reduce source broker's exposure
+        if (tx.broker_id && brokerValues[tx.broker_id]) {
+          brokerValues[tx.broker_id].current_value -= quantity * price;
+        }
+        // Incoming: increase destination broker's exposure
+        if (tx.destination_broker_id && brokerValues[tx.destination_broker_id]) {
+          brokerValues[tx.destination_broker_id].current_value += quantity * price;
+        }
+      }
     });
 
     return Object.values(brokerValues);

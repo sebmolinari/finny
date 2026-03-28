@@ -62,19 +62,30 @@ React 19 + Vite + Material UI 7. React Router 7 with a single `ProtectedRoute` c
 
 ```
 frontend/src/
-  api/api.js     # All axios calls organized by resource (authAPI, assetAPI, schedulerAPI…)
-  auth/          # AuthContext.jsx, ProtectedRoute.jsx
-  pages/         # Route-level components
-  components/    # Reusable UI components
-  router/        # router.jsx — all route definitions in one place
-  theme/         # MUI theme
+  api/
+    client.js        # axios instance + interceptors
+    index.js         # barrel — re-exports all *API named exports
+    *.api.js         # one file per resource (auth, assets, brokers, transactions, analytics…)
+  auth/              # AuthContext.jsx, ProtectedRoute.jsx, SettingsContext.jsx
+  pages/             # Route-level components; Dashboard/ is a feature folder with hooks/ and components/
+  components/
+    layout/          # Header, MenuContent, NavbarBreadcrumbs, PageContainer, …
+    charts/          # MTMEvolutionChart, PortfolioValueChart, AssetAllocationChart, …
+    dialogs/         # TransactionDialog, AssetDialog, BrokerDialog, …
+    data-display/    # AuditFieldsDisplay, …
+    scheduler/       # SchedulerForm, SchedulerHistory
+    ui/              # LoadingSpinner, ChartCard, RouteErrorBoundary, …
+  router/            # router.jsx — all route definitions in one place
+  theme/             # MUI theme
 ```
 
 **Key patterns:**
 
-- All API calls go through `src/api/api.js`. Add new endpoint groups as named exports (`export const fooAPI = { … }`).
-- Global axios interceptor handles 401 (redirect to login), 429 (rate limit toast), and timeout errors.
-- Admin-only pages use `<ProtectedRoute role="admin">` in `router.jsx` and appear under `adminItems` in `MenuContent.jsx`.
+- API calls live in per-resource files under `src/api/` (e.g. `transactions.api.js`). Import from the barrel: `import { transactionAPI } from "../api"`. To add a new resource, create `src/api/myresource.api.js` and re-export it from `src/api/index.js`.
+- Global axios interceptor (in `client.js`) handles 401 (fires `auth:unauthorized` CustomEvent — `AuthContext` listens and clears state so `ProtectedRoute` redirects), 429 (rate-limit toast), and timeout errors.
+- User settings (timezone, date format, etc.) are fetched once globally via `SettingsContext`. Read them with `const { timezone, dateFormat } = useUserSettings()` from `auth/SettingsContext.jsx` — do **not** call `settingsAPI.get()` per page.
+- All 25 route-level pages are loaded with `lazy()` + `Suspense` in `router.jsx` for code splitting.
+- Admin-only pages use `<ProtectedRoute role="admin">` in `router.jsx` and appear under `adminItems` in `components/layout/MenuContent.jsx`.
 - `handleApiError(err, fallbackMsg, setError)` from `utils/errorHandler.js` is the standard error handler in page components.
 
 ## Database
@@ -98,12 +109,11 @@ Never use `REAL` or `FLOAT` for any column. Use:
 ### Adding a new page
 
 1. Create `frontend/src/pages/MyPage.jsx`
-2. Add route in `frontend/src/router/router.jsx`
-3. If it needs a nav entry: add to the appropriate items array in `frontend/src/components/MenuContent.jsx`
-4. If it calls new API endpoints: add them to `frontend/src/api/api.js`
+2. Add route in `frontend/src/router/router.jsx` with a `handle: { title: "My Page" }` property — `NavbarBreadcrumbs` uses `useMatches()` to pick this up automatically; no manual `routeTitles` map update needed
+3. If it needs a nav entry: add to the appropriate items array in `frontend/src/components/layout/MenuContent.jsx`
+4. If it calls new API endpoints: create (or extend) `frontend/src/api/myresource.api.js` and re-export it from `frontend/src/api/index.js`
 5. Admin-only pages: wrap in `<ProtectedRoute role="admin">` in `router.jsx` and add under `adminItems` in `MenuContent.jsx`
-6. Add the route path + page title to `routeTitles` in `frontend/src/components/NavbarBreadcrumbs.jsx` so the header shows the correct page name
-7. Wrap page content in `<PageContainer>` with **no** `title` or `subtitle` props — the navbar breadcrumb is the page title
+6. Wrap page content in `<PageContainer>` with **no** `title` or `subtitle` props — the navbar breadcrumb is the page title
 
 ### Adding a new backend route
 
@@ -163,10 +173,10 @@ Rules:
 
 Rules:
 
-- Load the user's timezone from `settingsAPI.get()` (field: `response.data.timezone`).
-- Use `getTodayInTimezone(userTimezone)` wherever "today" is needed (date picker defaults, range start/end, event greying, YTD year, etc.). Never use `new Date().toISOString().split("T")[0]` or `toDateInput(new Date())`.
+- Get the user's timezone from `SettingsContext`: `const { timezone } = useUserSettings()`. Do **not** call `settingsAPI.get()` per page — settings are fetched once globally.
+- Use `getTodayInTimezone(timezone)` wherever "today" is needed (date picker defaults, range start/end, event greying, YTD year, etc.). Never use `new Date().toISOString().split("T")[0]` or `toDateInput(new Date())`.
 - For relative date arithmetic (e.g. 30 days ago from today): derive from `new Date(getTodayInTimezone(tz))`, do the arithmetic, then convert back via `.toISOString().split("T")[0]`.
-- Load settings in the same data-fetch function or a dedicated `useEffect` on mount. Fallback to `"UTC"` if the call fails.
+- `useUserSettings()` falls back to `"UTC"` automatically if settings haven't loaded yet.
 
 **What does NOT need timezone handling:**
 

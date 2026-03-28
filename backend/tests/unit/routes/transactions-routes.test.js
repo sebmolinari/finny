@@ -269,4 +269,106 @@ describe("POST /transactions/transfer", () => {
     const res = await request(app).post("/transactions/transfer").send(validTransfer);
     expect(res.status).toBe(500);
   });
+
+  it("creates a new transfer and returns 201 when no id provided", async () => {
+    Transaction.create.mockReturnValue(99);
+    Transaction.findById.mockReturnValue({ id: 99, transaction_type: "transfer" });
+    const res = await request(app).post("/transactions/transfer").send(validTransfer);
+    expect(res.status).toBe(201);
+    expect(Transaction.create).toHaveBeenCalled();
+    expect(Transaction.update).not.toHaveBeenCalled();
+  });
+
+  describe("update path (id provided)", () => {
+    const existingTransfer = {
+      id: 5,
+      transaction_type: "transfer",
+      asset_id: 1,
+      broker_id: 1,
+      destination_broker_id: 2,
+      quantity: 10,
+      date: "2024-01-10",
+      notes: "old note",
+    };
+
+    it("returns 200 and calls Transaction.update instead of create", async () => {
+      Transaction.findById
+        .mockReturnValueOnce(existingTransfer) // lookup existing
+        .mockReturnValueOnce({ ...existingTransfer, date: "2024-02-01" }); // refreshed after update
+      Transaction.update.mockReturnValue(true);
+
+      const res = await request(app)
+        .post("/transactions/transfer")
+        .send({ ...validTransfer, id: 5 });
+
+      expect(res.status).toBe(200);
+      expect(Transaction.update).toHaveBeenCalledWith(
+        5,
+        1,
+        expect.objectContaining({ transaction_type: "transfer" }),
+        1,
+      );
+      expect(Transaction.create).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 when the existing transfer is not found", async () => {
+      Transaction.findById.mockReturnValueOnce(null);
+
+      const res = await request(app)
+        .post("/transactions/transfer")
+        .send({ ...validTransfer, id: 999 });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("adds back original quantity when source broker/asset match", async () => {
+      // Available balance is 5, but the existing transfer used 10 — after adding
+      // back 10 the effective available is 15, so transferring 12 should pass.
+      Transaction.getAssetBrokerBalance.mockReturnValue(5);
+      Transaction.findById
+        .mockReturnValueOnce({ ...existingTransfer, quantity: 10 })
+        .mockReturnValueOnce({ ...existingTransfer, quantity: 12 });
+      Transaction.update.mockReturnValue(true);
+
+      const res = await request(app)
+        .post("/transactions/transfer")
+        .send({ ...validTransfer, id: 5, quantity: 12 });
+
+      expect(res.status).toBe(200);
+    });
+
+    it("returns 400 when quantity exceeds available even after adding back original", async () => {
+      // Available is 5, original was 10 → effective 15; trying to transfer 20 fails.
+      Transaction.getAssetBrokerBalance.mockReturnValue(5);
+      Transaction.findById.mockReturnValueOnce({ ...existingTransfer, quantity: 10 });
+
+      const res = await request(app)
+        .post("/transactions/transfer")
+        .send({ ...validTransfer, id: 5, quantity: 20 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("logs an update audit entry", async () => {
+      Transaction.findById
+        .mockReturnValueOnce(existingTransfer)
+        .mockReturnValueOnce(existingTransfer);
+      Transaction.update.mockReturnValue(true);
+
+      await request(app)
+        .post("/transactions/transfer")
+        .send({ ...validTransfer, id: 5 });
+
+      expect(AuditLog.logUpdate).toHaveBeenCalledWith(
+        1,
+        "admin",
+        "transactions",
+        5,
+        expect.objectContaining({ transaction_type: "transfer" }),
+        expect.objectContaining({ transaction_type: "transfer" }),
+        expect.any(String),
+        expect.anything(),
+      );
+    });
+  });
 });
