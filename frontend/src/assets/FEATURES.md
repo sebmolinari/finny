@@ -32,6 +32,7 @@ Finny is a finance management web application for tracking investments across mu
 - Broker-to-broker asset transfers preserve FIFO cost basis at the source broker
 - Cash flow management (deposits/withdrawals) per broker
 - Support for Crypto, Currency, Equity, Fixed Income and Real Estate
+- **Save & Add Another** — create multiple transactions in sequence without reopening the dialog
 
 ## 📥 Data Import / Export
 
@@ -46,12 +47,14 @@ Finny is a finance management web application for tracking investments across mu
 - Optional price symbol override and price factor for unit conversions
 - Historical price data with daily snapshots; edit or delete individual data points
 - Automatic portfolio valuation based on latest prices
+- **Save & Add Another** — add multiple assets in sequence without reopening the dialog
 
 ## 🏢 Brokers
 
 - Create and manage brokers
 - Portfolio exposure and cash balance tracked per broker — broker-to-broker transfers correctly shift exposure from source to destination
 - Transactions and holdings scoped to each broker
+- **Save & Add Another** — add multiple brokers in sequence without reopening the dialog
 
 ## 🎯 Asset Allocation & Rebalancing
 

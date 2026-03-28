@@ -1,6 +1,8 @@
 All notable changes to this project are documented below.
 
-## [1.0.3] – 2026-03-27
+## [1.0.3] – 2026-03-28
+
+- **Save & Add Another** on the Asset and Broker creation dialogs — create multiple records in sequence without reopening the dialog each time; the button is hidden when editing an existing record
 
 ### Changed
 
@@ -10,6 +12,7 @@ All notable changes to this project are documented below.
 
 ### Fixed
 
+- **Save & Add Another** in the Transaction blotter no longer causes the page to flicker — the grid refresh is now deferred until the dialog closes instead of firing while it is still open
 - **Bulk import validation** — CSV import now validates each row before inserting: date must be `YYYY-MM-DD`, broker and asset must exist, and all numeric fields (quantity, price, amount) must be valid numbers; invalid rows are rejected with a clear per-row error message without blocking valid rows
 - Editing a transfer transaction no longer creates a duplicate — the transfer is now updated in place and shows a "Transfer updated successfully" toast
 - **Exposure by Broker** dashboard chart now accounts for broker-to-broker transfers: moved shares correctly reduce the source broker's exposure and increase the destination broker's exposure

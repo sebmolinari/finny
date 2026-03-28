@@ -546,15 +546,21 @@
       "notes": "Trimming AAPL on August pullback"
     },
     {
+      "date": "2023-08-25",
+      "transaction_type": "deposit",
+      "total_amount": 45000,
+      "notes": "Savings set aside for property down payment"
+    },
+    {
       "date": "2023-09-01",
       "asset_symbol": "PROP",
       "broker_name": "Broker A",
       "transaction_type": "buy",
       "quantity": 1,
-      "price": 280000,
+      "price": 56000,
       "fee": 5500,
-      "total_amount": 285500,
-      "notes": "Rental property acquisition — financed with mortgage"
+      "total_amount": 61500,
+      "notes": "Rental property acquisition — $56,000 down payment + $5,500 closing costs (mortgage financed)"
     },
     {
       "date": "2023-09-05",
