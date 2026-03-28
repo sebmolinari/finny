@@ -10,6 +10,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  db.prepare("DELETE FROM transactions").run();
   db.prepare("DELETE FROM brokers").run();
 });
 

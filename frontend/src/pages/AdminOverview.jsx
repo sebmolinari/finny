@@ -1116,7 +1116,13 @@ export default function AdminOverview() {
                             <DeleteSweepIcon fontSize="small" />
                           )
                         }
-                        onClick={() => setPurgeHistoryDialogOpen(true)}
+                        onClick={() => {
+                          if (env === "development") {
+                            handlePurgeSchedulerHistory();
+                            return;
+                          }
+                          setPurgeHistoryDialogOpen(true);
+                        }}
                         disabled={purgingHistory}
                       >
                         Purge Scheduler History
@@ -1249,6 +1255,10 @@ export default function AdminOverview() {
                           )
                         }
                         onClick={() => {
+                          if (env === "development") {
+                            handleDeleteAllData();
+                            return;
+                          }
                           const word =
                             DELETE_CONFIRM_WORDS[
                               Math.floor(

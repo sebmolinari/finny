@@ -17,6 +17,7 @@ jest.mock("../../../middleware/validators/transactionValidators", () => ({
   transactionValidation: [],
   validateTransactionBusiness: jest.fn(),
 }));
+jest.mock("../../../services/analyticsService");
 
 const request = require("supertest");
 const express = require("express");
@@ -28,6 +29,7 @@ const UserSettings = require("../../../models/UserSettings");
 const {
   validateTransactionBusiness,
 } = require("../../../middleware/validators/transactionValidators");
+const AnalyticsService = require("../../../services/analyticsService");
 
 const DB_ERR = new Error("database exploded");
 
@@ -65,6 +67,7 @@ beforeEach(() => {
   Asset.getAll.mockReturnValue([]);
   Broker.findByUser.mockReturnValue([]);
   validateTransactionBusiness.mockReturnValue(undefined);
+  AnalyticsService.getPortfolioHoldings.mockReturnValue([]);
 });
 
 // ── GET / ──────────────────────────────────────────────────────────────────
@@ -367,7 +370,7 @@ describe("POST /transactions/transfer", () => {
         expect.objectContaining({ transaction_type: "transfer" }),
         expect.objectContaining({ transaction_type: "transfer" }),
         expect.any(String),
-        expect.anything(),
+        undefined,
       );
     });
   });

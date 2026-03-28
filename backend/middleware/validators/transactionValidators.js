@@ -111,13 +111,13 @@ function validateTransactionBusiness({ tx, userId, isUpdate = false, currentTx =
 
   if (assetRequiredTypes.includes(transaction_type)) {
     if (!asset_id) {
-      error("asset is required");
+      error("asset_id is required");
     }
   }
 
   if (transaction_type === "buy" || transaction_type === "sell") {
     if (quantity == null || price == null || broker_id == null) {
-      error("broker, asset, quantity, and price are required for buy/sell");
+      error("broker_id, quantity, and price are required for buy/sell");
     }
 
     // BUY: cash balance

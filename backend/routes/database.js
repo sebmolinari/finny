@@ -262,12 +262,14 @@ router.post("/seed", authMiddleware, adminMiddleware, async (req, res) => {
     for (const tx of sampleData.transactions || []) {
       const assetId = tx.asset_symbol ? assetIds[tx.asset_symbol] : undefined;
       const brokerId = tx.broker_name ? brokerIds[tx.broker_name] : undefined;
+      const destBrokerId = tx.destination_broker_name ? brokerIds[tx.destination_broker_name] : undefined;
       try {
         Transaction.create(
           userId,
           {
             asset_id: assetId || null,
             broker_id: brokerId || null,
+            destination_broker_id: destBrokerId || null,
             date: tx.date,
             transaction_type: tx.transaction_type,
             quantity: tx.quantity,
