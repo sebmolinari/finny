@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -52,6 +52,7 @@ export default function TransactionDialog({
   onSave,
 }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const hasSavedRef = useRef(false);
 
   // Initialise form whenever the dialog opens or the target transaction changes
   useEffect(() => {
@@ -83,6 +84,15 @@ export default function TransactionDialog({
       });
     }
   }, [open, editingTransaction, userTimezone, brokers]);
+
+  useEffect(() => {
+    if (open) hasSavedRef.current = false;
+  }, [open]);
+
+  const handleClose = () => {
+    if (hasSavedRef.current) onSave();
+    onClose();
+  };
 
   // ── Derived flags ────────────────────────────────────────────────────────────
   const transactionType = formData.transaction_type;
@@ -211,8 +221,8 @@ export default function TransactionDialog({
           notes: formData.notes,
         });
         toast.success(editingTransaction ? "Transfer updated successfully" : "Transfer created successfully");
-        onClose();
-        onSave();
+        hasSavedRef.current = true;
+        handleClose();
         return;
       }
 
@@ -246,16 +256,16 @@ export default function TransactionDialog({
       if (editingTransaction) {
         await transactionAPI.update(editingTransaction.id, submitData);
         toast.success("Transaction updated successfully");
-        onClose();
-        onSave();
+        hasSavedRef.current = true;
+        handleClose();
       } else {
         await transactionAPI.create(submitData);
         toast.success("Transaction created successfully");
-        onSave();
+        hasSavedRef.current = true;
         if (createAnother) {
           setFormData({ ...EMPTY_FORM, date: getTodayInTimezone(userTimezone) });
         } else {
-          onClose();
+          handleClose();
         }
       }
     } catch (error) {
@@ -265,7 +275,7 @@ export default function TransactionDialog({
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle
         sx={{
           display: "flex",
@@ -275,7 +285,7 @@ export default function TransactionDialog({
         }}
       >
         {editingTransaction ? "Edit Transaction" : "Add Transaction"}
-        <IconButton size="small" onClick={onClose}>
+        <IconButton size="small" onClick={handleClose}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
@@ -478,7 +488,7 @@ export default function TransactionDialog({
       </DialogContent>
 
       <DialogActions>
-        <Button color="inherit" onClick={onClose}>
+        <Button color="inherit" onClick={handleClose}>
           Cancel
         </Button>
         <Button type="submit" variant="contained" form="transaction-form">

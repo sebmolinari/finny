@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -33,6 +33,7 @@ export default function BrokerDialog({
   onSave,
 }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const hasSavedRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +49,16 @@ export default function BrokerDialog({
     }
   }, [open, editingBroker]);
 
-  const handleSubmit = async () => {
+  useEffect(() => {
+    if (open) hasSavedRef.current = false;
+  }, [open]);
+
+  const handleClose = () => {
+    if (hasSavedRef.current) onSave();
+    onClose();
+  };
+
+  const handleSubmit = async (createAnother = false) => {
     try {
       if (editingBroker) {
         await brokerAPI.update(editingBroker.id, formData);
@@ -57,15 +67,19 @@ export default function BrokerDialog({
         await brokerAPI.create(formData);
         toast.success("Broker created successfully");
       }
-      onClose();
-      onSave();
+      hasSavedRef.current = true;
+      if (createAnother) {
+        setFormData(EMPTY_FORM);
+      } else {
+        handleClose();
+      }
     } catch (error) {
       handleApiError(error, "Failed to save broker");
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle
         sx={{
           display: "flex",
@@ -75,7 +89,7 @@ export default function BrokerDialog({
         }}
       >
         {editingBroker ? "Edit Broker" : "Add Broker"}
-        <IconButton size="small" onClick={onClose}>
+        <IconButton size="small" onClick={handleClose}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
@@ -143,12 +157,17 @@ export default function BrokerDialog({
       </DialogContent>
 
       <DialogActions>
-        <Button color="inherit" onClick={onClose}>
+        <Button color="inherit" onClick={handleClose}>
           Cancel
         </Button>
         <Button type="submit" variant="contained" form="broker-form">
           {editingBroker ? "Update" : "Create"}
         </Button>
+        {!editingBroker && (
+          <Button variant="outlined" onClick={() => handleSubmit(true)}>
+            Save &amp; Add Another
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

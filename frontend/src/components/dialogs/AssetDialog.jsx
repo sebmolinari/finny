@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -61,6 +61,7 @@ export default function AssetDialog({
   onSave,
 }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const hasSavedRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -80,7 +81,16 @@ export default function AssetDialog({
     }
   }, [open, editingAsset]);
 
-  const handleSubmit = async () => {
+  useEffect(() => {
+    if (open) hasSavedRef.current = false;
+  }, [open]);
+
+  const handleClose = () => {
+    if (hasSavedRef.current) onSave();
+    onClose();
+  };
+
+  const handleSubmit = async (createAnother = false) => {
     try {
       if (editingAsset) {
         await assetAPI.update(editingAsset.id, formData);
@@ -89,8 +99,12 @@ export default function AssetDialog({
         await assetAPI.create(formData);
         toast.success("Asset created successfully");
       }
-      onClose();
-      onSave();
+      hasSavedRef.current = true;
+      if (createAnother) {
+        setFormData(EMPTY_FORM);
+      } else {
+        handleClose();
+      }
     } catch (error) {
       const responseData = error.response?.data;
       if (responseData?.errors && Array.isArray(responseData.errors)) {
@@ -104,7 +118,7 @@ export default function AssetDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle
         sx={{
           display: "flex",
@@ -114,7 +128,7 @@ export default function AssetDialog({
         }}
       >
         {editingAsset ? "Edit Asset" : "Add Asset"}
-        <IconButton size="small" onClick={onClose}>
+        <IconButton size="small" onClick={handleClose}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
@@ -256,12 +270,17 @@ export default function AssetDialog({
       </DialogContent>
 
       <DialogActions>
-        <Button color="inherit" onClick={onClose}>
+        <Button color="inherit" onClick={handleClose}>
           Cancel
         </Button>
         <Button type="submit" variant="contained" form="asset-form">
           {editingAsset ? "Update" : "Create"}
         </Button>
+        {!editingAsset && (
+          <Button variant="outlined" onClick={() => handleSubmit(true)}>
+            Save &amp; Add Another
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );
