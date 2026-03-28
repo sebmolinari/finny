@@ -393,3 +393,95 @@ describe("POST /assets/:id/prices/refresh", () => {
     expect((await request(app).post("/assets/1/prices/refresh")).status).toBe(500);
   });
 });
+
+// ── POST /:id/prices/bulk ──────────────────────────────────────────────────────
+
+describe("POST /assets/:id/prices/bulk (lines 836-864)", () => {
+  const validBody = {
+    prices: [
+      { date: "2024-01-01", price: 150.5 },
+      { date: "2024-01-02", price: 155.0 },
+    ],
+  };
+
+  it("returns 200 on success", async () => {
+    const res = await request(app)
+      .post("/assets/1/prices/bulk")
+      .send(validBody);
+    expect(res.status).toBe(200);
+    expect(PriceData.bulkCreate).toHaveBeenCalled();
+    expect(AuditLog.create).toHaveBeenCalled();
+    expect(res.body.count).toBe(2);
+  });
+
+  it("returns 500 on error (line 864)", async () => {
+    PriceData.bulkCreate.mockImplementation(() => {
+      throw DB_ERR;
+    });
+    const res = await request(app)
+      .post("/assets/1/prices/bulk")
+      .send(validBody);
+    expect(res.status).toBe(500);
+  });
+});
+
+// ── POST /bulk — bulk asset import ─────────────────────────────────────────────
+
+describe("POST /assets/bulk (lines 1091)", () => {
+  it("returns 400 when assets array is missing", async () => {
+    const res = await request(app).post("/assets/bulk").send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when assets array is empty", async () => {
+    const res = await request(app).post("/assets/bulk").send({ assets: [] });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when assets array contains non-objects (line 1091)", async () => {
+    const res = await request(app)
+      .post("/assets/bulk")
+      .send({ assets: ["not-an-object"] });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/object/);
+  });
+
+  it("returns 200 with success when assets are valid", async () => {
+    Asset.create.mockReturnValue(99);
+    const res = await request(app)
+      .post("/assets/bulk")
+      .send({
+        assets: [
+          {
+            symbol: "BULK1",
+            name: "Bulk Asset One",
+            asset_type: "equity",
+            currency: "USD",
+          },
+        ],
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.results.success).toHaveLength(1);
+  });
+
+  it("returns 200 with error entry on UNIQUE constraint violation", async () => {
+    Asset.create.mockImplementation(() => {
+      throw new Error("UNIQUE constraint failed: assets.symbol");
+    });
+    const res = await request(app)
+      .post("/assets/bulk")
+      .send({
+        assets: [
+          {
+            symbol: "DUP",
+            name: "Duplicate",
+            asset_type: "equity",
+            currency: "USD",
+          },
+        ],
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.results.errors).toHaveLength(1);
+    expect(res.body.results.errors[0].error).toMatch(/already exists/);
+  });
+});

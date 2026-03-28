@@ -112,7 +112,8 @@ export const analyticsAPI = {
       signal,
     }),
 
-  getMissingPrices: () => api.get("/analytics/missing-prices"),
+  getMissingPrices: (params = {}) =>
+    api.get("/analytics/missing-prices", { params }),
 
   fetchMissingPrices: (items) =>
     api.post("/analytics/missing-prices/fetch", { items }, { timeout: 120000 }),

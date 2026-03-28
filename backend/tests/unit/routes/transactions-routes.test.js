@@ -375,3 +375,75 @@ describe("POST /transactions/transfer", () => {
     });
   });
 });
+
+// ── DELETE /bulk ───────────────────────────────────────────────────────────────
+
+describe("DELETE /transactions/bulk", () => {
+  it("returns 400 when ids is missing", async () => {
+    const res = await request(app).delete("/transactions/bulk").send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when ids is an empty array", async () => {
+    const res = await request(app).delete("/transactions/bulk").send({ ids: [] });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when ids contain non-positive integers (line 404)", async () => {
+    const res = await request(app)
+      .delete("/transactions/bulk")
+      .send({ ids: [1, -1] });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/positive integers/);
+  });
+
+  it("returns 400 when ids contain non-integers", async () => {
+    const res = await request(app)
+      .delete("/transactions/bulk")
+      .send({ ids: [1, "abc"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 200 and reports success when all deletes succeed", async () => {
+    const res = await request(app)
+      .delete("/transactions/bulk")
+      .send({ ids: [1, 2] });
+    expect(res.status).toBe(200);
+    expect(res.body.results.success).toHaveLength(2);
+    expect(res.body.results.errors).toHaveLength(0);
+  });
+
+  it("returns 200 and reports error when Transaction.delete returns false (not found)", async () => {
+    Transaction.delete.mockReturnValue(false);
+    const res = await request(app)
+      .delete("/transactions/bulk")
+      .send({ ids: [999] });
+    expect(res.status).toBe(200);
+    expect(res.body.results.errors).toHaveLength(1);
+    expect(res.body.results.errors[0].error).toBe("Not found");
+  });
+
+  it("returns 200 and reports error when Transaction.delete throws per-item (line 433)", async () => {
+    Transaction.delete.mockImplementation(() => {
+      throw new Error("delete failed");
+    });
+    const res = await request(app)
+      .delete("/transactions/bulk")
+      .send({ ids: [1] });
+    expect(res.status).toBe(200);
+    expect(res.body.results.errors).toHaveLength(1);
+    expect(res.body.results.errors[0].error).toBe("delete failed");
+  });
+});
+
+// ── POST /bulk — each transaction must be an object (line 581) ─────────────────
+
+describe("POST /transactions/bulk — non-object transactions", () => {
+  it("returns 400 when transactions array contains non-objects (line 581)", async () => {
+    const res = await request(app)
+      .post("/transactions/bulk")
+      .send({ transactions: ["not-an-object"] });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/object/);
+  });
+});

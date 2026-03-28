@@ -4,6 +4,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || "production";
 
 process.env.DB_PATH = process.env.DB_PATH || "data/database.db";
 process.env.DB_VERBOSE = process.env.DB_VERBOSE || "false";
+process.env.DB_AUDIT_QUERIES = process.env.DB_AUDIT_QUERIES || "false";
 
 process.env.JWT_EXPIRATION = process.env.JWT_EXPIRATION || "12h";
 

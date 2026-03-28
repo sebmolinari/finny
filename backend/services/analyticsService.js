@@ -1416,7 +1416,7 @@ class AnalyticsService {
    *   status='ok'          — an exact price exists on the trade date
    * Only 'no_price' and 'stale_price' rows are returned.
    */
-  static getMissingPrices(userId) {
+  static getMissingPrices(userId, { includeStale = false } = {}) {
     const db = require("../config/database");
 
     const rows = db
@@ -1431,6 +1431,7 @@ class AnalyticsService {
         a.name,
         a.asset_type,
         a.price_symbol,
+        a.price_source,
         b.name        AS broker_name,
         (
           SELECT MAX(pd.date)
@@ -1468,7 +1469,8 @@ class AnalyticsService {
         status = "ok";
       }
 
-      if (status !== "no_price") continue;
+      if (status === "ok") continue;
+      if (status === "stale_price" && !includeStale) continue;
 
       issues.push({
         transaction_id: row.transaction_id,
@@ -1477,6 +1479,7 @@ class AnalyticsService {
         asset_id: row.asset_id,
         symbol: row.symbol,
         price_symbol: row.price_symbol || null,
+        price_source: row.price_source || null,
         name: row.name,
         asset_type: row.asset_type,
         broker_name: row.broker_name,
@@ -1494,9 +1497,95 @@ class AnalyticsService {
       });
     }
 
+    let stale_metadata = null;
+
+    if (includeStale) {
+      const tz =
+        UserSettings.findByUserId(userId)?.timezone || "UTC";
+      const todayStr = getTodayInTimezone(tz);
+
+      const staleRows = db
+        .prepare(
+          `
+        SELECT
+          a.id          AS asset_id,
+          a.symbol,
+          a.name,
+          a.asset_type,
+          a.price_symbol,
+          a.price_source,
+          MAX(pd.date)  AS latest_price_date,
+          MAX(t.date)   AS last_transaction_date,
+          SUM(CASE WHEN t.transaction_type = 'buy' THEN t.quantity ELSE -t.quantity END) AS net_quantity
+        FROM assets a
+        JOIN transactions t ON t.asset_id = a.id
+          AND t.user_id = ?
+          AND t.transaction_type IN ('buy', 'sell')
+        LEFT JOIN price_data pd ON pd.asset_id = a.id
+        GROUP BY a.id
+        HAVING latest_price_date IS NOT NULL
+        `,
+        )
+        .all(userId);
+
+      const staleAssets = staleRows.filter(
+        (r) => r.price_source !== "manual",
+      );
+      const excludedManual = staleRows.filter(
+        (r) => r.price_source === "manual",
+      );
+
+      for (const asset of staleAssets) {
+        // For closed positions (net_quantity <= 0) only fill up to the last
+        // transaction date; for open positions fill up to today.
+        const endDateStr =
+          asset.net_quantity > 0 ? todayStr : asset.last_transaction_date;
+
+        if (asset.latest_price_date >= endDateStr) continue;
+
+        const start = new Date(asset.latest_price_date + "T00:00:00Z");
+        start.setUTCDate(start.getUTCDate() + 1);
+        const end = new Date(endDateStr + "T00:00:00Z");
+
+        for (
+          let d = new Date(start);
+          d <= end;
+          d.setUTCDate(d.getUTCDate() + 1)
+        ) {
+          const dateStr = d.toISOString().split("T")[0];
+          const daysWithoutPrice = Math.round(
+            (d - new Date(asset.latest_price_date + "T00:00:00Z")) /
+              (1000 * 60 * 60 * 24),
+          );
+          issues.push({
+            transaction_id: null,
+            trade_date: dateStr,
+            transaction_type: null,
+            asset_id: asset.asset_id,
+            symbol: asset.symbol,
+            price_symbol: asset.price_symbol || null,
+            price_source: asset.price_source || null,
+            name: asset.name,
+            asset_type: asset.asset_type,
+            broker_name: null,
+            status: "stale_price",
+            closest_price_date: asset.latest_price_date,
+            closest_price: null,
+            days_without_price: daysWithoutPrice,
+          });
+        }
+      }
+
+      stale_metadata = {
+        excluded_manual_count: excludedManual.length,
+        excluded_manual_symbols: excludedManual.map((a) => a.symbol),
+      };
+    }
+
     return {
       total_issues: issues.length,
       issues,
+      stale_metadata,
     };
   }
 

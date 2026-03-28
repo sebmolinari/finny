@@ -10,6 +10,12 @@ import {
   TextField,
   Checkbox,
   LinearProgress,
+  FormControlLabel,
+  Switch,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
 import {
   PriceCheck as PriceCheckIcon,
@@ -31,12 +37,14 @@ import {
 import { TableBody, TableCell, TableRow, TableHead } from "@mui/material";
 
 const BATCH_SIZE = 50;
+const REVIEW_CHUNK_SIZE = 100;
 
 export default function MissingPrices() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const [issues, setIssues] = useState(null); // { total_issues, issues: [] }
+  const [includeStale, setIncludeStale] = useState(false);
+  const [issues, setIssues] = useState(null); // { total_issues, issues: [], stale_metadata }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -48,6 +56,7 @@ export default function MissingPrices() {
   const [editedPrices, setEditedPrices] = useState(new Map());
   const [fetchProgress, setFetchProgress] = useState(null); // { done, total }
   const [fetchingPrices, setFetchingPrices] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(null);
   const [applyingPrices, setApplyingPrices] = useState(false);
   const [applyResult, setApplyResult] = useState(null); // { applied, errors } | { error }
 
@@ -55,14 +64,16 @@ export default function MissingPrices() {
     setLoading(true);
     setError(null);
     try {
-      const res = await analyticsAPI.getMissingPrices();
+      const res = await analyticsAPI.getMissingPrices(
+        includeStale ? { includeStale: true } : {},
+      );
       setIssues(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load missing prices.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [includeStale]);
 
   useEffect(() => {
     loadIssues();
@@ -77,16 +88,48 @@ export default function MissingPrices() {
               asset_id: issue.asset_id,
               symbol: issue.symbol,
               price_symbol: issue.price_symbol,
+              price_source: issue.price_source,
               name: issue.name,
               asset_type: issue.asset_type,
               dates: [],
+              statuses: {},
             };
           }
           acc[issue.asset_id].dates.push(issue.trade_date);
+          acc[issue.asset_id].statuses[issue.trade_date] = issue.status;
           return acc;
         }, {}),
       )
     : [];
+
+  // Derive sorted list of years that have at least one missing date among included assets
+  const availableYears = [
+    ...new Set(
+      groupedByAsset
+        .filter((g) => !excludedIds.has(g.asset_id))
+        .flatMap((g) => g.dates.map((d) => d.slice(0, 4))),
+    ),
+  ].sort();
+
+  // Auto-exclude non-yahoo assets on initial load
+  useEffect(() => {
+    setExcludedIds(
+      new Set(
+        groupedByAsset
+          .filter((g) => g.price_source && g.price_source !== "yahoo")
+          .map((g) => g.asset_id),
+      ),
+    );
+  }, [availableYears.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep selectedYear valid whenever the available years list changes
+  useEffect(() => {
+    if (availableYears.length === 0) {
+      setSelectedYear(null);
+    } else if (selectedYear === null || !availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears.join(","), selectedYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleExclude = (assetId) => {
     setExcludedIds((prev) => {
@@ -98,33 +141,37 @@ export default function MissingPrices() {
   };
 
   const handleFetch = async () => {
-    // Build flat list of items to fetch (one per date per non-excluded asset)
-    const items = [];
+    // Build flat list of items to fetch for the selected year only
+    const allItems = [];
     for (const group of groupedByAsset) {
       if (excludedIds.has(group.asset_id)) continue;
       for (const date of group.dates) {
-        items.push({
+        if (selectedYear && !date.startsWith(selectedYear)) continue;
+        allItems.push({
           asset_id: group.asset_id,
           price_symbol: group.price_symbol || group.symbol,
           trade_date: date,
         });
       }
     }
-    if (items.length === 0) return;
+    if (allItems.length === 0) return;
+
+    // Only fetch the first REVIEW_CHUNK_SIZE items — user reviews and applies before continuing
+    const chunk = allItems.slice(0, REVIEW_CHUNK_SIZE);
 
     setFetchingPrices(true);
     setFetchResults(new Map());
     setEditedPrices(new Map());
     setApplyResult(null);
-    setFetchProgress({ done: 0, total: items.length });
+    setFetchProgress({ done: 0, total: chunk.length });
 
     const accumulated = new Map();
     const initialEdits = new Map();
 
     try {
-      // Process in batches of BATCH_SIZE
-      for (let i = 0; i < items.length; i += BATCH_SIZE) {
-        const batch = items.slice(i, i + BATCH_SIZE);
+      // Process chunk in batches of BATCH_SIZE — accumulate all results before showing
+      for (let i = 0; i < chunk.length; i += BATCH_SIZE) {
+        const batch = chunk.slice(i, i + BATCH_SIZE);
         const res = await analyticsAPI.fetchMissingPrices(batch);
 
         for (const r of res.data.results) {
@@ -136,12 +183,14 @@ export default function MissingPrices() {
         }
 
         setFetchProgress({
-          done: Math.min(i + BATCH_SIZE, items.length),
-          total: items.length,
+          done: Math.min(i + BATCH_SIZE, chunk.length),
+          total: chunk.length,
         });
-        setFetchResults(new Map(accumulated));
-        setEditedPrices(new Map(initialEdits));
       }
+
+      // Only populate the review grid once all batches are complete
+      setFetchResults(new Map(accumulated));
+      setEditedPrices(new Map(initialEdits));
     } catch (err) {
       setError(
         err.response?.data?.message || "Fetch failed. Please try again.",
@@ -241,9 +290,38 @@ export default function MissingPrices() {
     return !isNaN(n) && n > 0;
   }).length;
 
+  const staleMetadata = issues?.stale_metadata;
+  const hasExcludedManual =
+    staleMetadata && staleMetadata.excluded_manual_count > 0;
+
+  const nonYahooAssets = groupedByAsset.filter(
+    (g) => g.price_source && g.price_source !== "yahoo",
+  );
+
   return (
     <PageContainer>
-      <Alert severity="info" sx={{ mb: 3 }}>
+      <Alert
+        severity="info"
+        sx={{ mb: 2 }}
+        action={
+          <FormControlLabel
+            control={
+              <Switch
+                checked={includeStale}
+                onChange={(e) => setIncludeStale(e.target.checked)}
+                size="small"
+              />
+            }
+            label={
+              <Typography variant="caption" noWrap>
+                Detect stale prices
+              </Typography>
+            }
+            labelPlacement="start"
+            sx={{ mr: 0, ml: 1 }}
+          />
+        }
+      >
         A <strong>missing price</strong> means no price record exists on or
         before the transaction date — the portfolio valuation engine has nothing
         to fall back on. If your earliest price for an asset is on{" "}
@@ -251,7 +329,44 @@ export default function MissingPrices() {
         <strong>not</strong> a missing price: the engine will use the{" "}
         <em>t&#8209;2</em> price. Only transactions that predate every existing
         price record are listed here.
+        {includeStale && (
+          <>
+            <br />
+            A <strong>stale price</strong> means the asset has at least one
+            price record, but none more recent than today — the engine silently
+            rolls the last known price forward. Enable this toggle to surface
+            those gaps and fill them in.
+          </>
+        )}
       </Alert>
+
+      {includeStale && hasExcludedManual && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Stale price detection excludes{" "}
+          <strong>{staleMetadata.excluded_manual_count}</strong> asset
+          {staleMetadata.excluded_manual_count !== 1 ? "s" : ""} with manual
+          pricing:{" "}
+          <strong>{staleMetadata.excluded_manual_symbols.join(", ")}</strong>.
+          These must be updated manually.
+        </Alert>
+      )}
+
+      {nonYahooAssets.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <strong>
+            {nonYahooAssets.length} asset
+            {nonYahooAssets.length !== 1 ? "s" : ""} use a non-Yahoo price
+            source
+          </strong>{" "}
+          (
+          {nonYahooAssets
+            .map((g) => `${g.symbol} — ${g.price_source}`)
+            .join(", ")}
+          ). Fetching from Yahoo Finance for these assets may return incorrect
+          prices or no data at all, leading to inconsistencies with their
+          existing price records. Consider filling those prices manually.
+        </Alert>
+      )}
 
       {/* ── Summary metrics ── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -360,6 +475,10 @@ export default function MissingPrices() {
                   <StyledHeaderCell>Name</StyledHeaderCell>
                   <StyledHeaderCell>Type</StyledHeaderCell>
                   <StyledHeaderCell>Missing Dates</StyledHeaderCell>
+                  <StyledHeaderCell>Price Source</StyledHeaderCell>
+                  {includeStale && (
+                    <StyledHeaderCell>Status</StyledHeaderCell>
+                  )}
                 </StyledHeaderRow>
               </TableHead>
               <TableBody>
@@ -414,6 +533,52 @@ export default function MissingPrices() {
                           : ""}
                       </Typography>
                     </TableCell>
+                    <TableCell>
+                      {group.price_source && group.price_source !== "yahoo" ? (
+                        <Chip
+                          label={group.price_source}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          sx={{ fontSize: "0.7rem" }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          {group.price_source || "yahoo"}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    {includeStale && (
+                      <TableCell>
+                        {(() => {
+                          const uniqueStatuses = [
+                            ...new Set(Object.values(group.statuses)),
+                          ];
+                          return (
+                            <Box sx={{ display: "flex", gap: 0.5 }}>
+                              {uniqueStatuses.includes("no_price") && (
+                                <Chip
+                                  label="No Price"
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  sx={{ fontSize: "0.7rem" }}
+                                />
+                              )}
+                              {uniqueStatuses.includes("stale_price") && (
+                                <Chip
+                                  label="Stale"
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                  sx={{ fontSize: "0.7rem" }}
+                                />
+                              )}
+                            </Box>
+                          );
+                        })()}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -427,21 +592,82 @@ export default function MissingPrices() {
         <>
           {/* Fetch button + progress */}
           <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 1 }}>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <Button
-                variant="contained"
-                startIcon={
-                  fetchingPrices ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <CloudDownloadIcon />
-                  )
-                }
-                onClick={handleFetch}
-                disabled={fetchingPrices || includedCount === 0}
-              >
-                {fetchingPrices ? "Fetching…" : "Fetch Prices from Yahoo"}
-              </Button>
+            <Alert severity="info" sx={{ mb: 1 }}>
+              Fetching prices from Yahoo Finance is done{" "}
+              <strong>one year at a time</strong>, up to{" "}
+              <strong>{REVIEW_CHUNK_SIZE} dates per round</strong>. Review and
+              apply each round before fetching the next — this avoids rate
+              limits and keeps the review manageable.
+            </Alert>
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+              {availableYears.length > 0 && (
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <InputLabel id="year-select-label">Year</InputLabel>
+                  <Select
+                    labelId="year-select-label"
+                    value={selectedYear ?? ""}
+                    label="Year"
+                    onChange={(e) => {
+                      setSelectedYear(e.target.value);
+                      setFetchResults(new Map());
+                      setEditedPrices(new Map());
+                      setApplyResult(null);
+                    }}
+                    disabled={fetchingPrices}
+                  >
+                    {availableYears.map((y) => {
+                      const count = groupedByAsset
+                        .filter((g) => !excludedIds.has(g.asset_id))
+                        .reduce(
+                          (n, g) =>
+                            n + g.dates.filter((d) => d.startsWith(y)).length,
+                          0,
+                        );
+                      return (
+                        <MenuItem key={y} value={y}>
+                          {y}
+                          {count > 0 ? ` (${count})` : ""}
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              )}
+              {(() => {
+                const totalForYear = selectedYear
+                  ? groupedByAsset
+                      .filter((g) => !excludedIds.has(g.asset_id))
+                      .reduce(
+                        (n, g) =>
+                          n +
+                          g.dates.filter((d) => d.startsWith(selectedYear))
+                            .length,
+                        0,
+                      )
+                  : 0;
+                const chunkSize = Math.min(totalForYear, REVIEW_CHUNK_SIZE);
+                const label = fetchingPrices
+                  ? "Fetching…"
+                  : totalForYear > REVIEW_CHUNK_SIZE
+                    ? `Fetch Next ${chunkSize} of ${totalForYear} from Yahoo`
+                    : `Fetch ${chunkSize > 0 ? chunkSize + " " : ""}${selectedYear ?? ""} Prices from Yahoo`;
+                return (
+                  <Button
+                    variant="contained"
+                    startIcon={
+                      fetchingPrices ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <CloudDownloadIcon />
+                      )
+                    }
+                    onClick={handleFetch}
+                    disabled={fetchingPrices || includedCount === 0 || !selectedYear}
+                  >
+                    {label}
+                  </Button>
+                );
+              })()}
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
