@@ -202,6 +202,7 @@ export default function TransactionDialog({
           return;
         }
         await transactionAPI.transfer({
+          ...(editingTransaction ? { id: editingTransaction.id } : {}),
           asset_id: formData.asset_id,
           broker_id: formData.broker_id,
           destination_broker_id: formData.destination_broker_id,
@@ -209,7 +210,7 @@ export default function TransactionDialog({
           date: formData.date,
           notes: formData.notes,
         });
-        toast.success("Transfer created successfully");
+        toast.success(editingTransaction ? "Transfer updated successfully" : "Transfer created successfully");
         onClose();
         onSave();
         return;

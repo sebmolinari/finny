@@ -1,6 +1,6 @@
 All notable changes to this project are documented below.
 
-## [1.0.3] – 2026-03-25
+## [1.0.3] – 2026-03-27
 
 ### Changed
 
@@ -9,6 +9,9 @@ All notable changes to this project are documented below.
 
 ### Fixed
 
+- **Bulk import validation** — CSV import now validates each row before inserting: date must be `YYYY-MM-DD`, broker and asset must exist, and all numeric fields (quantity, price, amount) must be valid numbers; invalid rows are rejected with a clear per-row error message without blocking valid rows
+- Editing a transfer transaction no longer creates a duplicate — the transfer is now updated in place and shows a "Transfer updated successfully" toast
+- **Exposure by Broker** dashboard chart now accounts for broker-to-broker transfers: moved shares correctly reduce the source broker's exposure and increase the destination broker's exposure
 - Navigating away from a page mid-load no longer causes stale data to flash on return — in-flight requests are cancelled automatically
 
 ---

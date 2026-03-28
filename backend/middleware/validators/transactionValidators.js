@@ -19,11 +19,7 @@ const transactionValidation = [
     .notEmpty()
     .withMessage("Transaction type is required")
     .isIn(VALID_VALUES.TRANSACTION_TYPES)
-    .withMessage(
-      `Invalid transaction type. Valid types: ${VALID_VALUES.TRANSACTION_TYPES.join(
-        ", ",
-      )}`,
-    ),
+    .withMessage(`Invalid transaction type. Valid types: ${VALID_VALUES.TRANSACTION_TYPES.join(", ")}`),
 
   body("total_amount")
     .notEmpty()
@@ -39,7 +35,7 @@ const transactionValidation = [
     .toInt(),
 
   body("broker_id")
-    .if(body("transaction_type").isIn(["buy", "sell", "transfer"]))
+    .if(body("transaction_type").isIn(["buy", "sell", "dividend", "coupon", "interest", "rental", "transfer"]))
     .notEmpty()
     .withMessage("Broker is required for buy/sell/transfer")
     .bail()
@@ -81,10 +77,7 @@ const transactionValidation = [
     .trim()
     .custom((value, { req }) => {
       // Notes are mandatory for sell transactions
-      if (
-        req.body.transaction_type === "sell" &&
-        (!value || value.trim() === "")
-      ) {
+      if (req.body.transaction_type === "sell" && (!value || value.trim() === "")) {
         throw new Error("Notes are required for sell transactions");
       }
       return true;
@@ -101,20 +94,8 @@ const transactionValidation = [
  * @param {boolean} params.isUpdate
  * @param {Object|null} params.currentTx   Existing transaction (PUT only)
  */
-function validateTransactionBusiness({
-  tx,
-  userId,
-  isUpdate = false,
-  currentTx = null,
-}) {
-  const {
-    asset_id,
-    broker_id,
-    transaction_type,
-    quantity,
-    price,
-    total_amount,
-  } = tx;
+function validateTransactionBusiness({ tx, userId, isUpdate = false, currentTx = null }) {
+  const { asset_id, broker_id, transaction_type, quantity, price, total_amount } = tx;
 
   const userSettings = UserSettings.findByUserId(userId);
   const validateCash = userSettings.validate_cash_balance;
@@ -126,15 +107,7 @@ function validateTransactionBusiness({
     throw err;
   };
 
-  const assetRequiredTypes = [
-    "buy",
-    "sell",
-    "dividend",
-    "interest",
-    "rental",
-    "coupon",
-    "transfer",
-  ];
+  const assetRequiredTypes = ["buy", "sell", "dividend", "interest", "rental", "coupon", "transfer"];
 
   if (assetRequiredTypes.includes(transaction_type)) {
     if (!asset_id) {
@@ -158,19 +131,13 @@ function validateTransactionBusiness({
       }
 
       if (total_amount > availableCash) {
-        error(
-          `Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`,
-        );
+        error(`Insufficient cash balance. Available: ${availableCash}, attempted to buy: ${total_amount}`);
       }
     }
 
     // SELL: asset balance
     if (transaction_type === "sell" && validateSell) {
-      let availableQuantity = Transaction.getAssetBrokerBalance(
-        userId,
-        asset_id,
-        broker_id,
-      );
+      let availableQuantity = Transaction.getAssetBrokerBalance(userId, asset_id, broker_id);
 
       // PUT: add back existing sell quantity
       if (isUpdate && currentTx && currentTx.transaction_type === "sell") {
@@ -178,9 +145,7 @@ function validateTransactionBusiness({
       }
 
       if (quantity > availableQuantity) {
-        error(
-          `Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`,
-        );
+        error(`Insufficient balance. Available: ${availableQuantity}, attempted to sell: ${quantity}`);
       }
     }
   }
@@ -188,19 +153,13 @@ function validateTransactionBusiness({
   if (transaction_type === "transfer") {
     const { destination_broker_id } = tx;
     if (!broker_id || !destination_broker_id || !asset_id || !quantity) {
-      error(
-        "asset, broker, destination broker, and quantity are required for transfer",
-      );
+      error("asset, broker, destination broker, and quantity are required for transfer");
     }
     if (broker_id === destination_broker_id) {
       error("Source and destination brokers must be different");
     }
     if (validateSell) {
-      const availableQuantity = Transaction.getAssetBrokerBalance(
-        userId,
-        asset_id,
-        broker_id,
-      );
+      const availableQuantity = Transaction.getAssetBrokerBalance(userId, asset_id, broker_id);
       if (quantity > availableQuantity) {
         error(
           `Insufficient holdings at source broker. Available: ${availableQuantity}, attempted to transfer: ${quantity}`,

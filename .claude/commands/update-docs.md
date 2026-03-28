@@ -5,10 +5,12 @@ Steps:
 1. Run `git diff HEAD --stat` and `git status --short` to get an overview of all changes
 2. Run `git diff HEAD` on changed files to understand what was added, modified, or removed (use the Bash tool; diff may be large so focus on routes, models, pages, components, and migrations)
 3. Read the current `frontend/src/assets/CHANGELOG.md` and `frontend/src/assets/FEATURES.md`
-4. Determine the appropriate next version:
-   - Bump **patch** (e.g. 1.0.0 → 1.0.1) for bug fixes, refactors, and internal improvements
-   - Bump **minor** (e.g. 1.0.0 → 1.1.0) when new user-facing features were added
-5. Add a new dated version entry to the top of CHANGELOG.md using today's date and this structure (only include sections that apply):
+4. Ask the user: "Has version X.Y.Z (the latest changelog entry) been released yet?" and wait for their answer.
+   - If **yes** (released): determine the next version number and create a new entry at the top of CHANGELOG.md
+     - Bump **patch** (e.g. 1.0.0 → 1.0.1) for bug fixes, refactors, and internal improvements
+     - Bump **minor** (e.g. 1.0.0 → 1.1.0) when new user-facing features were added
+   - If **no** (not yet released): edit the existing latest entry in place — update its date to today and merge the new changes into the appropriate sections
+5. Write the changelog entry using today's date and this structure (only include sections that apply):
 
    ```
    ## [X.Y.Z] – YYYY-MM-DD
@@ -17,6 +19,9 @@ Steps:
    - ...
 
    ### Changed
+   - ...
+
+   ### Fixed
    - ...
 
    ### Removed

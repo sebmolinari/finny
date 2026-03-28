@@ -11,12 +11,16 @@ beforeAll(async () => {
 
   // Disable cash and sell balance validation so tests don't depend on pre-existing deposits
   await request(app).put("/api/v1/settings").set(headers).send({
-    validate_cash_balance: false,
-    validate_sell_balance: false,
+    validate_cash_balance: 1,
+    validate_sell_balance: 1,
   });
 
   const aRes = await request(app).post("/api/v1/assets").set(headers).send({
-    symbol: "AAPL", name: "Apple Inc", asset_type: "equity", currency: "USD", price_source: "yahoo",
+    symbol: "AAPL",
+    name: "Apple Inc",
+    asset_type: "equity",
+    currency: "USD",
+    price_source: "yahoo",
   });
   assetId = aRes.body.id;
 
@@ -25,6 +29,13 @@ beforeAll(async () => {
 });
 
 afterAll(() => db.clearAll());
+
+const txDepositPayload = () => ({
+  date: "2024-01-01",
+  transaction_type: "deposit",
+  total_amount: 10000,
+  fee: 0,
+});
 
 const txPayload = () => ({
   asset_id: assetId,
@@ -50,7 +61,12 @@ describe("GET /api/v1/transactions", () => {
 });
 
 describe("POST /api/v1/transactions", () => {
-  afterEach(() => db.prepare("DELETE FROM transactions").run());
+  afterAll(() => db.prepare("DELETE FROM transactions").run());
+
+  it("creates a deposit transaction", async () => {
+    const res = await request(app).post("/api/v1/transactions").set(headers).send(txDepositPayload());
+    expect(res.status).toBe(201);
+  });
 
   it("creates a buy transaction and returns 201", async () => {
     const res = await request(app).post("/api/v1/transactions").set(headers).send(txPayload());
@@ -59,24 +75,17 @@ describe("POST /api/v1/transactions", () => {
     expect(res.body.quantity).toBeCloseTo(10, 4);
   });
 
-  it("creates a deposit transaction", async () => {
-    const res = await request(app).post("/api/v1/transactions").set(headers).send({
-      date: "2024-01-01",
-      transaction_type: "deposit",
-      total_amount: 10000,
-      fee: 0,
-    });
-    expect(res.status).toBe(201);
-  });
-
   it("creates a sell transaction", async () => {
     await request(app).post("/api/v1/transactions").set(headers).send(txPayload());
-    const res = await request(app).post("/api/v1/transactions").set(headers).send({
-      ...txPayload(),
-      transaction_type: "sell",
-      date: "2024-06-01",
-      notes: "selling shares",
-    });
+    const res = await request(app)
+      .post("/api/v1/transactions")
+      .set(headers)
+      .send({
+        ...txPayload(),
+        transaction_type: "sell",
+        date: "2024-06-01",
+        notes: "selling shares",
+      });
     expect(res.status).toBe(201);
   });
 
@@ -89,7 +98,10 @@ describe("POST /api/v1/transactions", () => {
 
 describe("GET /api/v1/transactions/:id", () => {
   let txId;
+  afterAll(() => db.prepare("DELETE FROM transactions").run());
+
   beforeAll(async () => {
+    await request(app).post("/api/v1/transactions").set(headers).send(txDepositPayload());
     const res = await request(app).post("/api/v1/transactions").set(headers).send(txPayload());
     txId = res.body.id;
   });
@@ -107,17 +119,22 @@ describe("GET /api/v1/transactions/:id", () => {
 
 describe("PUT /api/v1/transactions/:id", () => {
   let txId;
+  afterAll(() => db.prepare("DELETE FROM transactions").run());
+
   beforeAll(async () => {
-    db.prepare("DELETE FROM transactions").run();
+    await request(app).post("/api/v1/transactions").set(headers).send(txDepositPayload());
     const res = await request(app).post("/api/v1/transactions").set(headers).send(txPayload());
     txId = res.body.id;
   });
 
   it("updates transaction and returns 200", async () => {
-    const res = await request(app).put(`/api/v1/transactions/${txId}`).set(headers).send({
-      ...txPayload(),
-      notes: "updated note",
-    });
+    const res = await request(app)
+      .put(`/api/v1/transactions/${txId}`)
+      .set(headers)
+      .send({
+        ...txPayload(),
+        notes: "updated note",
+      });
     expect(res.status).toBe(200);
   });
 
@@ -127,7 +144,10 @@ describe("PUT /api/v1/transactions/:id", () => {
 });
 
 describe("DELETE /api/v1/transactions/:id", () => {
+  afterAll(() => db.prepare("DELETE FROM transactions").run());
+
   it("deletes a transaction", async () => {
+    await request(app).post("/api/v1/transactions").set(headers).send(txDepositPayload());
     const res = await request(app).post("/api/v1/transactions").set(headers).send(txPayload());
     expect((await request(app).delete(`/api/v1/transactions/${res.body.id}`).set(headers)).status).toBe(200);
   });

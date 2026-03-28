@@ -650,6 +650,7 @@ router.post("/bulk", authMiddleware, async (req, res) => {
 router.post("/transfer", authMiddleware, (req, res) => {
   try {
     const {
+      id,
       asset_id,
       broker_id,
       destination_broker_id,
@@ -689,11 +690,28 @@ router.post("/transfer", authMiddleware, (req, res) => {
       return res.status(404).json({ message: "Destination broker not found" });
 
     // Check source broker has sufficient holdings
-    const availableQuantity = Transaction.getAssetBrokerBalance(
+    let availableQuantity = Transaction.getAssetBrokerBalance(
       req.user.id,
       asset_id,
       broker_id,
     );
+
+    // When updating an existing transfer, add back the original quantity so it
+    // isn't double-counted against the new quantity being validated
+    let existingTx = null;
+    if (id) {
+      existingTx = Transaction.findById(id, req.user.id);
+      if (!existingTx) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      if (
+        existingTx.broker_id === parseInt(broker_id) &&
+        existingTx.asset_id === parseInt(asset_id)
+      ) {
+        availableQuantity += existingTx.quantity;
+      }
+    }
+
     if (quantity > availableQuantity) {
       return res.status(400).json({
         message: `Insufficient holdings at source broker. Available: ${availableQuantity}, attempted to transfer: ${quantity}`,
@@ -717,31 +735,65 @@ router.post("/transfer", authMiddleware, (req, res) => {
         : 0;
     const totalCostTransferred = costPerUnit * quantity;
 
-    const id = Transaction.create(
-      req.user.id,
-      {
-        asset_id: parseInt(asset_id),
-        broker_id: parseInt(broker_id),
-        destination_broker_id: parseInt(destination_broker_id),
-        date,
-        transaction_type: "transfer",
-        quantity,
-        price: costPerUnit,
-        fee: 0,
-        total_amount: totalCostTransferred,
-        notes:
-          notes || `Transfer from ${sourceBroker.name} to ${destBroker.name}`,
-      },
-      req.user.id,
-    );
+    const transferData = {
+      asset_id: parseInt(asset_id),
+      broker_id: parseInt(broker_id),
+      destination_broker_id: parseInt(destination_broker_id),
+      date,
+      transaction_type: "transfer",
+      quantity,
+      price: costPerUnit,
+      fee: 0,
+      total_amount: totalCostTransferred,
+      notes:
+        notes || `Transfer from ${sourceBroker.name} to ${destBroker.name}`,
+    };
 
-    const transaction = Transaction.findById(id, req.user.id);
+    if (id) {
+      // Update existing transfer
+      Transaction.update(id, req.user.id, transferData, req.user.id);
+
+      const transaction = Transaction.findById(id, req.user.id);
+
+      AuditLog.logUpdate(
+        req.user.id,
+        req.user.username,
+        "transactions",
+        parseInt(id),
+        {
+          transaction_type: existingTx.transaction_type,
+          asset_id: existingTx.asset_id,
+          broker_id: existingTx.broker_id,
+          destination_broker_id: existingTx.destination_broker_id,
+          quantity: existingTx.quantity,
+          date: existingTx.date,
+          notes: existingTx.notes,
+        },
+        {
+          transaction_type: "transfer",
+          asset_id,
+          broker_id,
+          destination_broker_id,
+          quantity,
+          date,
+          notes: transferData.notes,
+        },
+        req.ip,
+        req.get("user-agent"),
+      );
+
+      return res.json(transaction);
+    }
+
+    const newId = Transaction.create(req.user.id, transferData, req.user.id);
+
+    const transaction = Transaction.findById(newId, req.user.id);
 
     AuditLog.logCreate(
       req.user.id,
       req.user.username,
       "transactions",
-      id,
+      newId,
       {
         transaction_type: "transfer",
         asset_id,
