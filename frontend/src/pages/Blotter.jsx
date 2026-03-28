@@ -474,7 +474,7 @@ export default function Blotter() {
         <BlotterToolbarActions
           selectedCount={selectedCount}
           onBulkDelete={handleBulkDelete}
-          onAdd={handleOpenDialog}
+          onAdd={() => handleOpenDialog()}
           onImport={handleOpenImportDialog}
         />
       ),
