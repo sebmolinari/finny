@@ -166,6 +166,7 @@ describe("PUT /scheduler/:id", () => {
     frequency: "weekly",
     time_of_day: "09:00",
     enabled: true,
+    metadata: { day_of_week: 1 },
   };
 
   it("returns 200 on success", async () => {
@@ -241,7 +242,7 @@ describe("PUT /scheduler/:id", () => {
     expect(res.status).toBe(200);
     expect(SchedulerService.updateScheduler).toHaveBeenCalledWith(
       "1", expect.anything(), expect.anything(), expect.anything(),
-      expect.anything(), 0, 1,
+      expect.anything(), 0, 1, expect.anything(),
     );
   });
 

@@ -10,4 +10,6 @@ export const brokerAPI = {
   update: (id, data) => api.put(`/brokers/${id}`, data),
 
   delete: (id) => api.delete(`/brokers/${id}`),
+
+  bulkImport: (brokers) => api.post("/brokers/bulk", { brokers }),
 };

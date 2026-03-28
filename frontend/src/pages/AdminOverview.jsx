@@ -1278,7 +1278,12 @@ export default function AdminOverview() {
                     <Alert severity="success" sx={{ py: 0, px: 1 }}>
                       Deleted: {deleteDataResult.deleted.transactions}{" "}
                       transactions, {deleteDataResult.deleted.assets} assets,{" "}
-                      {deleteDataResult.deleted.brokers} brokers.
+                      {deleteDataResult.deleted.brokers} brokers,{" "}
+                      {deleteDataResult.deleted.allocationTargets} allocation
+                      targets, {deleteDataResult.deleted.priceData} price
+                      records, {deleteDataResult.deleted.notifications}{" "}
+                      notifications, {deleteDataResult.deleted.auditLogs} audit
+                      logs.
                     </Alert>
                   )}
                   {deleteDataResult?.error && (

@@ -112,6 +112,7 @@ describe("SchedulerService.isScheduleDue", () => {
         time: "08:00",
         dayOfWeek: 1,
         dayOfMonth: 15,
+        today: "2024-01-15",
       }),
     ).toBe(true);
   });
@@ -127,6 +128,7 @@ describe("SchedulerService.isScheduleDue", () => {
         time: "08:00",
         dayOfWeek: 1,
         dayOfMonth: 14,
+        today: "2024-01-14",
       }),
     ).toBe(false);
   });
@@ -138,6 +140,56 @@ describe("SchedulerService.isScheduleDue", () => {
         time: "08:00",
         dayOfWeek: 1,
         dayOfMonth: 1,
+        today: "2024-01-01",
+      }),
+    ).toBe(true);
+  });
+
+  it("clamps day_of_month to last day when month is shorter (e.g. Feb + day 31)", () => {
+    const s = {
+      ...base,
+      frequency: "monthly",
+      metadata: JSON.stringify({ day_of_month: 31 }),
+    };
+    // February 2023 has 28 days (non-leap year) — should fire on the 28th
+    expect(
+      SchedulerService.isScheduleDue(s, {
+        time: "08:00",
+        dayOfWeek: 2,
+        dayOfMonth: 28,
+        today: "2023-02-28",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not fire early when month is shorter and today is not the last day", () => {
+    const s = {
+      ...base,
+      frequency: "monthly",
+      metadata: JSON.stringify({ day_of_month: 31 }),
+    };
+    expect(
+      SchedulerService.isScheduleDue(s, {
+        time: "08:00",
+        dayOfWeek: 1,
+        dayOfMonth: 27,
+        today: "2023-02-27",
+      }),
+    ).toBe(false);
+  });
+
+  it("fires on day 31 in months that have 31 days", () => {
+    const s = {
+      ...base,
+      frequency: "monthly",
+      metadata: JSON.stringify({ day_of_month: 31 }),
+    };
+    expect(
+      SchedulerService.isScheduleDue(s, {
+        time: "08:00",
+        dayOfWeek: 3,
+        dayOfMonth: 31,
+        today: "2023-01-31",
       }),
     ).toBe(true);
   });
@@ -148,6 +200,41 @@ describe("SchedulerService.isScheduleDue", () => {
       SchedulerService.isScheduleDue(s, {
         time: "08:00",
         dayOfWeek: 1,
+        dayOfMonth: 1,
+      }),
+    ).toBe(false);
+  });
+
+  it("returns true for weekdays on Monday through Friday", () => {
+    const s = { ...base, frequency: "weekdays", metadata: null };
+    for (const dow of [1, 2, 3, 4, 5]) {
+      expect(
+        SchedulerService.isScheduleDue(s, {
+          time: "08:00",
+          dayOfWeek: dow,
+          dayOfMonth: 1,
+        }),
+      ).toBe(true);
+    }
+  });
+
+  it("returns false for weekdays on Sunday (0)", () => {
+    const s = { ...base, frequency: "weekdays", metadata: null };
+    expect(
+      SchedulerService.isScheduleDue(s, {
+        time: "08:00",
+        dayOfWeek: 0,
+        dayOfMonth: 1,
+      }),
+    ).toBe(false);
+  });
+
+  it("returns false for weekdays on Saturday (6)", () => {
+    const s = { ...base, frequency: "weekdays", metadata: null };
+    expect(
+      SchedulerService.isScheduleDue(s, {
+        time: "08:00",
+        dayOfWeek: 6,
         dayOfMonth: 1,
       }),
     ).toBe(false);
@@ -228,6 +315,21 @@ describe("SchedulerService CRUD delegations", () => {
       "daily",
       "08:00",
       1,
+      null,
+    );
+  });
+
+  it("createScheduler passes metadata to Scheduler.create", () => {
+    Scheduler.create.mockReturnValue(2);
+    const meta = { day_of_week: 3 };
+    SchedulerService.createScheduler("W", "t", "weekly", "08:00", 1, meta);
+    expect(Scheduler.create).toHaveBeenCalledWith(
+      "W",
+      "t",
+      "weekly",
+      "08:00",
+      1,
+      meta,
     );
   });
 
@@ -242,6 +344,23 @@ describe("SchedulerService CRUD delegations", () => {
       "09:00",
       1,
       1,
+      null,
+    );
+  });
+
+  it("updateScheduler passes metadata to Scheduler.update", () => {
+    Scheduler.update.mockReturnValue(1);
+    const meta = { day_of_month: 15 };
+    SchedulerService.updateScheduler(1, "M", "t", "monthly", "09:00", 1, 1, meta);
+    expect(Scheduler.update).toHaveBeenCalledWith(
+      1,
+      "M",
+      "t",
+      "monthly",
+      "09:00",
+      1,
+      1,
+      meta,
     );
   });
 
