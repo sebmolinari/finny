@@ -368,6 +368,83 @@ router.put(
 
 /**
  * @swagger
+ * /transactions/bulk:
+ *   delete:
+ *     summary: Bulk delete transactions by IDs
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: Bulk delete completed
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+router.delete("/bulk", authMiddleware, async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array" });
+    }
+    if (!ids.every((id) => Number.isInteger(id) && id > 0)) {
+      return res.status(400).json({ message: "All ids must be positive integers" });
+    }
+
+    const results = { success: [], errors: [] };
+
+    for (const id of ids) {
+      try {
+        const transaction = Transaction.findById(id, req.user.id);
+        const deleted = Transaction.delete(id, req.user.id);
+        if (!deleted) {
+          results.errors.push({ id, error: "Not found" });
+        } else {
+          results.success.push({ id });
+          if (transaction) {
+            AuditLog.logDelete(
+              req.user.id,
+              req.user.username,
+              "transactions",
+              id,
+              {
+                transaction_type: transaction.transaction_type,
+                total_amount: transaction.total_amount,
+              },
+              req.ip,
+              req.get("user-agent"),
+            );
+          }
+        }
+      } catch (err) {
+        results.errors.push({ id, error: err.message });
+      }
+    }
+
+    res.json({
+      message: `Bulk delete completed: ${results.success.length} deleted, ${results.errors.length} failed`,
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
  * /transactions/{id}:
  *   delete:
  *     summary: Delete an transaction transaction by ID

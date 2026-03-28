@@ -71,8 +71,14 @@ class SchedulerService {
 
       case "monthly": {
         const dayOfMonth = metadata.day_of_month || 1;
-        return nowParts.dayOfMonth === dayOfMonth;
+        const [year, month] = nowParts.today.split("-").map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const effectiveDay = Math.min(dayOfMonth, daysInMonth);
+        return nowParts.dayOfMonth === effectiveDay;
       }
+
+      case "weekdays":
+        return nowParts.dayOfWeek >= 1 && nowParts.dayOfWeek <= 5;
 
       default:
         return false;
@@ -225,8 +231,8 @@ class SchedulerService {
     return Scheduler.findById(id);
   }
 
-  static createScheduler(name, type, frequency, timeOfDay, createdBy) {
-    return Scheduler.create(name, type, frequency, timeOfDay, createdBy);
+  static createScheduler(name, type, frequency, timeOfDay, createdBy, metadata = null) {
+    return Scheduler.create(name, type, frequency, timeOfDay, createdBy, metadata);
   }
 
   static updateScheduler(
@@ -237,6 +243,7 @@ class SchedulerService {
     timeOfDay,
     enabled,
     updatedBy,
+    metadata = null,
   ) {
     return Scheduler.update(
       id,
@@ -246,6 +253,7 @@ class SchedulerService {
       timeOfDay,
       enabled,
       updatedBy,
+      metadata,
     );
   }
 

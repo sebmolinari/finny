@@ -31,4 +31,8 @@ export const assetAPI = {
   refreshAllPrices: () => api.post("/assets/prices/refresh-all"),
 
   refreshAssetPrice: (assetId) => api.post(`/assets/${assetId}/prices/refresh`),
+
+  bulkImport: (assets) => api.post("/assets/bulk", { assets }),
+
+  bulkImportPrices: (prices) => api.post("/assets/prices/bulk-import", { prices }),
 };

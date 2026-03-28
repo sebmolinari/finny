@@ -32,6 +32,24 @@ const brokerValidation = [
     .toBoolean(),
 ];
 
+const { validationResult } = require("express-validator");
+
+async function runBrokerValidation(data) {
+  const fakeReq = { body: data };
+  for (const validator of brokerValidation) {
+    await validator.run(fakeReq);
+  }
+  const result = validationResult(fakeReq);
+  if (!result.isEmpty()) {
+    const err = new Error(result.array().map((e) => e.msg).join(", "));
+    err.status = 400;
+    err.details = result.array();
+    throw err;
+  }
+  return fakeReq.body;
+}
+
 module.exports = {
   brokerValidation,
+  runBrokerValidation,
 };

@@ -15,4 +15,6 @@ export const transactionAPI = {
 
   bulkImport: (transactions) =>
     api.post("/transactions/bulk", { transactions }),
+
+  bulkDelete: (ids) => api.delete("/transactions/bulk", { data: { ids } }),
 };
